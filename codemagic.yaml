@@ -1,4 +1,3 @@
-
 workflows:
   android-apk:
     name: Fire Safety Job Prep APK
