@@ -1,24 +1,55 @@
 workflows:
   android-apk:
-    name: Android APK
+    name: Fire Safety Job Prep APK
     max_build_duration: 30
     instance_type: linux_x2
+
     environment:
       flutter: stable
+
     scripts:
-      - name: Create Android project files
+      - name: Check project files
         script: |
+          set -e
+          test -f lib/main.dart
+          test -f pubspec.yaml
+          echo "Project files found successfully"
+
+      - name: Create Android project
+        script: |
+          set -e
           cp lib/main.dart /tmp/main.dart
           cp pubspec.yaml /tmp/pubspec.yaml
-          flutter create --org com.firesafetybd --project-name jobprep --platforms=android .
+
+          flutter create \
+            --no-pub \
+            --org com.firesafetybd \
+            --project-name jobprep \
+            --platforms=android .
+
           cp /tmp/main.dart lib/main.dart
           cp /tmp/pubspec.yaml pubspec.yaml
+
       - name: Set app name
         script: |
+          set -e
           sed -i 's/android:label="[^"]*"/android:label="Fire Safety Job Prep"/' android/app/src/main/AndroidManifest.xml
+          grep 'android:label=' android/app/src/main/AndroidManifest.xml
+
       - name: Get packages
-        script: flutter pub get
-      - name: Build APK
-        script: flutter build apk --release
+        script: |
+          set -e
+          flutter pub get
+
+      - name: Check Flutter code
+        script: |
+          set -e
+          flutter analyze
+
+      - name: Build release APK
+        script: |
+          set -e
+          flutter build apk --release
+
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
