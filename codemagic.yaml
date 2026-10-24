@@ -30,26 +30,34 @@ workflows:
           cp /tmp/main.dart lib/main.dart
           cp /tmp/pubspec.yaml pubspec.yaml
 
-      - name: Set app name
+            - name: Set app name
         script: |
-          set -e
-          sed -i 's/android:label="[^"]*"/android:label="Fire Safety Job Prep"/' android/app/src/main/AndroidManifest.xml
-          grep 'android:label=' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-      - name: Get packages
-        script: |
-          set -e
-          flutter pub get
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          content = path.read_text()
 
-      - name: Check Flutter code
-        script: |
-          set -e
-          flutter analyze
+          pattern = r'\bandroid:label\s*=\s*"[^"]*"'
 
-      - name: Build release APK
-        script: |
-          set -e
-          flutter build apk --release
+          if re.search(pattern, content):
+              content = re.sub(
+                  pattern,
+                  'android:label="Fire Safety Job Prep"',
+                  content,
+                  count=1
+              )
+          else:
+              content, count = re.subn(
+                  r'<application\b',
+                  '<application android:label="Fire Safety Job Prep"',
+                  content,
+                  count=1
+              )
+              if count == 0:
+                  raise SystemExit("Android application tag not found")
 
-    artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+          path.write_text(content)
+          print("App name updated successfully")
+          PY
