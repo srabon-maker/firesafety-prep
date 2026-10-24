@@ -1,3 +1,4 @@
+
 workflows:
   android-apk:
     name: Fire Safety Job Prep APK
@@ -30,13 +31,18 @@ workflows:
           cp /tmp/main.dart lib/main.dart
           cp /tmp/pubspec.yaml pubspec.yaml
 
-            - name: Set app name
+      - name: Set app name
         script: |
+          set -e
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           path = Path("android/app/src/main/AndroidManifest.xml")
+
+          if not path.is_file():
+              raise SystemExit("AndroidManifest.xml not found")
+
           content = path.read_text()
 
           pattern = r'\bandroid:label\s*=\s*"[^"]*"'
@@ -61,3 +67,16 @@ workflows:
           path.write_text(content)
           print("App name updated successfully")
           PY
+
+      - name: Get packages
+        script: |
+          set -e
+          flutter pub get
+
+      - name: Build release APK
+        script: |
+          set -e
+          flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
