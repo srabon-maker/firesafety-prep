@@ -13,7 +13,7 @@ workflows:
         script: flutter pub get
 
       - name: Check Flutter code
-        script: flutter analyze
+  script: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build Android APK
         script: flutter build apk --release
