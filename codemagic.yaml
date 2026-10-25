@@ -1,3 +1,4 @@
+
 workflows:
   fire-safety-job-prep:
     name: Fire Safety Job Prep Android Build
@@ -6,8 +7,6 @@ workflows:
 
     environment:
       flutter: stable
-      android_signing:
-        - fire_safety_keystore
 
     scripts:
       - name: Get Flutter packages
