@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 void main() => runApp(const JobPrepApp());
 
-const Color kRed = Color(0xFFE53935);
-const Color kRedDark = Color(0xFF0D1B2A);
-const Color kCream = Color(0xFFF4F7FB);
-const Color kPink = Color(0xFFFFDAD8);
-const Color kAmberBg = Color(0xFFFFF3E0);
-const Color kAmberLight = Color(0xFFFFA726);
+const Color kRed = Color(0xFF791F1F);
+conInputDecorationrk = Color(0xFF501313);
+const Color kCream = Color(0xFFFCEBEB);
+const Color kPink = Color(0xFFF7C1C1);
+const Color kAmberBg = Color(0xFFFAEEDA);
+const Color kAmberLight = Color(0xFFFAC775);
 const Color kBrown = Color(0xFF633806);
-const Color kFlame = Color(0xFFFF6D00);
-const Color kNavy = Color(0xFF0D1B2A);
-const Color kNavyLight = Color(0xFF19334D);
+const Color kFlame = Color(0xFFEF9F27);
 
 class Palette {
   final bool dark;
@@ -65,34 +63,16 @@ class JobPrepApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Roboto',
-        fontFamilyFallback: const ['Noto Sans Bengali', 'sans-serif'],
         colorScheme: ColorScheme.fromSeed(seedColor: kRed),
         scaffoldBackgroundColor: const Palette(false).bg,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: kNavy,
-          foregroundColor: Colors.white,
-          centerTitle: false,
-          titleTextStyle: TextStyle(
-            fontFamily: 'Roboto', fontFamilyFallback: ['Noto Sans Bengali', 'sans-serif'], fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white,
-          ),
-        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Roboto',
-        fontFamilyFallback: const ['Noto Sans Bengali', 'sans-serif'],
         colorScheme: ColorScheme.fromSeed(
           seedColor: kRed,
           brightness: Brightness.dark,
         ),
         scaffoldBackgroundColor: const Palette(true).bg,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: kNavy, foregroundColor: Colors.white,
-          titleTextStyle: TextStyle(
-            fontFamily: 'Roboto', fontFamilyFallback: ['Noto Sans Bengali', 'sans-serif'], fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white,
-          ),
-        ),
       ),
       home: const RootPage(),
     );
@@ -108,67 +88,57 @@ class LogoPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
 
-    final bg = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(0, 0, 96, 96),
-      const Radius.circular(24),
-    );
-    canvas.drawRRect(bg, Paint()..color = kNavy);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        const Rect.fromLTWH(4, 4, 88, 88), const Radius.circular(21),
+        const Rect.fromLTWH(0, 0, 96, 96),
+        const Radius.circular(22),
+      ),
+      Paint()..color = kCream,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(7, 7, 82, 82),
+        const Radius.circular(18),
       ),
       Paint()..color = kRed,
     );
 
     final shield = Path()
-      ..moveTo(48, 13)
-      ..lineTo(75, 24)
-      ..lineTo(73, 49)
-      ..cubicTo(72, 65, 60, 77, 48, 83)
-      ..cubicTo(36, 77, 24, 65, 23, 49)
-      ..lineTo(21, 24)
+      ..moveTo(48, 17)
+      ..lineTo(73, 27)
+      ..lineTo(73, 48)
+      ..cubicTo(73, 64, 61, 76, 48, 81)
+      ..cubicTo(35, 76, 23, 64, 23, 48)
+      ..lineTo(23, 27)
       ..close();
-    canvas.drawPath(shield, Paint()..color = Colors.white);
-
-    final shieldInner = Path()
-      ..moveTo(48, 18)
-      ..lineTo(69, 27)
-      ..lineTo(67, 48)
-      ..cubicTo(66, 61, 57, 71, 48, 76)
-      ..cubicTo(39, 71, 30, 61, 29, 48)
-      ..lineTo(27, 27)
-      ..close();
-    canvas.drawPath(shieldInner, Paint()..color = kNavy);
-
-    // Fire/flame symbol
-    final flame = Path()
-      ..moveTo(49, 28)
-      ..cubicTo(56, 37, 61, 43, 60, 52)
-      ..cubicTo(59, 62, 54, 68, 47, 68)
-      ..cubicTo(38, 68, 33, 61, 34, 53)
-      ..cubicTo(34, 47, 38, 42, 42, 38)
-      ..cubicTo(42, 45, 46, 47, 47, 49)
-      ..cubicTo(49, 42, 46, 35, 49, 28)
-      ..close();
-    canvas.drawPath(flame, Paint()..color = kRed);
-    final innerFlame = Path()
-      ..moveTo(48, 49)
-      ..cubicTo(54, 56, 53, 63, 48, 65)
-      ..cubicTo(43, 64, 41, 60, 43, 56)
-      ..cubicTo(44, 53, 47, 52, 48, 49)
-      ..close();
-    canvas.drawPath(innerFlame, Paint()..color = kAmberLight);
-
-    // Small extinguisher silhouette to make the safety theme clear.
-    final extinguisher = Paint()..color = Colors.white;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(43, 55, 11, 15), const Radius.circular(3)),
-      extinguisher,
+    canvas.drawPath(
+      shield,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.6
+        ..strokeJoin = StrokeJoin.round
+        ..color = kCream,
     );
-    canvas.drawRect(const Rect.fromLTWH(45, 52, 7, 4), extinguisher);
-    canvas.drawRect(const Rect.fromLTWH(47, 50, 4, 3), extinguisher);
-    canvas.drawLine(const Offset(50, 51), const Offset(56, 48), Paint()..color = Colors.white..strokeWidth = 2.2..strokeCap = StrokeCap.round);
 
+    final flame = Path()
+      ..moveTo(48, 28)
+      ..cubicTo(55, 37, 62, 42, 62, 53)
+      ..cubicTo(62, 62, 56, 69, 48, 69)
+      ..cubicTo(40, 69, 34, 62, 34, 53)
+      ..cubicTo(34, 47, 37, 43, 40, 39)
+      ..cubicTo(41, 43, 43, 45, 45, 45)
+      ..cubicTo(44, 39, 45, 33, 48, 28)
+      ..close();
+    canvas.drawPath(flame, Paint()..color = kFlame);
+
+    final inner = Path()
+      ..moveTo(48, 49)
+      ..cubicTo(52, 53, 55, 56, 55, 61)
+      ..cubicTo(55, 65, 52, 67, 48, 67)
+      ..cubicTo(44, 67, 41, 65, 41, 61)
+      ..cubicTo(41, 57, 45, 54, 48, 49)
+      ..close();
+    canvas.drawPath(inner, Paint()..color = kAmberLight);
     canvas.restore();
   }
 
@@ -274,95 +244,56 @@ class HomeTab extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kNavy, kNavyLight, kRed],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: [
-                  BoxShadow(
-                    color: kNavy.withOpacity(0.16),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: kRed,
+                borderRadius: BorderRadius.circular(22),
               ),
-              child: Stack(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    right: -24,
-                    top: -28,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.10), width: 18),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const LogoMark(size: 54),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Fire Safety',
-                                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
-                                  ),
-                                  Text(
-                                    'JOB PREP',
-                                    style: TextStyle(color: kPink, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 2.2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(Icons.notifications_none_rounded, color: Colors.white.withOpacity(0.9), size: 25),
-                          ],
-                        ),
-                        const SizedBox(height: 22),
-                        const Text(
-                          'শিখুন আজ,\nনিরাপদ রাখুন আগামীকাল',
-                          style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w800, height: 1.25),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Fire Safety ক্যারিয়ারের প্রস্তুতি হোক আরও গোছানো',
-                          style: TextStyle(color: Colors.white.withOpacity(0.82), fontSize: 13, height: 1.5),
-                        ),
-                        const SizedBox(height: 18),
-                        Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () => _open(context, 'সার্চ'),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.search_rounded, color: kNavy, size: 22),
-                                  SizedBox(width: 9),
-                                  Expanded(child: Text('প্রশ্ন, টপিক বা স্ট্যান্ডার্ড খুঁজুন', style: TextStyle(color: Color(0xFF667085), fontSize: 13))),
-                                  Icon(Icons.arrow_forward_rounded, color: kRed, size: 20),
-                                ],
-                              ),
-                            ),
+                  Row(
+                    children: [
+                      const LogoMark(size: 50),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Fire Safety Job Prep',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Material(
+                    color: palette.tile,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _open(context, 'সার্চ'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search, size: 22, color: palette.sub),
+                            const SizedBox(width: 8),
+                            Text(
+                              'প্রশ্ন বা টপিক খুঁজুন',
+                              style: TextStyle(color: palette.sub, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -541,7 +472,7 @@ class TileCard extends StatelessWidget {
     final palette = Palette.of(context);
     return Material(
       color: palette.tile,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -593,7 +524,7 @@ class WideTile extends StatelessWidget {
     final palette = Palette.of(context);
     return Material(
       color: palette.tile,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -894,8 +825,8 @@ class CommunityTab extends StatefulWidget {
 
 class _CommunityTabState extends State<CommunityTab> {
   static const List<String> _categories = [
-    'সাধারণ আলোচনা',
-    'প্রশ্নোত্তর',
+    'চাকরির আলোচনা',
+    'প্রশ্ন',
     'ইন্টারভিউ অভিজ্ঞতা',
   ];
 
@@ -905,7 +836,7 @@ class _CommunityTabState extends State<CommunityTab> {
     Post(
       author: 'নমুনা ব্যবহারকারী ১',
       time: '২ ঘণ্টা আগে',
-      category: 'প্রশ্নোত্তর',
+      category: 'প্রশ্ন',
       text:
           'ফায়ার সেফটি অফিসার পদের ইন্টারভিউতে সাধারণত কী কী প্রশ্ন আসে? কেউ অভিজ্ঞতা জানালে উপকার হতো।',
       likes: 12,
@@ -919,7 +850,7 @@ class _CommunityTabState extends State<CommunityTab> {
     Post(
       author: 'নমুনা ব্যবহারকারী ২',
       time: 'গতকাল',
-      category: 'সাধারণ আলোচনা',
+      category: 'চাকরির আলোচনা',
       text: 'NFPA ১০ আর NFPA ১৩ পড়ার জন্য কোন অংশগুলো আগে দেখা ভালো?',
       likes: 8,
       comments: [],
@@ -1124,7 +1055,7 @@ class _CommunityTabState extends State<CommunityTab> {
                         minLines: 3,
                         maxLength: 2000,
                         decoration: const InputDecoration(
-                          hintText: 'ফায়ার সেফটি বিষয়ে আলোচনা করুন...',
+                          hintText: 'আপনার প্রশ্ন বা আলোচনা লিখুন...',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -1216,50 +1147,10 @@ class _CommunityTabState extends State<CommunityTab> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'ফায়ার সেফটি বিষয়ে আলোচনা করুন',
+                    'ফায়ার সেফটি চাকরি নিয়ে আলোচনা করুন',
                     style: TextStyle(color: kPink, fontSize: 13),
                   ),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Material(
-                color: palette.tile,
-                borderRadius: BorderRadius.circular(18),
-                child: InkWell(
-                  onTap: _newPost,
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: palette.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(color: toneOf('red', palette.dark).bg, shape: BoxShape.circle),
-                          child: Icon(Icons.forum_rounded, color: toneOf('red', palette.dark).fg),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('ফায়ার সেফটি বিষয়ে আলোচনা করুন', style: TextStyle(color: palette.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 3),
-                              Text('প্রশ্ন, অভিজ্ঞতা বা পরামর্শ শেয়ার করুন', style: TextStyle(color: palette.sub, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.add_circle_rounded, color: kRed, size: 28),
-                      ],
-                    ),
-                  ),
-                ),
               ),
             ),
             SizedBox(
