@@ -1,81 +1,23 @@
 workflows:
-  android-apk:
-    name: Fire Safety Job Prep APK
-    max_build_duration: 30
+  fire-safety-job-prep:
+    name: Fire Safety Job Prep Android Build
+    max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
       flutter: stable
+      android_signing:
+        - fire_safety_keystore
 
     scripts:
-      - name: Check project files
-        script: |
-          set -e
-          test -f lib/main.dart
-          test -f pubspec.yaml
-          echo "Project files found successfully"
+      - name: Get Flutter packages
+        script: flutter pub get
 
-      - name: Create Android project
-        script: |
-          set -e
-          cp lib/main.dart /tmp/main.dart
-          cp pubspec.yaml /tmp/pubspec.yaml
+      - name: Check Flutter code
+        script: flutter analyze
 
-          flutter create \
-            --no-pub \
-            --org com.firesafetybd \
-            --project-name jobprep \
-            --platforms=android .
-
-          cp /tmp/main.dart lib/main.dart
-          cp /tmp/pubspec.yaml pubspec.yaml
-
-      - name: Set app name
-        script: |
-          set -e
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path("android/app/src/main/AndroidManifest.xml")
-
-          if not path.is_file():
-              raise SystemExit("AndroidManifest.xml not found")
-
-          content = path.read_text()
-
-          pattern = r'\bandroid:label\s*=\s*"[^"]*"'
-
-          if re.search(pattern, content):
-              content = re.sub(
-                  pattern,
-                  'android:label="Fire Safety Job Prep"',
-                  content,
-                  count=1
-              )
-          else:
-              content, count = re.subn(
-                  r'<application\b',
-                  '<application android:label="Fire Safety Job Prep"',
-                  content,
-                  count=1
-              )
-              if count == 0:
-                  raise SystemExit("Android application tag not found")
-
-          path.write_text(content)
-          print("App name updated successfully")
-          PY
-
-      - name: Get packages
-        script: |
-          set -e
-          flutter pub get
-
-      - name: Build release APK
-        script: |
-          set -e
-          flutter build apk --release
+      - name: Build Android APK
+        script: flutter build apk --release
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
