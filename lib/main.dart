@@ -1,160 +1,216 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const FireSafetyJobPrepApp());
+void main() => runApp(const JobPrepApp());
 
-const maroon = Color(0xFF650D18);
-const deepMaroon = Color(0xFF36060D);
-const cream = Color(0xFFFFF8F4);
-const ink = Color(0xFF27191B);
-const apiUrl = 'https://fire.manobikishwarganj.com/api/get_questions.php';
+const Color kRed = Color(0xFF791F1F);
+const Color kRedDark = Color(0xFF501313);
+const Color kCream = Color(0xFFFCEBEB);
+const Color kPink = Color(0xFFF7C1C1);
+const Color kAmberBg = Color(0xFFFAEEDA);
+const Color kAmberLight = Color(0xFFFAC775);
+const Color kBrown = Color(0xFF633806);
+const Color kFlame = Color(0xFFEF9F27);
 
-class FireSafetyJobPrepApp extends StatelessWidget {
-  const FireSafetyJobPrepApp({super.key});
+class Palette {
+  final bool dark;
+  const Palette(this.dark);
+
+  factory Palette.of(BuildContext context) =>
+      Palette(Theme.of(context).brightness == Brightness.dark);
+
+  Color get tile => dark ? const Color(0xFF1A1A1C) : Colors.white;
+  Color get border => dark ? const Color(0x1FFFFFFF) : const Color(0x1F000000);
+  Color get text => dark ? Colors.white : const Color(0xFF1B1B1B);
+  Color get sub => dark ? const Color(0x99FFFFFF) : const Color(0x8A000000);
+  Color get bg => dark ? const Color(0xFF0E0E10) : const Color(0xFFF7F4F2);
+}
+
+class Tone {
+  final Color bg;
+  final Color fg;
+  const Tone(this.bg, this.fg);
+}
+
+Tone toneOf(String name, bool dark) {
+  switch (name) {
+    case 'red':
+      return dark
+          ? const Tone(Color(0xFF501313), Color(0xFFF09595))
+          : const Tone(Color(0xFFFCEBEB), Color(0xFF791F1F));
+    case 'amber':
+      return dark
+          ? const Tone(Color(0xFF412402), Color(0xFFEF9F27))
+          : const Tone(Color(0xFFFAEEDA), Color(0xFF854F0B));
+    case 'green':
+      return dark
+          ? const Tone(Color(0xFF173404), Color(0xFF97C459))
+          : const Tone(Color(0xFFEAF3DE), Color(0xFF3B6D11));
+    default:
+      return dark
+          ? const Tone(Color(0xFF042C53), Color(0xFF85B7EB))
+          : const Tone(Color(0xFFE6F1FB), Color(0xFF185FA5));
+  }
+}
+
+class JobPrepApp extends StatelessWidget {
+  const JobPrepApp({super.key});
+
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: 'Fire Safety Job Prep',
-    theme: ThemeData(useMaterial3: true, scaffoldBackgroundColor: cream,
-      colorScheme: ColorScheme.fromSeed(seedColor: maroon),
-      appBarTheme: const AppBarTheme(backgroundColor: maroon, foregroundColor: Colors.white)),
-    home: const MainShell(),
-  );
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Fire Safety Job Prep',
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: kRed),
+        scaffoldBackgroundColor: const Palette(false).bg,
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: kRed,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Palette(true).bg,
+      ),
+      home: const RootPage(),
+    );
+  }
 }
 
-class PrepQuestion {
-  final int id;
-  final String category, question, a, b, c, d, answer, explanation;
-  const PrepQuestion({required this.id, required this.category, required this.question,
-    required this.a, required this.b, required this.c, required this.d,
-    required this.answer, required this.explanation});
-  factory PrepQuestion.fromJson(Map<String,dynamic> j) => PrepQuestion(
-    id: int.tryParse('${j['id']}') ?? 0, category: '${j['category'] ?? ''}',
-    question: '${j['question'] ?? ''}', a: '${j['option_a'] ?? ''}',
-    b: '${j['option_b'] ?? ''}', c: '${j['option_c'] ?? ''}',
-    d: '${j['option_d'] ?? ''}', answer: '${j['correct_answer'] ?? ''}'.trim().toUpperCase(),
-    explanation: '${j['explanation'] ?? ''}');
-  List<MapEntry<String,String>> get options => [
-    MapEntry('A',a), MapEntry('B',b), MapEntry('C',c), MapEntry('D',d)];
+// ---------------------------------------------------------------- Logo
+
+class LogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 96.0;
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(0, 0, 96, 96),
+        const Radius.circular(22),
+      ),
+      Paint()..color = kCream,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(7, 7, 82, 82),
+        const Radius.circular(18),
+      ),
+      Paint()..color = kRed,
+    );
+
+    final shield = Path()
+      ..moveTo(48, 17)
+      ..lineTo(73, 27)
+      ..lineTo(73, 48)
+      ..cubicTo(73, 64, 61, 76, 48, 81)
+      ..cubicTo(35, 76, 23, 64, 23, 48)
+      ..lineTo(23, 27)
+      ..close();
+    canvas.drawPath(
+      shield,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.6
+        ..strokeJoin = StrokeJoin.round
+        ..color = kCream,
+    );
+
+    final flame = Path()
+      ..moveTo(48, 28)
+      ..cubicTo(55, 37, 62, 42, 62, 53)
+      ..cubicTo(62, 62, 56, 69, 48, 69)
+      ..cubicTo(40, 69, 34, 62, 34, 53)
+      ..cubicTo(34, 47, 37, 43, 40, 39)
+      ..cubicTo(41, 43, 43, 45, 45, 45)
+      ..cubicTo(44, 39, 45, 33, 48, 28)
+      ..close();
+    canvas.drawPath(flame, Paint()..color = kFlame);
+
+    final inner = Path()
+      ..moveTo(48, 49)
+      ..cubicTo(52, 53, 55, 56, 55, 61)
+      ..cubicTo(55, 65, 52, 67, 48, 67)
+      ..cubicTo(44, 67, 41, 65, 41, 61)
+      ..cubicTo(41, 57, 45, 54, 48, 49)
+      ..close();
+    canvas.drawPath(inner, Paint()..color = kAmberLight);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant LogoPainter oldDelegate) => false;
 }
 
-Future<List<PrepQuestion>> loadQuestions() async {
-  final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
-  try {
-    final req = await client.getUrl(Uri.parse(apiUrl));
-    req.headers.set(HttpHeaders.acceptHeader, 'application/json');
-    final res = await req.close();
-    final body = await res.transform(utf8.decoder).join();
-    if (res.statusCode != 200) throw Exception('সার্ভার সমস্যা: HTTP ${res.statusCode}');
-    final data = jsonDecode(body);
-    if (data is! Map || data['success'] != true) throw Exception('API থেকে প্রশ্ন পাওয়া যায়নি।');
-    return (data['questions'] as List? ?? [])
-      .whereType<Map>().map((e) => PrepQuestion.fromJson(Map<String,dynamic>.from(e)))
-      .where((q) => q.question.trim().isNotEmpty).toList();
-  } on SocketException {
-    throw Exception('ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।');
-  } finally { client.close(force: true); }
+class LogoMark extends StatelessWidget {
+  final double size;
+  const LogoMark({super.key, this.size = 48});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(painter: LogoPainter()),
+      );
 }
 
-class MainShell extends StatefulWidget {
-  const MainShell({super.key});
-  @override State<MainShell> createState() => _MainShellState();
-}
-class _MainShellState extends State<MainShell> {
-  int tab = 0;
-  @override Widget build(BuildContext context) => Scaffold(
-    body: IndexedStack(index: tab, children: const [HomePage(), CommunityPage(), NotesPage(), ProfilePage()]),
-    bottomNavigationBar: NavigationBar(selectedIndex: tab, onDestinationSelected: (v)=>setState(()=>tab=v),
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label:'হোম'),
-        NavigationDestination(icon: Icon(Icons.forum_outlined), label:'কমিউনিটি'),
-        NavigationDestination(icon: Icon(Icons.menu_book_outlined), label:'নোট'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label:'প্রোফাইল'),
-      ]),
-  );
+// ---------------------------------------------------------------- Root
+
+class RootPage extends StatefulWidget {
+  const RootPage({super.key});
+
+  @override
+  State<RootPage> createState() => _RootPageState();
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-  static const cats = [
-    ('চাকরির সার্কুলার', Icons.work_outline, Color(0xFFFFE7DD), Color(0xFFB83228)),
-    ('মডেল টেস্ট', Icons.assignment_outlined, Color(0xFFFFE8E8), Color(0xFF9E1630)),
-    ('ফায়ার', Icons.local_fire_department, Color(0xFFFFE2DF), Color(0xFFD92735)),
-    ('সেইফটি', Icons.health_and_safety_outlined, Color(0xFFE4F4E7), Color(0xFF20834B)),
-    ('কমপ্লায়েন্স', Icons.verified_user_outlined, Color(0xFFF0E7FF), Color(0xFF7142B8)),
-    ('টেকনিক্যাল', Icons.settings_outlined, Color(0xFFE2F3FA), Color(0xFF14799A)),
+class _RootPageState extends State<RootPage> {
+  int _index = 0;
+
+  // IndexedStack preserves each tab's state while switching tabs.
+  final List<Widget> _pages = const [
+    HomeTab(),
+    CircularTab(),
+    CommunityTab(),
+    SoonPage(title: 'নোট', showBack: false),
+    SoonPage(title: 'প্রোফাইল', showBack: false),
   ];
-  @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Fire Safety Job Prep')),
-    body: GridView.count(padding: const EdgeInsets.all(16), crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.3,
-      children: [for (final c in cats) InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          if (c.$1 == 'মডেল টেস্ট') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const TestsPage()));
-          } else if (c.$1 == 'চাকরির সার্কুলার') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const JobsPage()));
-          } else {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => TopicPage(title:c.$1, icon:c.$2, color:c.$4)));
-          }
-        },
-        child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color:c.$3, borderRadius:BorderRadius.circular(18)),
-          child: Column(crossAxisAlignment:CrossAxisAlignment.start, mainAxisAlignment:MainAxisAlignment.spaceBetween,
-            children:[Icon(c.$2,color:c.$4,size:32), Text(c.$1,style:const TextStyle(fontWeight:FontWeight.bold,color:ink,fontSize:16))])),
-      )],
-    ),
-  );
-}
-
-class TopicPage extends StatelessWidget {
-  const TopicPage({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.color,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color color;
-
-  String get apiCategory =>
-      const {
-        'ফায়ার': 'Fire',
-        'সেইফটি': 'Safety',
-        'কমপ্লায়েন্স': 'Compliance',
-        'টেকনিক্যাল': 'Technical',
-      }[title] ??
-      title;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            color: Colors.white,
-            child: ListTile(
-              leading: Icon(icon, color: color),
-              title: const Text('মডেল প্রশ্ন'),
-              subtitle: const Text('প্রশ্ন, চারটি অপশন ও সঠিক উত্তর'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => QuestionsPage(
-                      title: '$title — মডেল প্রশ্ন',
-                      category: apiCategory,
-                      examMode: false,
-                    ),
-                  ),
-                );
-              },
-            ),
+      body: IndexedStack(index: _index, children: _pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (index) => setState(() => _index = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'হোম',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.work_outline),
+            selectedIcon: Icon(Icons.work),
+            label: 'সার্কুলার',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.forum_outlined),
+            selectedIcon: Icon(Icons.forum),
+            label: 'কমিউনিটি',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'নোট',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'প্রোফাইল',
           ),
         ],
       ),
@@ -162,293 +218,1124 @@ class TopicPage extends StatelessWidget {
   }
 }
 
-class QuestionsPage extends StatefulWidget {
-  const QuestionsPage({super.key,required this.title,this.category,required this.examMode});
-  final String title; final String? category; final bool examMode;
-  @override State<QuestionsPage> createState()=>_QuestionsPageState();
-}
-class _QuestionsPageState extends State<QuestionsPage> {
-  late Future<List<PrepQuestion>> future;
-  final Map<int, String> answers = {};
-  bool submitted = false;
+// ---------------------------------------------------------------- Home
 
-  @override
-  void initState() {
-    super.initState();
-    future = loadQuestions();
-  }
+class HomeTab extends StatelessWidget {
+  const HomeTab({super.key});
 
-  String norm(String s) {
-    final v = s.trim().toUpperCase();
-    final m = RegExp(r'^[\\(\\[]?([ABCD])[\\)\\].:\\s]*$').firstMatch(v);
-    return m?.group(1) ?? v;
-  }
-
-  void reload() {
-    setState(() {
-      answers.clear();
-      submitted = false;
-      future = loadQuestions();
-    });
+  void _open(BuildContext context, String title) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SoonPage(title: title),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: FutureBuilder<List<PrepQuestion>>(
-        future: future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    final palette = Palette.of(context);
 
-          if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('${snap.error}', textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: reload,
-                      child: const Text('আবার চেষ্টা করুন'),
-                    ),
-                  ],
-                ),
+    return SafeArea(
+      bottom: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: kRed,
+                borderRadius: BorderRadius.circular(22),
               ),
-            );
-          }
-
-          final qs = (snap.data ?? []).where((q) {
-            final c = widget.category;
-            return c == null ||
-                c == 'All' ||
-                q.category.trim().toLowerCase() == c.toLowerCase();
-          }).toList();
-
-          if (qs.isEmpty) {
-            return Center(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('এই ক্যাটাগরিতে কোনো প্রশ্ন পাওয়া যায়নি।'),
-                  TextButton(
-                    onPressed: reload,
-                    child: const Text('আবার লোড করুন'),
+                  Row(
+                    children: [
+                      const LogoMark(size: 50),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Fire Safety Job Prep',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
-
-          final score = qs
-              .where((q) =>
-                  answers[q.id] != null &&
-                  norm(answers[q.id]!) == norm(q.answer))
-              .length;
-
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  widget.examMode
-                      ? (submitted
-                          ? 'ফলাফল: $score / ${qs.length}'
-                          : '${qs.length}টি প্রশ্ন • শেষে জমা দিন')
-                      : 'মোট ${qs.length}টি প্রশ্ন',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: maroon,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: qs.length,
-                  itemBuilder: (context, i) {
-                    final q = qs[i];
-                    final selected = answers[q.id];
-                    final reveal = !widget.examMode || submitted;
-
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.only(bottom: 12),
+                  const SizedBox(height: 14),
+                  Material(
+                    color: palette.tile,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _open(context, 'সার্চ'),
                       child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        child: Row(
                           children: [
+                            Icon(Icons.search, size: 22, color: palette.sub),
+                            const SizedBox(width: 8),
                             Text(
-                              'প্রশ্ন ${i + 1}',
-                              style: const TextStyle(
-                                color: maroon,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              'প্রশ্ন বা টপিক খুঁজুন',
+                              style: TextStyle(color: palette.sub, fontSize: 15),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              q.question,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            for (final op in q.options)
-                              if (op.value.trim().isNotEmpty)
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 7),
-                                  decoration: BoxDecoration(
-                                    color: reveal && norm(q.answer) == op.key
-                                        ? const Color(0xFFE4F5E8)
-                                        : selected == op.key
-                                            ? const Color(0xFFFFE7E1)
-                                            : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: reveal && norm(q.answer) == op.key
-                                          ? Colors.green
-                                          : selected == op.key
-                                              ? maroon
-                                              : Colors.black12,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    dense: true,
-                                    title: Text('${op.key}. ${op.value}'),
-                                    leading: CircleAvatar(
-                                      radius: 14,
-                                      child: Text(op.key),
-                                    ),
-                                    onTap: submitted && widget.examMode
-                                        ? null
-                                        : () => setState(
-                                              () => answers[q.id] = op.key,
-                                            ),
-                                  ),
-                                ),
-                            if (reveal)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5E9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'সঠিক উত্তর: ${q.answer}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF176B3B),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (q.explanation.trim().isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 5),
-                                        child: Text('ব্যাখ্যা: ${q.explanation}'),
-                                      ),
-                                    if (widget.examMode && selected != null)
-                                      Text(
-                                        norm(selected) == norm(q.answer)
-                                            ? 'আপনার উত্তর সঠিক।'
-                                            : 'আপনার উত্তর সঠিক নয়।',
-                                      ),
-                                  ],
-                                ),
-                              ),
                           ],
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              if (widget.examMode && !submitted)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () => setState(() => submitted = true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: maroon,
-                          padding: const EdgeInsets.all(15),
-                        ),
-                        child: const Text('পরীক্ষা জমা দিন ও ফলাফল দেখুন'),
-                      ),
                     ),
                   ),
-                ),
-              if (widget.examMode && submitted)
-                SafeArea(
-                  child: TextButton(
-                    onPressed: reload,
-                    child: const Text('আবার পরীক্ষা দিন'),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: ModelTestCard(
+                onTap: () => _open(context, 'মডেল টেস্ট'),
+              ),
+            ),
+            SectionTitle('বিষয় অনুযায়ী প্রস্তুতি', color: palette.text),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final ratio = constraints.maxWidth < 340 ? 1.35 : 1.6;
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: ratio,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      TileCard(
+                        label: 'ফায়ার',
+                        tone: 'red',
+                        icon: Icons.local_fire_department,
+                        onTap: () => _open(context, 'ফায়ার'),
+                      ),
+                      TileCard(
+                        label: 'সেফটি',
+                        tone: 'amber',
+                        icon: Icons.warning_amber_rounded,
+                        onTap: () => _open(context, 'সেফটি'),
+                      ),
+                      TileCard(
+                        label: 'কমপ্লায়েন্স',
+                        tone: 'green',
+                        icon: Icons.verified_user,
+                        onTap: () => _open(context, 'কমপ্লায়েন্স'),
+                      ),
+                      TileCard(
+                        label: 'টেকনিক্যাল',
+                        tone: 'blue',
+                        icon: Icons.build,
+                        onTap: () => _open(context, 'টেকনিক্যাল'),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            SectionTitle('উৎস অনুযায়ী প্রশ্নোত্তর', color: palette.text),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.6,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  TileCard(
+                    label: 'NFPA',
+                    tone: 'red',
+                    abbr: 'NFPA',
+                    onTap: () => _open(context, 'NFPA'),
                   ),
-                ),
-            ],
-          );
-        },
+                  TileCard(
+                    label: 'BNBC',
+                    tone: 'green',
+                    icon: Icons.apartment,
+                    onTap: () => _open(context, 'BNBC'),
+                  ),
+                  TileCard(
+                    label: 'শ্রম আইন',
+                    tone: 'amber',
+                    icon: Icons.gavel,
+                    onTap: () => _open(context, 'শ্রম আইন'),
+                  ),
+                  TileCard(
+                    label: 'RSC গাইডলাইন',
+                    tone: 'blue',
+                    abbr: 'RSC',
+                    onTap: () => _open(context, 'RSC গাইডলাইন'),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: WideTile(
+                label: 'Nirapon',
+                tone: 'red',
+                icon: Icons.health_and_safety,
+                onTap: () => _open(context, 'Nirapon'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class TestsPage extends StatelessWidget {
-  const TestsPage({super.key});
-  static const tests=[('ফায়ার সেফটি মডেল টেস্ট','Fire',Icons.local_fire_department,Colors.red),
-    ('সেইফটি মডেল টেস্ট','Safety',Icons.health_and_safety,Colors.green),
-    ('কমপ্লায়েন্স মডেল টেস্ট','Compliance',Icons.verified_user,Colors.deepPurple),
-    ('টেকনিক্যাল মডেল টেস্ট','Technical',Icons.settings,Colors.blue)];
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('মডেল টেস্ট')),body:ListView(padding:const EdgeInsets.all(14),children:[
-    const Card(color:deepMaroon,child:Padding(padding:EdgeInsets.all(18),child:Text('পরীক্ষা জমা দেওয়ার আগে সঠিক উত্তর দেখানো হবে না.',style:TextStyle(color:Colors.white,fontSize:16)))),
-    for(final t in tests)Card(color:Colors.white,child:ListTile(leading:Icon(t.$3,color:t.$4),title:Text(t.$1),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>QuestionsPage(title:t.$1,category:t.$2,examMode:true))))),
-  ]));
+class SectionTitle extends StatelessWidget {
+  final String text;
+  final Color color;
+  const SectionTitle(this.text, {super.key, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 12),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      );
 }
 
-class JobsPage extends StatelessWidget {
-  const JobsPage({super.key});
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('চাকরির সার্কুলার')),body:const Center(child:Padding(padding:EdgeInsets.all(24),child:Text('চাকরির বিজ্ঞপ্তি এখানে যোগ করা যাবে।',textAlign:TextAlign.center))));
+class IconBox extends StatelessWidget {
+  final Tone tone;
+  final IconData? icon;
+  final String? abbr;
+  const IconBox({super.key, required this.tone, this.icon, this.abbr});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: tone.bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: abbr != null
+          ? Text(
+              abbr!,
+              style: TextStyle(
+                color: tone.fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : Icon(icon ?? Icons.help_outline, color: tone.fg, size: 25),
+    );
+  }
 }
 
-class CommunityPage extends StatefulWidget {
-  const CommunityPage({super.key});
-  @override State<CommunityPage> createState()=>_CommunityPageState();
-}
-class _CommunityPageState extends State<CommunityPage>{
-  final posts=<String>['PASS পদ্ধতির ধাপগুলো কী কী?','ফায়ার ড্রিলের সময় কোন বিষয়গুলো পর্যবেক্ষণ করা উচিত?'];
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('কমিউনিটি'),actions:[IconButton(onPressed:()async{
-    final c=TextEditingController();
-    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('নতুন পোস্ট'),content:TextField(controller:c,maxLines:4,decoration:const InputDecoration(hintText:'পোস্ট লিখুন')),actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('বাতিল')),
-      FilledButton(onPressed:()=>Navigator.pop(ctx,c.text.trim().isNotEmpty),child:const Text('পোস্ট করুন'))]));
-    if(ok==true&&mounted)setState(()=>posts.insert(0,c.text.trim()));c.dispose();
-  },icon:const Icon(Icons.add))]),body:ListView(padding:const EdgeInsets.all(12),children:[for(final p in posts)Card(color:Colors.white,child:Padding(padding:const EdgeInsets.all(16),child:Text(p))) ]));
+class TileCard extends StatelessWidget {
+  final String label;
+  final String tone;
+  final IconData? icon;
+  final String? abbr;
+  final VoidCallback onTap;
+
+  const TileCard({
+    super.key,
+    required this.label,
+    required this.tone,
+    this.icon,
+    this.abbr,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Palette.of(context);
+    return Material(
+      color: palette.tile,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: palette.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconBox(tone: toneOf(tone, palette.dark), icon: icon, abbr: abbr),
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: palette.text,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class NotesPage extends StatelessWidget {
-  const NotesPage({super.key});
-  static const notes=['Fire Triangle — Heat, Fuel ও Oxygen','NFPA 10 — Portable Fire Extinguishers','NFPA 14 — Standpipe and Hose Systems','NFPA 20 — Stationary Fire Pumps','NFPA 25 — Inspection, Testing and Maintenance','NFPA 72 — Fire Alarm and Signaling Systems','BNBC 2020 — Fire Protection'];
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('নোট ও রিসোর্স')),body:ListView(children:[for(final n in notes)Card(color:Colors.white,child:ListTile(leading:const Icon(Icons.menu_book,color:maroon),title:Text(n),onTap:()=>showDialog(context:context,builder:(ctx)=>AlertDialog(title:Text(n),content:const Text('এই নোটের বিস্তারিত বিষয়বস্তু পরে যোগ করা যাবে।'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('বন্ধ করুন'))]))))]));
+class WideTile extends StatelessWidget {
+  final String label;
+  final String tone;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const WideTile({
+    super.key,
+    required this.label,
+    required this.tone,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Palette.of(context);
+    return Material(
+      color: palette.tile,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: palette.border),
+          ),
+          child: Row(
+            children: [
+              IconBox(tone: toneOf(tone, palette.dark), icon: icon),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: palette.text,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: palette.sub),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('প্রোফাইল')),body:const Center(child:Text('Fire Safety Job Prep সদস্য')));
+// ---------------------------------------------------------------- Circulars (sample data)
+
+class CircularTab extends StatelessWidget {
+  const CircularTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Palette.of(context);
+    final items = <List<String>>[
+      ['ফায়ার সেফটি অফিসার', 'নমুনা কোম্পানি লিমিটেড', '৩০ নভেম্বর'],
+      ['ফায়ার সেফটি ম্যানেজার', 'নমুনা গ্রুপ', '২৫ নভেম্বর'],
+      ['সেফটি ইঞ্জিনিয়ার', 'নমুনা ইন্ডাস্ট্রিজ', '১৫ ডিসেম্বর'],
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: kRed,
+        foregroundColor: Colors.white,
+        title: const Text('চাকরির সার্কুলার'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'নিচের তথ্যগুলো শুধু নমুনা। পরে সার্ভার থেকে আসল সার্কুলার আসবে।',
+            style: TextStyle(color: palette.sub, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          for (final item in items)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: palette.dark ? const Color(0xFF2A2118) : kAmberBg,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: kAmberLight,
+                    child: Icon(Icons.work, color: kBrown),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item[0],
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: kBrown,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item[1],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0x99633806),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'শেষ তারিখ',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0x99633806),
+                        ),
+                      ),
+                      Text(
+                        item[2],
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: kRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- Placeholder page
+
+class SoonPage extends StatelessWidget {
+  final String title;
+  final bool showBack;
+  const SoonPage({super.key, required this.title, this.showBack = true});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Palette.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: kRed,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: showBack,
+        title: Text(title),
+      ),
+      body: Center(
+        child: Text(
+          'শীঘ্রই আসছে',
+          style: TextStyle(fontSize: 18, color: palette.sub),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- Model test card
+
+class ModelTestCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const ModelTestCard({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: kCream,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 100,
+          child: Stack(
+            children: [
+              Positioned(
+                right: -10,
+                bottom: -18,
+                child: Icon(
+                  Icons.assignment_turned_in,
+                  size: 100,
+                  color: kRed.withAlpha(28),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 26,
+                      backgroundColor: kPink,
+                      child: Icon(
+                        Icons.assignment_turned_in,
+                        color: kRed,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'মডেল টেস্ট',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: kRed,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'সময় ধরে পরীক্ষা দিন',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xB3791F1F),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: kRed,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'শুরু করুন',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: kCream,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward, size: 14, color: kCream),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- Community (local demo)
+
+class Comment {
+  final String author;
+  final String text;
+  Comment(this.author, this.text);
+}
+
+class Post {
+  final String author;
+  final String time;
+  final String category;
+  final String text;
+  int likes;
+  bool liked;
+  bool reported;
+  final List<Comment> comments;
+
+  Post({
+    required this.author,
+    required this.time,
+    required this.category,
+    required this.text,
+    this.likes = 0,
+    this.liked = false,
+    this.reported = false,
+    required this.comments,
+  });
+}
+
+class CommunityTab extends StatefulWidget {
+  const CommunityTab({super.key});
+
+  @override
+  State<CommunityTab> createState() => _CommunityTabState();
+}
+
+class _CommunityTabState extends State<CommunityTab> {
+  static const List<String> _categories = [
+    'চাকরির আলোচনা',
+    'প্রশ্ন',
+    'ইন্টারভিউ অভিজ্ঞতা',
+  ];
+
+  String _filter = 'সব';
+
+  final List<Post> _posts = [
+    Post(
+      author: 'নমুনা ব্যবহারকারী ১',
+      time: '২ ঘণ্টা আগে',
+      category: 'প্রশ্ন',
+      text:
+          'ফায়ার সেফটি অফিসার পদের ইন্টারভিউতে সাধারণত কী কী প্রশ্ন আসে? কেউ অভিজ্ঞতা জানালে উপকার হতো।',
+      likes: 12,
+      comments: [
+        Comment(
+          'নমুনা ব্যবহারকারী ৩',
+          'আগুনের শ্রেণি, এক্সটিংগুইশারের ব্যবহার আর ইভ্যাকুয়েশন প্ল্যান নিয়ে প্রশ্ন বেশি আসে।',
+        ),
+      ],
+    ),
+    Post(
+      author: 'নমুনা ব্যবহারকারী ২',
+      time: 'গতকাল',
+      category: 'চাকরির আলোচনা',
+      text: 'NFPA ১০ আর NFPA ১৩ পড়ার জন্য কোন অংশগুলো আগে দেখা ভালো?',
+      likes: 8,
+      comments: [],
+    ),
+  ];
+
+  List<Post> get _shown => _posts
+      .where((post) =>
+          !post.reported &&
+          (_filter == 'সব' || post.category == _filter))
+      .toList();
+
+  void _report(Post post) {
+    setState(() => post.reported = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('এই ডেমোতে পোস্টটি আপনার তালিকা থেকে লুকানো হয়েছে।'),
+      ),
+    );
+  }
+
+  Future<void> _openComments(Post post) async {
+    final controller = TextEditingController();
+
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (sheetContext) {
+          return StatefulBuilder(
+            builder: (sheetContext, setSheetState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+                ),
+                child: SizedBox(
+                  height: 430,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'মন্তব্য (${post.comments.length})',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: post.comments.isEmpty
+                            ? const Center(
+                                child: Text('এখনো কোনো মন্তব্য নেই'),
+                              )
+                            : ListView(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                children: [
+                                  for (final comment in post.comments)
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            comment.author,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            comment.text,
+                                            style:
+                                                const TextStyle(fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                textInputAction: TextInputAction.send,
+                                onSubmitted: (_) => _addComment(
+                                  post,
+                                  controller,
+                                  setSheetState,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: 'মন্তব্য লিখুন...',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'মন্তব্য পাঠান',
+                              icon: const Icon(Icons.send, color: kRed),
+                              onPressed: () => _addComment(
+                                post,
+                                controller,
+                                setSheetState,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  void _addComment(
+    Post post,
+    TextEditingController controller,
+    StateSetter setSheetState,
+  ) {
+    final text = controller.text.trim();
+    if (text.isEmpty) return;
+
+    setSheetState(() {
+      post.comments.add(Comment('আপনি', text));
+      controller.clear();
+    });
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _newPost() async {
+    final controller = TextEditingController();
+    String category = _categories.first;
+
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (sheetContext) {
+          return StatefulBuilder(
+            builder: (sheetContext, setSheetState) {
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'নতুন পোস্ট',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final item in _categories)
+                            ChoiceChip(
+                              label: Text(item),
+                              selected: category == item,
+                              showCheckmark: false,
+                              selectedColor: kRed,
+                              labelStyle: TextStyle(
+                                color: category == item ? Colors.white : null,
+                                fontSize: 12,
+                              ),
+                              onSelected: (_) =>
+                                  setSheetState(() => category = item),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: controller,
+                        maxLines: 5,
+                        minLines: 3,
+                        maxLength: 2000,
+                        decoration: const InputDecoration(
+                          hintText: 'আপনার প্রশ্ন বা আলোচনা লিখুন...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: kRed,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            final text = controller.text.trim();
+                            if (text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('পোস্ট লেখার পর জমা দিন।'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setState(() {
+                              _posts.insert(
+                                0,
+                                Post(
+                                  author: 'আপনি',
+                                  time: 'এইমাত্র',
+                                  category: category,
+                                  text: text,
+                                  comments: [],
+                                ),
+                              );
+                            });
+                            Navigator.of(sheetContext).pop();
+                          },
+                          child: const Text('পোস্ট করুন'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = Palette.of(context);
+    final shown = _shown;
+
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _newPost,
+        backgroundColor: kRed,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('নতুন পোস্ট'),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kRed,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'কমিউনিটি',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'ফায়ার সেফটি চাকরি নিয়ে আলোচনা করুন',
+                    style: TextStyle(color: kPink, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 56,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                children: [
+                  for (final category in ['সব', ..._categories])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(category),
+                        selected: _filter == category,
+                        showCheckmark: false,
+                        selectedColor: kRed,
+                        labelStyle: TextStyle(
+                          color: _filter == category
+                              ? Colors.white
+                              : palette.text,
+                          fontSize: 12,
+                        ),
+                        onSelected: (_) =>
+                            setState(() => _filter = category),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: shown.isEmpty
+                  ? Center(
+                      child: Text(
+                        'এখানে এখনো কোনো পোস্ট নেই',
+                        style: TextStyle(color: palette.sub),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            'ডেমো সংস্করণ: পোস্টগুলো শুধু এই অ্যাপের বর্তমান সেশনে থাকে। সার্ভার যুক্ত না থাকায় অন্য ব্যবহারকারীরা দেখতে পাবেন না।',
+                            style: TextStyle(
+                              color: palette.sub,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        for (final post in shown) _postCard(post, palette),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _postCard(Post post, Palette palette) {
+    final avatarText = post.author.isEmpty ? '?' : post.author.substring(0, 1);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.tile,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: toneOf('red', palette.dark).bg,
+                child: Text(
+                  avatarText,
+                  style: TextStyle(
+                    color: toneOf('red', palette.dark).fg,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.author,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: palette.text,
+                      ),
+                    ),
+                    Text(
+                      post.time,
+                      style: TextStyle(fontSize: 11, color: palette.sub),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'পোস্টের বিকল্প',
+                icon: Icon(Icons.more_horiz, color: palette.sub),
+                onSelected: (value) {
+                  if (value == 'report') _report(post);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Text('এই পোস্টটি লুকান'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            post.text,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: palette.text,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: toneOf('amber', palette.dark).bg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              post.category,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: toneOf('amber', palette.dark).fg,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: palette.border),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() {
+                  post.liked = !post.liked;
+                  post.likes = (post.likes + (post.liked ? 1 : -1))
+                      .clamp(0, 1 << 30)
+                      .toInt();
+                }),
+                icon: Icon(
+                  post.liked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                  size: 18,
+                  color: post.liked ? kRed : palette.sub,
+                ),
+                label: Text(
+                  '${post.likes}',
+                  style: TextStyle(color: post.liked ? kRed : palette.sub),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _openComments(post),
+                icon: Icon(
+                  Icons.chat_bubble_outline,
+                  size: 18,
+                  color: palette.sub,
+                ),
+                label: Text(
+                  '${post.comments.length}',
+                  style: TextStyle(color: palette.sub),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
