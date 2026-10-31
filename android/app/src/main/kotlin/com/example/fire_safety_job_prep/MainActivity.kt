@@ -1,4 +1,5 @@
-package com.example.fire_safety_job_prep
+
+package com.firesafetybd
 
 import io.flutter.embedding.android.FlutterActivity
 
