@@ -14,6 +14,12 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+  # Google Login
+  google_sign_in: ^7.2.0
+
+  # Secure Login Session Storage
+  flutter_secure_storage: ^9.2.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
