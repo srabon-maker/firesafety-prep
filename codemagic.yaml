@@ -1,4 +1,3 @@
-
 workflows:
   fire-safety-job-prep:
     name: Fire Safety BD Android Build
