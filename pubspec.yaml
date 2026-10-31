@@ -20,6 +20,9 @@ dependencies:
   # Secure Login Session Storage
   flutter_secure_storage: ^9.2.4
 
+  # Connect Flutter with PHP APIs
+  http: ^1.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
