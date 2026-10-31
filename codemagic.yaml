@@ -1,7 +1,7 @@
 
 workflows:
   fire-safety-job-prep:
-    name: Fire Safety Job Prep Android Build
+    name: Fire Safety BD Android Build
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -11,6 +11,9 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+
+      - name: Generate Fire Safety BD Launcher Icon
+        script: dart run flutter_launcher_icons
 
       - name: Check Flutter code
         script: flutter analyze --no-fatal-infos --no-fatal-warnings
