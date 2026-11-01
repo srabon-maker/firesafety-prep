@@ -1,3 +1,4 @@
+
 workflows:
   fire-safety-job-prep:
     name: Fire Safety BD Android Build
@@ -20,14 +21,33 @@ workflows:
       - name: Build Android APK
         script: flutter build apk --release
 
-      - name: Get Android SHA-1
+      - name: Verify Actual APK SHA-1
         script: |
-          echo "===== ANDROID DEBUG SHA-1 ====="
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "===== APK FILE ====="
+          ls -lh "$APK"
+
+          echo "===== DEBUG KEYSTORE SHA-1 ====="
           keytool -list -v \
             -alias androiddebugkey \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
             -keypass android
+
+          echo "===== ACTUAL RELEASE APK CERTIFICATE ====="
+
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" \
+            -type f -name apksigner | sort -V | tail -n 1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found."
+            exit 1
+          fi
+
+          "$APKSIGNER" verify --print-certs "$APK"
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
