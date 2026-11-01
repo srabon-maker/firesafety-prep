@@ -1,0 +1,239 @@
+
+import 'package:flutter/material.dart';
+
+import '../services/auth_service.dart';
+import 'registration_page.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  static const Color maroon = Color(0xFF650D18);
+
+  bool _loading = false;
+
+  Future<void> _login() async {
+    if (_loading) return;
+
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      // Google Login
+      final result =
+          await AuthService.instance.signInWithGoogle();
+
+      if (!mounted) return;
+
+      // User cancelled login
+      if (result == null) {
+        return;
+      }
+
+      // First-time user: Registration required
+      if (result['needs_registration'] == true) {
+        final googleUser =
+            result['google_user'] as Map<String, dynamic>? ?? {};
+
+        final idToken = result['id_token']?.toString() ?? '';
+
+        if (idToken.isEmpty) {
+          throw Exception('Google ID Token পাওয়া যায়নি।');
+        }
+
+        final registered = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RegistrationPage(
+              idToken: idToken,
+              googleUser: googleUser,
+            ),
+          ),
+        );
+
+        if (!mounted) return;
+
+        if (registered == true) {
+          Navigator.pop(context, true);
+        }
+
+        return;
+      }
+
+      // Existing user: Login successful
+      if (result['success'] == true) {
+        Navigator.pop(context, true);
+        return;
+      }
+
+      throw Exception(
+        result['message']?.toString() ??
+            'Login সফল হয়নি। আবার চেষ্টা করুন।',
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: maroon,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo
+                Image.asset(
+                  'assets/fire_safety_job_prep_logo.png',
+                  height: 125,
+                  width: 125,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.local_fire_department,
+                      size: 110,
+                      color: maroon,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // App Name
+                const Text(
+                  'Fire Safety BD',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: maroon,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Welcome to Fire Safety BD',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                const Text(
+                  'Login to access all services',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
+
+                const SizedBox(height: 35),
+
+                // Google Login Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: OutlinedButton(
+                    onPressed: _loading ? null : _login,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: maroon,
+                      side: const BorderSide(
+                        color: maroon,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _loading
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                height: 21,
+                                width: 21,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: maroon,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Please wait...'),
+                            ],
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.g_mobiledata,
+                                size: 34,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                const Text(
+                  'New users will need to complete registration '
+                  'after Google Login.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
