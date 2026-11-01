@@ -15,22 +15,22 @@ class _LoginPageState extends State<LoginPage> {
   static const Color maroon = Color(0xFF650D18);
 
   bool _loading = false;
+  String? _errorMessage;
 
   Future<void> _login() async {
     if (_loading) return;
 
     setState(() {
       _loading = true;
+      _errorMessage = null;
     });
 
     try {
-      // Google Login
       final result =
           await AuthService.instance.signInWithGoogle();
 
       if (!mounted) return;
 
-      // User cancelled login
       if (result == null) {
         return;
       }
@@ -65,8 +65,8 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Existing user: Login successful
-      if (result['success'] == true) {
+      // Existing user: AuthService already saved the session
+      if (result['needs_registration'] == false) {
         Navigator.pop(context, true);
         return;
       }
@@ -75,18 +75,16 @@ class _LoginPageState extends State<LoginPage> {
         result['message']?.toString() ??
             'Login সফল হয়নি। আবার চেষ্টা করুন।',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('LOGIN PAGE ERROR: $e');
+      debugPrint('$stackTrace');
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() {
+        _errorMessage = e.toString()
+            .replaceFirst('Exception: ', '');
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -130,7 +128,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                // App Name
                 const Text(
                   'Fire Safety BD',
                   textAlign: TextAlign.center,
@@ -217,6 +214,64 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                   ),
                 ),
+
+                // Detailed error display
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 22),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      border: Border.all(
+                        color: Colors.red.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red.shade800,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Login Error',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        SelectableText(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _errorMessage = null;
+                            });
+                          },
+                          icon: const Icon(Icons.close),
+                          label: const Text('Dismiss'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 25),
 
