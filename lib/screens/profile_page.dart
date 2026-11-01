@@ -7,7 +7,12 @@ const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    super.key,
+    required this.onLogout,
+  });
+
+  final VoidCallback onLogout;
 
   Future<void> _logout(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -19,14 +24,16 @@ class ProfilePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
+            onPressed: () =>
+                Navigator.pop(dialogContext, false),
             child: const Text('না'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: maroon,
             ),
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () =>
+                Navigator.pop(dialogContext, true),
             child: const Text('হ্যাঁ, লগ আউট'),
           ),
         ],
@@ -40,8 +47,8 @@ class ProfilePage extends StatelessWidget {
 
       if (!context.mounted) return;
 
-      // MainShell-এর Home tab-এ ফিরে যাবে।
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // MainShell-কে Home Tab-এ পাঠানো
+      onLogout();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
