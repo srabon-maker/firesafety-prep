@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
 
 import '../data/app_data.dart';
 import '../models/community_post.dart';
 import '../widgets/post_card.dart';
+import '../services/auth_guard.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -18,6 +20,10 @@ class CommunityPage extends StatefulWidget {
 
 class _CommunityPageState extends State<CommunityPage> {
   String filter = 'সব পোস্ট';
+
+  Future<bool> _checkLogin() async {
+    return await AuthGuard.ensureAuthenticated(context);
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -145,6 +151,11 @@ class _CommunityPageState extends State<CommunityPage> {
   );
 
   Future<void> _createPost(BuildContext context) async {
+    // পোস্ট তৈরির আগে Login যাচাই
+    final authenticated = await _checkLogin();
+
+    if (!mounted || !authenticated) return;
+
     final textController = TextEditingController();
     String category = 'ফায়ার';
 
@@ -175,7 +186,7 @@ class _CommunityPageState extends State<CommunityPage> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
-                value: category,
+                initialValue: category,
                 decoration: const InputDecoration(
                   labelText: 'বিষয়',
                 ),
