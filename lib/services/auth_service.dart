@@ -1,6 +1,8 @@
 
+
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -27,14 +29,32 @@ class AuthService {
 
   bool _googleInitialized = false;
 
+  void _log(String message) {
+    debugPrint('[FIRE SAFETY AUTH] $message');
+  }
+
+  // --------------------------------------------------
+  // GOOGLE SIGN-IN INITIALIZATION
+  // --------------------------------------------------
+
   Future<void> _initializeGoogleSignIn() async {
     if (_googleInitialized) return;
 
-    await _googleSignIn.initialize(
-      serverClientId: webClientId,
-    );
+    _log('Initializing Google Sign-In...');
 
-    _googleInitialized = true;
+    try {
+      await _googleSignIn.initialize(
+        serverClientId: webClientId,
+      );
+
+      _googleInitialized = true;
+
+      _log('Google Sign-In initialized successfully.');
+    } catch (e, stackTrace) {
+      _log('INITIALIZATION ERROR: $e');
+      _log('$stackTrace');
+      rethrow;
+    }
   }
 
   // --------------------------------------------------
@@ -42,65 +62,104 @@ class AuthService {
   // --------------------------------------------------
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
-    await _initializeGoogleSignIn();
+    _log('STEP 1: Google login started.');
 
-    final GoogleSignInAccount account =
-        await _googleSignIn.authenticate();
+    try {
+      await _initializeGoogleSignIn();
 
-    final String? idToken =
-        account.authentication.idToken;
+      _log('STEP 2: Waiting for Google account selection.');
 
-    if (idToken == null || idToken.isEmpty) {
-      throw Exception(
-        'Google থেকে ID Token পাওয়া যায়নি। আবার চেষ্টা করুন।',
+      final GoogleSignInAccount account =
+          await _googleSignIn.authenticate();
+
+      _log('STEP 3: Google account selected.');
+      _log('Google email: ${account.email}');
+      _log('Google ID received: ${account.id.isNotEmpty}');
+
+      _log('STEP 4: Requesting Google ID Token.');
+
+      final String? idToken =
+          account.authentication.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        _log('ERROR: Google ID Token is NULL or EMPTY.');
+
+        throw Exception(
+          'Google থেকে ID Token পাওয়া যায়নি। আবার চেষ্টা করুন।',
+        );
+      }
+
+      _log('STEP 5: Google ID Token received successfully.');
+
+      _log('STEP 6: Sending login request to PHP API.');
+
+      final response = await http.post(
+        Uri.parse('${apiBaseUrl}google_login.php'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'id_token': idToken,
+        }),
       );
-    }
 
-    final response = await http.post(
-      Uri.parse('${apiBaseUrl}google_login.php'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'id_token': idToken,
-      }),
-    );
+      _log('STEP 7: PHP API response received.');
+      _log('HTTP Status: ${response.statusCode}');
 
-    final data = _decodeResponse(response);
+      final data = _decodeResponse(response);
 
-    // নতুন ব্যবহারকারী: Registration Page-এ পাঠানোর তথ্য
-    if (data['needs_registration'] == true) {
+      _log('STEP 8: PHP API response decoded successfully.');
+
+      // New user: Registration required
+      if (data['needs_registration'] == true) {
+        _log('New user detected. Registration required.');
+
+        return {
+          'needs_registration': true,
+          'id_token': idToken,
+          'google_user': data['google_user'] ??
+              {
+                'name': account.displayName ?? '',
+                'email': account.email,
+                'photo': account.photoUrl,
+                'google_id': account.id,
+              },
+        };
+      }
+
+      // Existing user: Save session
+      final token = data['session_token'];
+
+      if (token == null || token.toString().isEmpty) {
+        throw Exception(
+          'সার্ভার থেকে Session Token পাওয়া যায়নি।',
+        );
+      }
+
+      await _storage.write(
+        key: _sessionKey,
+        value: token.toString(),
+      );
+
+      _log('STEP 9: Session saved successfully.');
+      _log('GOOGLE LOGIN COMPLETED.');
+
       return {
-        'needs_registration': true,
-        'id_token': idToken,
-        'google_user': data['google_user'] ??
-            {
-              'name': account.displayName ?? '',
-              'email': account.email,
-              'photo': account.photoUrl,
-              'google_id': account.id,
-            },
+        'needs_registration': false,
+        'session_token': token.toString(),
+        'user': data['user'],
       };
+    } on GoogleSignInException catch (e, stackTrace) {
+      _log('GOOGLE SIGN-IN EXCEPTION: ${e.code}');
+      _log('Google error details: $e');
+      _log('$stackTrace');
+      rethrow;
+    } catch (e, stackTrace) {
+      _log('GOOGLE LOGIN ERROR: $e');
+      _log('$stackTrace');
+      rethrow;
     }
-
-    // পুরোনো ব্যবহারকারী: Session সংরক্ষণ
-    final token = data['session_token'];
-
-    if (token == null || token.toString().isEmpty) {
-      throw Exception('সার্ভার থেকে Session Token পাওয়া যায়নি।');
-    }
-
-    await _storage.write(
-      key: _sessionKey,
-      value: token.toString(),
-    );
-
-    return {
-      'needs_registration': false,
-      'session_token': token.toString(),
-      'user': data['user'],
-    };
   }
 
   // --------------------------------------------------
@@ -118,6 +177,8 @@ class AuthService {
     String? jobLocation,
     String? currentAddress,
   }) async {
+    _log('Registration started.');
+
     final response = await http.post(
       Uri.parse('${apiBaseUrl}register.php'),
       headers: {
@@ -137,18 +198,24 @@ class AuthService {
       }),
     );
 
+    _log('Registration HTTP Status: ${response.statusCode}');
+
     final data = _decodeResponse(response);
 
     final token = data['session_token'];
 
     if (token == null || token.toString().isEmpty) {
-      throw Exception('Registration-এর পর Session Token পাওয়া যায়নি।');
+      throw Exception(
+        'Registration-এর পর Session Token পাওয়া যায়নি।',
+      );
     }
 
     await _storage.write(
       key: _sessionKey,
       value: token.toString(),
     );
+
+    _log('Registration completed successfully.');
 
     return data;
   }
@@ -215,14 +282,15 @@ class AuthService {
         );
       }
     } finally {
-      // Local session অবশ্যই মুছে ফেলবে
       await _storage.delete(key: _sessionKey);
 
       try {
         await _initializeGoogleSignIn();
         await _googleSignIn.signOut();
-      } catch (_) {
-        // Google sign-out ব্যর্থ হলেও local session মুছে যাবে
+
+        _log('Google sign-out completed.');
+      } catch (e) {
+        _log('Google sign-out error: $e');
       }
     }
   }
