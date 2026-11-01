@@ -1,10 +1,65 @@
+
 import 'package:flutter/material.dart';
+
+import '../services/auth_service.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('লগ আউট করবেন?'),
+        content: const Text(
+          'আপনি কি নিশ্চিতভাবে আপনার অ্যাকাউন্ট থেকে লগ আউট করতে চান?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('না'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: maroon,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('হ্যাঁ, লগ আউট'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    try {
+      await AuthService.instance.logout();
+
+      if (!context.mounted) return;
+
+      // MainShell-এর Home tab-এ ফিরে যাবে।
+      Navigator.of(context).popUntil((route) => route.isFirst);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('সফলভাবে লগ আউট হয়েছে।'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('লগ আউট করা যায়নি: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -50,7 +105,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Fire Safety Job Prep সদস্য',
+                    'Fire Safety BD সদস্য',
                     style: TextStyle(color: Colors.white70),
                   ),
                 ],
@@ -98,7 +153,9 @@ class ProfilePage extends StatelessWidget {
                   leading: Icon(item.$1, color: maroon),
                   title: Text(item.$2),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
+                  onTap: item.$2 == 'লগ আউট'
+                      ? () => _logout(context)
+                      : () {},
                 ),
               ),
           ],
