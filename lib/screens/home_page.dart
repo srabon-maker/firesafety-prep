@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../services/auth_guard.dart';
 import 'jobs_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
@@ -23,6 +24,65 @@ class HomePage extends StatelessWidget {
     ('কমপ্লায়েন্স', Icons.verified_user_outlined, Color(0xFFF0E7FF), Color(0xFF7142B8)),
     ('টেকনিক্যাল', Icons.settings_outlined, Color(0xFFE2F3FA), Color(0xFF14799A)),
   ];
+
+  Future<void> _openCategory(
+    BuildContext context,
+    int i,
+  ) async {
+    final authenticated =
+        await AuthGuard.ensureAuthenticated(context);
+
+    if (!context.mounted || !authenticated) return;
+
+    final c = categories[i];
+
+    Widget page;
+
+    if (i == 0) {
+      page = const JobsPage();
+    } else if (i == 1) {
+      page = const TestsPage();
+    } else {
+      page = TopicPage(
+        title: c.$1,
+        icon: c.$2,
+        color: c.$4,
+      );
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
+
+  Future<void> _openNotes(BuildContext context) async {
+    final authenticated =
+        await AuthGuard.ensureAuthenticated(context);
+
+    if (!context.mounted || !authenticated) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NotesPage(),
+      ),
+    );
+  }
+
+  Future<void> _openTests(BuildContext context) async {
+    final authenticated =
+        await AuthGuard.ensureAuthenticated(context);
+
+    if (!context.mounted || !authenticated) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TestsPage(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => CustomScrollView(
@@ -117,7 +177,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
+              const Text(
                 '৬টি বিষয়',
                 style: TextStyle(
                   color: Colors.brown,
@@ -138,34 +198,7 @@ class HomePage extends StatelessWidget {
 
               return InkWell(
                 borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  if (i == 0) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const JobsPage(),
-                      ),
-                    );
-                  } else if (i == 1) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TestsPage(),
-                      ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => TopicPage(
-                          title: c.$1,
-                          icon: c.$2,
-                          color: c.$4,
-                        ),
-                      ),
-                    );
-                  }
-                },
+                onTap: () => _openCategory(context, i),
                 child: Container(
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
@@ -257,12 +290,7 @@ class HomePage extends StatelessWidget {
                   context,
                   'মডেল টেস্ট শুরু',
                   Icons.play_circle_fill,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TestsPage(),
-                    ),
-                  ),
+                  () => _openTests(context),
                 ),
               ),
               const SizedBox(width: 10),
@@ -271,12 +299,7 @@ class HomePage extends StatelessWidget {
                   context,
                   'নোট পড়ুন',
                   Icons.menu_book,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotesPage(),
-                    ),
-                  ),
+                  () => _openNotes(context),
                 ),
               ),
             ],
