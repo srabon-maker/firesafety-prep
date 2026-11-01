@@ -10,9 +10,11 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
+  // Google OAuth Web Client ID
   static const String webClientId =
       '489619291156-dmva2n4skh4snd9qbl0ne2tionpm92b9.apps.googleusercontent.com';
 
+  // Fire Safety BD API
   static const String apiBaseUrl =
       'https://fire.manobikishwarganj.com/api/auth/';
 
@@ -23,91 +25,92 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  bool _initialized = false;
+  bool _googleInitialized = false;
 
-  Future<void> initialize() async {
-    if (_initialized) return;
+  Future<void> _initializeGoogleSignIn() async {
+    if (_googleInitialized) return;
 
     await _googleSignIn.initialize(
       serverClientId: webClientId,
     );
 
-    _initialized = true;
+    _googleInitialized = true;
   }
 
   // --------------------------------------------------
-  // GOOGLE SIGN IN
+  // GOOGLE SIGN-IN
   // --------------------------------------------------
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
-    await initialize();
+    await _initializeGoogleSignIn();
 
-    try {
-      final account = await _googleSignIn.authenticate();
+    final GoogleSignInAccount account =
+        await _googleSignIn.authenticate();
 
-      final idToken = account.authentication.idToken;
+    final String? idToken =
+        account.authentication.idToken;
 
-      if (idToken == null || idToken.isEmpty) {
-        throw Exception('Google ID Token পাওয়া যায়নি।');
-      }
-
-      final response = await http.post(
-        Uri.parse('${apiBaseUrl}google_login.php'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'id_token': idToken,
-        }),
-      ).timeout(const Duration(seconds: 30));
-
-      final result = _decodeResponse(response);
-
-      // First-time user: registration required
-      if (result['needs_registration'] == true) {
-        return {
-          ...result,
-          'google_user': result['google_user'] ??
-              {
-                'name': account.displayName ?? '',
-                'email': account.email,
-                'photo': account.photoUrl ?? '',
-              },
-        };
-      }
-
-      // Existing user: save session
-      final token = result['session_token'];
-
-      if (result['success'] == true &&
-          token is String &&
-          token.isNotEmpty) {
-        await saveSession(token);
-        return result;
-      }
-
+    if (idToken == null || idToken.isEmpty) {
       throw Exception(
-        result['message'] ?? 'Google Login সফল হয়নি।',
+        'Google থেকে ID Token পাওয়া যায়নি। আবার চেষ্টা করুন।',
       );
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        return null;
-      }
-
-      throw Exception('Google Login সমস্যা: ${e.description ?? e.code}');
-    } on http.ClientException {
-      throw Exception('সার্ভারের সঙ্গে সংযোগ করা যাচ্ছে না।');
     }
+
+    final response = await http.post(
+      Uri.parse('${apiBaseUrl}google_login.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'id_token': idToken,
+      }),
+    );
+
+    final data = _decodeResponse(response);
+
+    // নতুন ব্যবহারকারী: Registration Page-এ পাঠানোর তথ্য
+    if (data['needs_registration'] == true) {
+      return {
+        'needs_registration': true,
+        'id_token': idToken,
+        'google_user': data['google_user'] ??
+            {
+              'name': account.displayName ?? '',
+              'email': account.email,
+              'photo': account.photoUrl,
+              'google_id': account.id,
+            },
+      };
+    }
+
+    // পুরোনো ব্যবহারকারী: Session সংরক্ষণ
+    final token = data['session_token'];
+
+    if (token == null || token.toString().isEmpty) {
+      throw Exception('সার্ভার থেকে Session Token পাওয়া যায়নি।');
+    }
+
+    await _storage.write(
+      key: _sessionKey,
+      value: token.toString(),
+    );
+
+    return {
+      'needs_registration': false,
+      'session_token': token.toString(),
+      'user': data['user'],
+    };
   }
 
   // --------------------------------------------------
-  // REGISTRATION
+  // USER REGISTRATION
   // --------------------------------------------------
 
   Future<Map<String, dynamic>> register({
     required String idToken,
     required String fullName,
+    required String email,
     required String mobileNumber,
     required String currentStatus,
     String? companyName,
@@ -124,83 +127,74 @@ class AuthService {
       body: jsonEncode({
         'id_token': idToken,
         'full_name': fullName,
+        'email': email,
         'mobile_number': mobileNumber,
         'current_status': currentStatus,
-        'company_name': companyName ?? '',
-        'designation': designation ?? '',
-        'job_location': jobLocation ?? '',
-        'current_address': currentAddress ?? '',
+        'company_name': companyName,
+        'designation': designation,
+        'job_location': jobLocation,
+        'current_address': currentAddress,
       }),
-    ).timeout(const Duration(seconds: 30));
+    );
 
-    final result = _decodeResponse(response);
+    final data = _decodeResponse(response);
 
-    final token = result['session_token'];
+    final token = data['session_token'];
 
-    if (result['success'] == true &&
-        token is String &&
-        token.isNotEmpty) {
-      await saveSession(token);
-      return result;
+    if (token == null || token.toString().isEmpty) {
+      throw Exception('Registration-এর পর Session Token পাওয়া যায়নি।');
     }
 
-    throw Exception(
-      result['message'] ?? 'Registration সফল হয়নি।',
-    );
-  }
-
-  // --------------------------------------------------
-  // SESSION STORAGE
-  // --------------------------------------------------
-
-  Future<void> saveSession(String token) async {
     await _storage.write(
       key: _sessionKey,
-      value: token,
+      value: token.toString(),
     );
-  }
 
-  Future<String?> getSession() async {
-    return _storage.read(key: _sessionKey);
+    return data;
   }
 
   // --------------------------------------------------
-  // VALIDATE CURRENT SESSION
+  // GET SAVED SESSION TOKEN
+  // --------------------------------------------------
+
+  Future<String?> getSessionToken() async {
+    return await _storage.read(key: _sessionKey);
+  }
+
+  // --------------------------------------------------
+  // VALIDATE SESSION WITH SERVER
   // --------------------------------------------------
 
   Future<Map<String, dynamic>?> validateSession() async {
-    final token = await getSession();
+    final token = await getSessionToken();
 
     if (token == null || token.isEmpty) {
       return null;
     }
 
-    try {
-      final response = await http.get(
-        Uri.parse('${apiBaseUrl}me.php'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 30));
+    final response = await http.get(
+      Uri.parse('${apiBaseUrl}me.php'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
 
-      final result = _decodeResponse(response);
-
-      if (result['success'] == true) {
-        return result;
-      }
-
+    if (response.statusCode == 401 ||
+        response.statusCode == 403) {
       await _storage.delete(key: _sessionKey);
       return null;
-    } catch (_) {
-      // Network error: do not erase a potentially valid session.
-      rethrow;
     }
-  }
 
-  Future<bool> isLoggedIn() async {
-    final result = await validateSession();
-    return result != null;
+    final data = _decodeResponse(response);
+
+    if (data['success'] == false ||
+        data['authenticated'] == false) {
+      await _storage.delete(key: _sessionKey);
+      return null;
+    }
+
+    return data;
   }
 
   // --------------------------------------------------
@@ -208,7 +202,7 @@ class AuthService {
   // --------------------------------------------------
 
   Future<void> logout() async {
-    final token = await getSession();
+    final token = await getSessionToken();
 
     try {
       if (token != null && token.isNotEmpty) {
@@ -218,16 +212,17 @@ class AuthService {
             'Accept': 'application/json',
             'Authorization': 'Bearer $token',
           },
-        ).timeout(const Duration(seconds: 15));
+        );
       }
     } finally {
-      // Always clear local session.
+      // Local session অবশ্যই মুছে ফেলবে
       await _storage.delete(key: _sessionKey);
 
       try {
+        await _initializeGoogleSignIn();
         await _googleSignIn.signOut();
       } catch (_) {
-        // Local session is already cleared.
+        // Google sign-out ব্যর্থ হলেও local session মুছে যাবে
       }
     }
   }
@@ -239,29 +234,37 @@ class AuthService {
   Map<String, dynamic> _decodeResponse(
     http.Response response,
   ) {
-    Map<String, dynamic> result;
+    Map<String, dynamic> data;
 
     try {
       final decoded = jsonDecode(response.body);
 
       if (decoded is! Map<String, dynamic>) {
-        throw const FormatException('Invalid API response.');
+        throw Exception('সার্ভারের Response সঠিক নয়।');
       }
 
-      result = decoded;
+      data = decoded;
     } catch (_) {
       throw Exception(
-        'সার্ভার থেকে সঠিক তথ্য পাওয়া যায়নি। HTTP ${response.statusCode}',
+        'সার্ভার থেকে সঠিক JSON Response পাওয়া যায়নি।',
       );
     }
 
     if (response.statusCode < 200 ||
         response.statusCode >= 300) {
       throw Exception(
-        result['message'] ?? 'Server error: ${response.statusCode}',
+        data['message']?.toString() ??
+            'সার্ভার Error: ${response.statusCode}',
       );
     }
 
-    return result;
+    if (data['success'] == false) {
+      throw Exception(
+        data['message']?.toString() ??
+            'অনুরোধটি সম্পন্ন করা যায়নি।',
+      );
+    }
+
+    return data;
   }
 }
