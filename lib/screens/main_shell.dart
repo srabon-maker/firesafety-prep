@@ -17,12 +17,22 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int index = 0;
 
-  final pages = const [
-    HomePage(),
-    CommunityPage(),
-    NotesPage(),
-    ProfilePage(),
+  late final List<Widget> pages = [
+    const HomePage(),
+    const CommunityPage(),
+    const NotesPage(),
+    ProfilePage(
+      onLogout: _goToHome,
+    ),
   ];
+
+  void _goToHome() {
+    if (!mounted) return;
+
+    setState(() {
+      index = 0;
+    });
+  }
 
   Future<void> _onDestinationSelected(int i) async {
     // Home সবার জন্য উন্মুক্ত
