@@ -1,5 +1,4 @@
 
-
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -66,6 +65,14 @@ class AuthService {
 
     try {
       await _initializeGoogleSignIn();
+
+      // Clear previous Google Sign-In session.
+      try {
+        await _googleSignIn.signOut();
+        _log('Previous Google Sign-In session cleared.');
+      } catch (e) {
+        _log('Previous Google Sign-Out warning: $e');
+      }
 
       _log('STEP 2: Waiting for Google account selection.');
 
