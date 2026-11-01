@@ -2,7 +2,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/auth_service.dart';
@@ -98,7 +97,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         }
       }
     } catch (_) {
-      // Ignore invalid saved suggestions.
+      // Invalid saved suggestions are ignored.
     }
 
     if (mounted) {
@@ -153,6 +152,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       await AuthService.instance.register(
         idToken: widget.idToken,
         fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
         mobileNumber: _mobileController.text.trim(),
         currentStatus: _currentStatus!,
         companyName: _companyController.text.trim(),
@@ -248,7 +248,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
       ),
       body: SafeArea(
         child: _loadingSuggestions
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
             : AutofillGroup(
                 child: Form(
                   key: _formKey,
@@ -273,7 +275,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       Text(
                         _emailController.text,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                        ),
                       ),
                       const SizedBox(height: 25),
 
@@ -281,14 +285,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         label: 'Full Name',
                         controller: _nameController,
                         requiredField: true,
-                        autofillHints: const [AutofillHints.name],
+                        autofillHints: const [
+                          AutofillHints.name,
+                        ],
                       ),
 
                       _textField(
                         label: 'Email',
                         controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
+                        keyboardType:
+                            TextInputType.emailAddress,
+                        autofillHints: const [
+                          AutofillHints.email,
+                        ],
                       ),
 
                       _textField(
@@ -302,10 +311,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       ),
 
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: DropdownButtonFormField<String>(
-                          value: _currentStatus,
-                          decoration: _decoration('Current Status'),
+                        padding: const EdgeInsets.only(
+                          bottom: 16,
+                        ),
+                        child:
+                            DropdownButtonFormField<String>(
+                          initialValue: _currentStatus,
+                          decoration:
+                              _decoration('Current Status'),
                           items: _statuses.map((status) {
                             return DropdownMenuItem(
                               value: status,
@@ -313,7 +326,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             );
                           }).toList(),
                           onChanged: (value) {
-                            setState(() => _currentStatus = value);
+                            setState(() {
+                              _currentStatus = value;
+                            });
                           },
                         ),
                       ),
@@ -363,7 +378,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             backgroundColor: maroon,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(12),
                             ),
                           ),
                           child: _loading
@@ -385,7 +401,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       const Text(
                         '* Name, Mobile Number ও Current Status বাধ্যতামূলক।',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
