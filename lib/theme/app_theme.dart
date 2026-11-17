@@ -9,6 +9,23 @@ class AppColors {
 }
 
 class AppTheme {
+  static ThemeData get darkTheme => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: const Color(0xFF151417),
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.maroon,
+      brightness: Brightness.dark,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF27171B),
+      foregroundColor: Colors.white,
+    ),
+    cardTheme: const CardThemeData(color: Color(0xFF242127)),
+    navigationBarTheme: const NavigationBarThemeData(
+      backgroundColor: Color(0xFF242127),
+    ),
+  );
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
