@@ -88,7 +88,7 @@ class _ProfilePageState extends State<ProfilePage> {
       widget.onLogout();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(_tr(context, 'সফলভাবে লগ আউট হয়েছে।', 'Logged out successfully.')),
           behavior: SnackBarBehavior.floating,
         ),
