@@ -58,15 +58,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('লগ আউট করবেন?'),
-        content: const Text(
-          'আপনি কি নিশ্চিতভাবে আপনার অ্যাকাউন্ট থেকে লগ আউট করতে চান?',
-        ),
+        title: Text(_tr(context, 'লগ আউট করবেন?', 'Log out?')),
+        content: Text(_tr(context, 'আপনি কি নিশ্চিতভাবে আপনার অ্যাকাউন্ট থেকে লগ আউট করতে চান?', 'Are you sure you want to log out?')),
         actions: [
           TextButton(
             onPressed: () =>
                 Navigator.pop(dialogContext, false),
-            child: const Text('না'),
+            child: Text(_tr(context, 'না', 'Cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -74,7 +72,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             onPressed: () =>
                 Navigator.pop(dialogContext, true),
-            child: const Text('হ্যাঁ, লগ আউট'),
+            child: Text(_tr(context, 'হ্যাঁ, লগ আউট', 'Yes, log out')),
           ),
         ],
       ),
@@ -91,7 +89,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('সফলভাবে লগ আউট হয়েছে।'),
+          content: Text(_tr(context, 'সফলভাবে লগ আউট হয়েছে।', 'Logged out successfully.')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -100,7 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('লগ আউট করা যায়নি: $e'),
+          content: Text(_tr(context, 'লগ আউট করা যায়নি: $e', 'Could not log out: $e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -233,14 +231,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: maroon,
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'প্রোফাইল তথ্য লোড করা যায়নি।',
+                  Text(
+                    _tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।', 'Could not load profile information.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _refreshProfile,
-                    child: const Text('আবার চেষ্টা করুন'),
+                    child: Text(_tr(context, 'আবার চেষ্টা করুন', 'Try again')),
                   ),
                 ],
               ),
@@ -263,13 +261,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: maroon,
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'প্রোফাইল তথ্য পাওয়া যায়নি।',
+                  Text(
+                    _tr(context, 'প্রোফাইল তথ্য পাওয়া যায়নি।', 'Profile information not found.'),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _refreshProfile,
-                    child: const Text('আবার চেষ্টা করুন'),
+                    child: Text(_tr(context, 'আবার চেষ্টা করুন', 'Try again')),
                   ),
                 ],
               ),
