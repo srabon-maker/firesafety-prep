@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,7 @@ class AuthService {
       'https://fire.manobikishwarganj.com/api/auth/';
 
   static const String _sessionKey = 'fire_safety_session_token';
+  static const Duration _requestTimeout = Duration(seconds: 20);
 
   final FlutterSecureStorage _storage =
       const FlutterSecureStorage();
@@ -106,10 +108,8 @@ class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'id_token': idToken,
-        }),
-      );
+        body: jsonEncode({'id_token': idToken}),
+      ).timeout(_requestTimeout);
 
       _log('STEP 7: PHP API response received.');
       _log('HTTP Status: ${response.statusCode}');
@@ -161,7 +161,12 @@ class AuthService {
       _log('GOOGLE SIGN-IN EXCEPTION: ${e.code}');
       _log('Google error details: $e');
       _log('$stackTrace');
-      rethrow;
+      throw Exception(
+        'Google Sign-In ব্যর্থ (${e.code}). '
+        'Android OAuth package name, APK signing SHA-1 এবং Web Client ID যাচাই করুন।',
+      );
+    } on TimeoutException {
+      throw Exception('Login server-এর Response আসতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
     } catch (e, stackTrace) {
       _log('GOOGLE LOGIN ERROR: $e');
       _log('$stackTrace');
@@ -203,7 +208,7 @@ class AuthService {
         'job_location': jobLocation,
         'current_address': currentAddress,
       }),
-    );
+    ).timeout(_requestTimeout);
 
     _log('Registration HTTP Status: ${response.statusCode}');
 
@@ -252,7 +257,7 @@ class AuthService {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(_requestTimeout);
 
     if (response.statusCode == 401 ||
         response.statusCode == 403) {
@@ -286,7 +291,7 @@ class AuthService {
             'Accept': 'application/json',
             'Authorization': 'Bearer $token',
           },
-        );
+        ).timeout(_requestTimeout);
       }
     } finally {
       await _storage.delete(key: _sessionKey);
