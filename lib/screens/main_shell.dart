@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_guard.dart';
 import 'home_page.dart';
 import 'community_page.dart';
-import 'notes_page.dart';
 import 'profile_page.dart';
+import 'marketplace/marketplace_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -19,8 +19,8 @@ class _MainShellState extends State<MainShell> {
 
   late final List<Widget> pages = [
     const HomePage(),
+    const MarketplacePage(),
     const CommunityPage(),
-    const NotesPage(),
     ProfilePage(
       onLogout: _goToHome,
     ),
@@ -35,9 +35,9 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _onDestinationSelected(int i) async {
-    // Home সবার জন্য উন্মুক্ত
-    if (i == 0) {
-      setState(() => index = 0);
+    // Home ও Marketplace সবার জন্য উন্মুক্ত
+    if (i == 0 || i == 1) {
+      setState(() => index = i);
       return;
     }
 
@@ -69,14 +69,14 @@ class _MainShellState extends State<MainShell> {
               label: 'হোম',
             ),
             NavigationDestination(
+              icon: Icon(Icons.storefront_outlined),
+              selectedIcon: Icon(Icons.storefront),
+              label: 'মার্কেট',
+            ),
+            NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
               label: 'কমিউনিটি',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book),
-              label: 'নোট',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),
