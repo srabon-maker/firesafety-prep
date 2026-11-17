@@ -5,7 +5,7 @@ import '../services/auth_guard.dart';
 import 'home_page.dart';
 import 'community_page.dart';
 import 'profile_page.dart';
-import 'marketplace/marketplace_page.dart';
+import 'marketplace_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});

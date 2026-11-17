@@ -6,7 +6,7 @@ import 'jobs_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
 import 'topic_page.dart';
-import 'marketplace/marketplace_page.dart';
+import 'marketplace_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
