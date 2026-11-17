@@ -6,6 +6,7 @@ import 'jobs_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
 import 'topic_page.dart';
+import 'marketplace/marketplace_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -25,10 +26,7 @@ class HomePage extends StatelessWidget {
     ('টেকনিক্যাল', Icons.settings_outlined, Color(0xFFE2F3FA), Color(0xFF14799A)),
   ];
 
-  Future<void> _openCategory(
-    BuildContext context,
-    int i,
-  ) async {
+  Future<void> _openCategory(BuildContext context, int i) async {
     final authenticated =
         await AuthGuard.ensureAuthenticated(context);
 
@@ -84,9 +82,19 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  void _openMarketplace(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MarketplacePage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
     slivers: [
+      // Header
       SliverToBoxAdapter(
         child: Container(
           padding: EdgeInsets.fromLTRB(
@@ -160,12 +168,17 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Categories heading
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
         sliver: SliverToBoxAdapter(
           child: Row(
             children: [
-              const Icon(Icons.grid_view_rounded, color: maroon, size: 24),
+              const Icon(
+                Icons.grid_view_rounded,
+                color: maroon,
+                size: 24,
+              ),
               const SizedBox(width: 9),
               const Expanded(
                 child: Text(
@@ -189,6 +202,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Categories grid
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverGrid(
@@ -251,7 +265,8 @@ class HomePage extends StatelessWidget {
             },
             childCount: categories.length,
           ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
@@ -260,6 +275,75 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Marketplace section
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 5),
+        sliver: SliverToBoxAdapter(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _openMarketplace(context),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [deepMaroon, maroon],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(.15),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(
+                      Icons.storefront,
+                      color: Colors.white,
+                      size: 29,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Fire Safety Marketplace',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'ফায়ার সেফটি পণ্য ও সার্ভিস দেখুন',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 17,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      // Quick preparation heading
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
         sliver: SliverToBoxAdapter(
@@ -280,6 +364,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Quick buttons
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -287,7 +372,6 @@ class HomePage extends StatelessWidget {
             children: [
               Expanded(
                 child: _quickButton(
-                  context,
                   'মডেল টেস্ট শুরু',
                   Icons.play_circle_fill,
                   () => _openTests(context),
@@ -296,7 +380,6 @@ class HomePage extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _quickButton(
-                  context,
                   'নোট পড়ুন',
                   Icons.menu_book,
                   () => _openNotes(context),
@@ -307,6 +390,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Recent updates heading
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
         sliver: SliverToBoxAdapter(
@@ -327,6 +411,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
+      // Recent updates
       SliverList(
         delegate: SliverChildListDelegate([
           _updateTile(
@@ -354,7 +439,6 @@ class HomePage extends StatelessWidget {
   );
 
   static Widget _quickButton(
-    BuildContext context,
     String title,
     IconData icon,
     VoidCallback onTap,
