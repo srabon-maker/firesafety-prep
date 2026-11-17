@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_guard.dart';
+import '../settings/app_settings.dart';
 import 'home_page.dart';
 import 'community_page.dart';
 import 'profile_page.dart';
@@ -59,29 +60,29 @@ class _MainShellState extends State<MainShell> {
         bottomNavigationBar: NavigationBar(
           height: 70,
           selectedIndex: index,
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFFFFE0D8),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          indicatorColor: Theme.of(context).colorScheme.primaryContainer,
           onDestinationSelected: _onDestinationSelected,
-          destinations: const [
+          destinations: [
             NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
-              label: 'হোম',
+              label: AppText.of(context, 'হোম', 'Home'),
             ),
             NavigationDestination(
               icon: Icon(Icons.storefront_outlined),
               selectedIcon: Icon(Icons.storefront),
-              label: 'মার্কেট',
+              label: AppText.of(context, 'মার্কেট', 'Market'),
             ),
             NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
-              label: 'কমিউনিটি',
+              label: AppText.of(context, 'কমিউনিটি', 'Community'),
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
-              label: 'প্রোফাইল',
+              label: AppText.of(context, 'প্রোফাইল', 'Profile'),
             ),
           ],
         ),
