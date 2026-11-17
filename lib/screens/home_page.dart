@@ -137,7 +137,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Fire Safety Job Prep',
+                      'Fire Safety BD',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
