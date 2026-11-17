@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/question_data.dart';
+import 'result_page.dart';
 
 class QuizPage extends StatefulWidget {
   const QuizPage({super.key});
