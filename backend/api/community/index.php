@@ -192,6 +192,11 @@ try {
         $check = $pdo->prepare("SELECT id FROM community_posts WHERE id=? AND status='approved'");
         $check->execute([$postId]);
         if (!$check->fetchColumn()) community_reply(404, ['success'=>false,'message'=>'পোস্ট পাওয়া যায়নি।']);
+        $rate = $pdo->prepare('SELECT COUNT(*) FROM community_comments WHERE user_id=? AND created_at >= NOW()-INTERVAL 1 DAY');
+        $rate->execute([$userId]);
+        if ((int)$rate->fetchColumn() >= 30) {
+            community_reply(429, ['success'=>false,'message'=>'২৪ ঘণ্টায় সর্বোচ্চ ৩০টি মন্তব্য করা যাবে।']);
+        }
         $stmt = $pdo->prepare("INSERT INTO community_comments (post_id,user_id,body,status) VALUES (?, ?, ?, 'visible')");
         $stmt->execute([$postId, $userId, $body]);
         community_reply(201, ['success'=>true,'message'=>'মন্তব্য প্রকাশিত হয়েছে।']);
