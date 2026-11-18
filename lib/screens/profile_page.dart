@@ -280,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState ==
             ConnectionState.waiting) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
               color: Theme.of(context).colorScheme.primary,
             ),

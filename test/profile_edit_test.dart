@@ -16,13 +16,18 @@ void main() {
 
     expect(find.text('Test User'), findsOneWidget);
     expect(find.text('test@example.com'), findsOneWidget);
-    final emailField = tester.widget<TextFormField>(
-      find.byWidgetPredicate(
-        (widget) => widget is TextFormField &&
-            widget.initialValue == 'test@example.com',
+    final emailFormField = find.byWidgetPredicate(
+      (widget) => widget is TextFormField &&
+          widget.initialValue == 'test@example.com',
+    );
+    expect(emailFormField, findsOneWidget);
+    final emailTextField = tester.widget<TextField>(
+      find.descendant(
+        of: emailFormField,
+        matching: find.byType(TextField),
       ),
     );
-    expect(emailField.readOnly, isTrue);
+    expect(emailTextField.readOnly, isTrue);
   });
 
   testWidgets('Cannot submit an empty required name or phone',
