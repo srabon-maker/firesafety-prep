@@ -25,7 +25,7 @@ class JobNoticeParser {
     'responsibilities': 'দায়িত্ব ও কাজের বিবরণ',
     'skills': 'দক্ষতা',
     'otherSkills': 'অন্যান্য দক্ষতা',
-    'benefits': 'বেতন ও অন্যান্য সুবিধা',
+    'benefits': 'অন্যান্য সুবিধা',
     'workplace': 'কাজের ধরন',
     'employmentStatus': 'চাকরির ধরন',
     'gender': 'আবেদনের শর্ত',
