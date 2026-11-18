@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'backend/**/*.php'
+      - '.cpanel.yml'
       - '.github/workflows/admin-php-checks.yml'
   push:
     branches: [main]
     paths:
       - 'backend/**/*.php'
+      - '.cpanel.yml'
       - '.github/workflows/admin-php-checks.yml'
   workflow_dispatch:
 
