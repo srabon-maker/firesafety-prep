@@ -1,5 +1,90 @@
 
 workflows:
+  fire-safety-generate-keystore-once:
+    name: ONE TIME ONLY - Generate Fire Safety BD Release Keystore
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+
+    # Deliberately no webhook triggers. Start this workflow manually only.
+    triggering:
+      events: []
+
+    environment:
+      groups:
+        - fsbd_keystore_generator
+
+    scripts:
+      - name: Generate one private Android signing key (manual only)
+        script: |
+          set -eu
+          umask 077
+
+          if [ "${CM_TRIGGER_SOURCE:-}" != "api" ]; then
+            echo "ERROR: This workflow must be started manually from Codemagic."
+            exit 1
+          fi
+
+          if [ "${CM_BRANCH:-}" != "feature/codemagic-one-time-keystore-generator" ]; then
+            echo "ERROR: Run the generator only from the dedicated feature branch."
+            exit 1
+          fi
+
+          : "${FSBD_KEYSTORE_PASSWORD:?Add FSBD_KEYSTORE_PASSWORD as a Secret in Codemagic group fsbd_keystore_generator}"
+
+          if [ "${#FSBD_KEYSTORE_PASSWORD}" -lt 16 ]; then
+            echo "ERROR: Use a unique keystore password of at least 16 characters."
+            exit 1
+          fi
+
+          if ! command -v keytool >/dev/null 2>&1; then
+            echo "ERROR: Java keytool is unavailable on this build machine."
+            exit 1
+          fi
+
+          OUTPUT="build/private-signing/fire-safety-bd-release.jks"
+          mkdir -p build/private-signing
+          chmod 700 build/private-signing
+
+          if [ -e "$OUTPUT" ]; then
+            echo "ERROR: Refusing to overwrite an existing signing key."
+            exit 1
+          fi
+
+          # The key and keystore intentionally share one strong secret.
+          # Never print the password or commit this generated file to Git.
+          keytool -genkeypair -noprompt \\
+            -keystore "$OUTPUT" \\
+            -storetype JKS \\
+            -alias fire_safety_bd \\
+            -keyalg RSA -keysize 3072 -validity 10000 \\
+            -dname "CN=Fire Safety BD, OU=Mobile, O=Fire Safety BD, C=BD" \\
+            -storepass "$FSBD_KEYSTORE_PASSWORD" \\
+            -keypass "$FSBD_KEYSTORE_PASSWORD" >/dev/null 2>&1
+
+          test -s "$OUTPUT" || {
+            echo "ERROR: Signing key was not created."
+            exit 1
+          }
+
+          chmod 600 "$OUTPUT"
+          echo "Release keystore created successfully."
+          echo "Alias: fire_safety_bd"
+          echo "Certificate fingerprints (safe to register in Google OAuth):"
+          keytool -list -v \\
+            -keystore "$OUTPUT" \\
+            -alias fire_safety_bd \\
+            -storepass "$FSBD_KEYSTORE_PASSWORD" \\
+            | grep -E '^[[:space:]]*(SHA1:|SHA256:)'
+
+          echo "IMPORTANT: Download the .jks from build Artifacts, back it up"
+          echo "securely, upload to Codemagic signing identities, then delete"
+          echo "this generator build/artifact and its generator-only secret."
+
+    # Sensitive private key! Only authorized project members should access
+    # this ONE-TIME build artifact; delete the build after secure backup/upload.
+    artifacts:
+      - build/private-signing/fire-safety-bd-release.jks
+
   fire-safety-job-prep:
     name: Fire Safety BD Android Build
     max_build_duration: 60
