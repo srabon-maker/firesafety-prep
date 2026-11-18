@@ -226,7 +226,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.cloud_off_outlined,
                     size: 45,
                     color: Theme.of(context).colorScheme.primary,
@@ -256,7 +256,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.person_off_outlined,
                     size: 45,
                     color: Theme.of(context).colorScheme.primary,
@@ -306,7 +306,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: photo == null || photo.isEmpty
                           ? const Icon(
                               Icons.person,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: maroon,
                               size: 45,
                             )
                           : null,
