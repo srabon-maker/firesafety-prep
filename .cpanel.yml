@@ -1,12 +1,35 @@
 ---
+# Fire Safety BD admin UI release. Only reviewed PHP pages and the shared CSS
+# are copied; live configuration, API endpoints, logs and user uploads stay put.
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/manobiki/fire.manobikishwarganj.com
     - export BACKUPPATH=/home2/manobiki/fire-safety-deploy-backups
+    - export RELEASEBACKUP="$BACKUPPATH/admin-$(date +%Y%m%d-%H%M%S)"
+    - /bin/test -d "$DEPLOYPATH"
     - /bin/test -f "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
     - /bin/test -f backend/admin/fire_safety_job_prep_dashboard.php
+    - /bin/test -f backend/assets/admin-unified.css
+    - /bin/test -f backend/questions.php
+    - /bin/test -f backend/notes.php
+    - /bin/test -f backend/model_tests.php
+    - /bin/test -f backend/category_management.php
+    - /bin/test -f backend/job_circulars.php
+    - /bin/test -f backend/job_submission_review.php
+    - /bin/test -f backend/community_review.php
+    - /bin/test -f backend/marketplace_admin.php
     - /bin/test -f backend/users.php
-    - /bin/mkdir -p "$BACKUPPATH"
-    - /bin/test -f "$BACKUPPATH/fire_safety_job_prep_dashboard.pre-users-20261118.php" || /bin/cp -p "$DEPLOYPATH/fire_safety_job_prep_dashboard.php" "$BACKUPPATH/fire_safety_job_prep_dashboard.pre-users-20261118.php"
+    - /bin/mkdir -p "$RELEASEBACKUP/assets" "$DEPLOYPATH/assets"
+    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php marketplace_admin.php users.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
+    - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
+    - /bin/cp -p backend/assets/admin-unified.css "$DEPLOYPATH/assets/admin-unified.css"
+    - /bin/cp -p backend/questions.php "$DEPLOYPATH/questions.php"
+    - /bin/cp -p backend/notes.php "$DEPLOYPATH/notes.php"
+    - /bin/cp -p backend/model_tests.php "$DEPLOYPATH/model_tests.php"
+    - /bin/cp -p backend/category_management.php "$DEPLOYPATH/category_management.php"
+    - /bin/cp -p backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
+    - /bin/cp -p backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
+    - /bin/cp -p backend/community_review.php "$DEPLOYPATH/community_review.php"
+    - /bin/cp -p backend/marketplace_admin.php "$DEPLOYPATH/marketplace_admin.php"
     - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
     - /bin/cp -p backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
