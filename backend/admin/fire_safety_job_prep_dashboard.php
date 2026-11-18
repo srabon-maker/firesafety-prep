@@ -1256,7 +1256,7 @@ tr:last-child td {
             <span class="ico">⊞</span> ক্যাটাগরি
         </a>
 
-        <a href="questions.php">
+        <a href="users.php">
             <span class="ico">♙</span> ব্যবহারকারী
         </a>
 
