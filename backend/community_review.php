@@ -65,6 +65,23 @@ button{background:#650d18;color:white;border:0;border-radius:9px;padding:11px 15
 button.reject{background:#666}button.hide{background:#a74a24}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css"></head><body>
+<div class="fs-admin-shell">
+<aside class="fs-admin-side" aria-label="অ্যাডমিন নেভিগেশন">
+<a class="fs-admin-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
+<nav class="fs-admin-menu"><a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+<a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
+<a href="model_tests.php">☑ মডেল টেস্ট</a>
+<a href="notes.php">◫ নোট</a>
+<a href="job_circulars.php">▣ চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
+<a href="category_management.php">⊞ ক্যাটাগরি</a>
+<a href="users.php">♙ ব্যবহারকারী</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community" aria-current="page">▱ কমিউনিটি</a>
+<a href="logout.php">↪ লগ আউট</a></nav>
+</aside>
+<div class="fs-admin-content">
+<a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>
+
 <header><h1>Fire Safety BD — কমিউনিটি পোস্ট অনুমোদন</h1>
 <a href="job_submission_review.php">← Job Approval</a></header><main>
 <?php if ($error): ?><p class="error"><?= community_review_escape($error) ?></p><?php endif; ?>
@@ -96,4 +113,6 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <button type="submit" name="decision" value="hide" class="hide">Hide post</button></form>
 <?php endif; ?></section>
 <?php endforeach; ?>
-</main></body></html>
+</main></div>
+</div>
+</body></html>
