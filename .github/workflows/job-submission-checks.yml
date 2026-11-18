@@ -8,6 +8,7 @@ on:
     paths:
       - 'backend/api/jobs/**'
       - 'backend/job_submission_review.php'
+      - 'backend/job_circulars.php'
       - 'backend/migrations/**'
       - 'lib/screens/jobs_page.dart'
       - 'lib/screens/submit_job_page.dart'
@@ -30,6 +31,7 @@ jobs:
           php -l backend/api/jobs/submit.php
           php -l backend/api/jobs/my_submissions.php
           php -l backend/job_submission_review.php
+          php -l backend/job_circulars.php
   flutter-checks:
     runs-on: ubuntu-latest
     steps:
