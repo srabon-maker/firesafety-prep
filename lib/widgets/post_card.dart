@@ -48,14 +48,14 @@ class PostCard extends StatelessWidget {
                 children: [
                   Text(
                     post.author,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     post.time,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -74,7 +74,7 @@ class PostCard extends StatelessWidget {
               ),
               child: Text(
                 post.category,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -86,7 +86,7 @@ class PostCard extends StatelessWidget {
         const SizedBox(height: 13),
         Text(
           post.text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             height: 1.55,
             color: Theme.of(context).colorScheme.onSurface,
@@ -103,7 +103,7 @@ class PostCard extends StatelessWidget {
               },
               icon: Icon(
                 post.liked ? Icons.favorite : Icons.favorite_border,
-                color: post.liked ? red : maroon,
+                color: post.liked ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
               ),
               label: Text('${post.likes}'),
             ),
@@ -221,7 +221,7 @@ class _CommentsPageState extends State<CommentsPage> {
                     children: [
                       Text(
                         c.author,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           color: Theme.of(context).colorScheme.primary,
                         ),
