@@ -115,6 +115,23 @@ table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;bor
 .scroll{overflow:auto}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css"></head><body>
+<div class="fs-admin-shell">
+<aside class="fs-admin-side" aria-label="অ্যাডমিন নেভিগেশন">
+<a class="fs-admin-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
+<nav class="fs-admin-menu"><a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+<a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
+<a href="model_tests.php">☑ মডেল টেস্ট</a>
+<a href="notes.php">◫ নোট</a>
+<a href="job_circulars.php" aria-current="page">▣ চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
+<a href="category_management.php">⊞ ক্যাটাগরি</a>
+<a href="users.php">♙ ব্যবহারকারী</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
+<a href="logout.php">↪ লগ আউট</a></nav>
+</aside>
+<div class="fs-admin-content">
+<a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>
+
 <header><h1>Fire Safety BD — ইউজার সার্কুলার অনুমোদন</h1>
 <a href="job_circulars.php">← Job Circular Admin</a> &nbsp; | &nbsp; <a href="community_review.php">কমিউনিটি পোস্ট অনুমোদন</a></header>
 <main>
@@ -163,4 +180,6 @@ table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;bor
 <a href="job_circulars.php?edit=<?= (int)$s['published_job_id'] ?>">#<?= (int)$s['published_job_id'] ?></a>
 <?php endif; ?></td></tr><?php endforeach; ?></tbody>
 </table></div></section>
-</main></body></html>
+</main></div>
+</div>
+</body></html>
