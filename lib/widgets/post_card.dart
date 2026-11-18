@@ -21,9 +21,9 @@ class PostCard extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(15),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFF0E3DE)),
+      border: Border.all(color: Theme.of(context).dividerColor),
       boxShadow: [
         BoxShadow(
           color: maroon.withOpacity(.035),
@@ -50,14 +50,14 @@ class PostCard extends StatelessWidget {
                     post.author,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: ink,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     post.time,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Colors.black45,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -69,13 +69,13 @@ class PostCard extends StatelessWidget {
                 vertical: 5,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE9E3),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 post.category,
                 style: const TextStyle(
-                  color: maroon,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -89,7 +89,7 @@ class PostCard extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             height: 1.55,
-            color: ink,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const Divider(height: 24),
@@ -119,9 +119,9 @@ class PostCard extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.mode_comment_outlined,
-                color: maroon,
+                color: Theme.of(context).colorScheme.primary,
               ),
               label: Text('${post.comments.length} মন্তব্য'),
             ),
@@ -138,10 +138,10 @@ class PostCard extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: maroon,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
@@ -197,7 +197,7 @@ class _CommentsPageState extends State<CommentsPage> {
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
-                  color: deepMaroon,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -213,7 +213,7 @@ class _CommentsPageState extends State<CommentsPage> {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Column(
@@ -223,7 +223,7 @@ class _CommentsPageState extends State<CommentsPage> {
                         c.author,
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
-                          color: maroon,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 4),
