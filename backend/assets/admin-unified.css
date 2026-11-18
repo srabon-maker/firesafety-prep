@@ -106,20 +106,36 @@ body{margin:0;background:var(--fs-bg);color:var(--fs-ink);font-family:Arial,"Not
 .layout>.main input,.shell>.main input,.fs-admin-content input,
 .layout>.main select,.shell>.main select,.fs-admin-content select,
 .layout>.main textarea,.shell>.main textarea,.fs-admin-content textarea{border-radius:11px}
-@media(max-width:900px){
+@media(min-width:641px) and (max-width:900px){
+  .layout,.shell,.fs-admin-shell{display:grid;grid-template-columns:245px minmax(0,1fr)}
+  .layout>.sidebar,.shell>.sidebar,.fs-admin-shell>.fs-admin-side{display:block;min-height:100vh}
+  .layout>.sidebar .nav,.layout>.sidebar .nav-list,.shell>.sidebar .side-nav,.fs-admin-menu{display:grid}
+  .layout>.main,.shell>.main,.fs-admin-content{padding:24px}
+}
+.fs-admin-menu-toggle{display:none}
+@media(max-width:640px){
   .layout,.shell,.fs-admin-shell{display:block}
   .layout>.sidebar,.shell>.sidebar,.fs-admin-shell>.fs-admin-side{
-    display:block;width:100%;min-height:0;padding:12px 14px
+    display:none;width:100%;min-height:0;padding:12px 14px
   }
+  .layout>.sidebar.fs-admin-expanded,.shell>.sidebar.fs-admin-expanded,.fs-admin-shell>.fs-admin-side.fs-admin-expanded{display:block}
   .layout>.sidebar .brand,.shell>.sidebar .brand,.fs-admin-brand{padding:4px 4px 12px}
   .layout>.sidebar .brand img,.shell>.sidebar .brand img,.fs-admin-brand img{width:44px;height:44px}
   .layout>.sidebar .nav,.layout>.sidebar .nav-list,.shell>.sidebar .side-nav,.fs-admin-menu{
-    display:flex;overflow-x:auto;gap:6px;padding:0 0 6px;scrollbar-width:thin
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:6px;padding:0 0 6px
   }
   .layout>.sidebar .nav a,.layout>.sidebar .nav-list a,.shell>.sidebar .side-nav a,.fs-admin-menu a{
-    white-space:nowrap;flex-shrink:0;padding:9px 12px;font-size:13px
+    white-space:normal;min-width:0;padding:10px;font-size:14px
   }
   .layout>.main,.shell>.main,.fs-admin-content{padding:18px 14px}
   .layout>.sidebar .nav-title,.layout>.sidebar .sidebar-bottom,.fs-admin-mobile-return{display:none}
+  .fs-admin-menu-toggle{
+    display:inline-flex;align-items:center;gap:9px;margin-bottom:16px;
+    border:0;border-radius:10px;background:#510d18;color:#fff;
+    padding:10px 14px;font-size:16px;font-weight:700;cursor:pointer
+  }
+  .layout>.main .table-wrap,.layout>.main .table-responsive,.shell>.main .table-wrap,
+  .fs-admin-content .table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .layout>.main table,.shell>.main table,.fs-admin-content table{width:100%}
 }
 
