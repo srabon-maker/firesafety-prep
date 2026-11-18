@@ -27,10 +27,12 @@ class HomePage extends StatelessWidget {
   ];
 
   Future<void> _openCategory(BuildContext context, int i) async {
-    final authenticated =
-        await AuthGuard.ensureAuthenticated(context);
-
-    if (!context.mounted || !authenticated) return;
+    // Published job circulars are public; login is needed only to submit.
+    if (i != 0) {
+      final authenticated =
+          await AuthGuard.ensureAuthenticated(context);
+      if (!context.mounted || !authenticated) return;
+    }
 
     final c = categories[i];
 
