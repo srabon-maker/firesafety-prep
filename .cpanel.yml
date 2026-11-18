@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home2/manobiki/fire-safety-staging
+    - /bin/mkdir -p "$DEPLOYPATH"
+    - /bin/cp backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
+    - /bin/cp backend/community_review.php "$DEPLOYPATH/community_review.php"
+    - /bin/cp backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
+    - /bin/cp backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
