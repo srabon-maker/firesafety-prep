@@ -7,3 +7,4 @@ deployment:
     - /bin/cp backend/community_review.php "$DEPLOYPATH/community_review.php"
     - /bin/cp backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
     - /bin/cp backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
+    - /bin/cp backend/users.php "$DEPLOYPATH/users.php"
