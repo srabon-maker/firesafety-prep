@@ -461,27 +461,25 @@ $token = csrf_token();
 @media(max-width:650px){.layout{display:block}.sidebar{width:100%;padding:12px 14px;display:block}.brand{display:flex;align-items:center;gap:11px;padding:0 3px 10px;border:0}.brand img{width:46px;height:46px;margin:0}.brand-name{font-size:17px}.nav-title,.sidebar-bottom{display:none}.nav-list{flex-direction:row;gap:6px;overflow-x:auto;padding-top:8px}.nav-link{white-space:nowrap;padding:8px 11px;font-size:12px;margin:0}.main{padding:18px 13px 30px}.topbar{align-items:flex-start}.page-title{font-size:21px}.stats{grid-template-columns:1fr 1fr;gap:9px}.stat-card{padding:12px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr}.question-head{display:block}.question-actions{margin-top:11px}}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css">
-<script src="assets/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="layout">
-<aside class="sidebar">
- <div class="brand"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD logo" onerror="this.style.display='none'"><div><div class="brand-name">Fire Safety BD</div><div class="brand-sub">Question Management</div></div></div>
- <div class="nav-title">Main menu</div>
- <nav class="nav-list" aria-label="অ্যাডমিন মেনু">
-<a class="nav-link" href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
-<a class="nav-link active" href="questions.php" aria-current="page">ⓘ প্রশ্ন ব্যাংক</a>
-<a class="nav-link" href="model_tests.php">☑ মডেল টেস্ট</a>
-<a class="nav-link" href="notes.php">◫ নোট</a>
-<a class="nav-link" href="job_circulars.php">▣ চাকরির সার্কুলার</a>
-<a class="nav-link" href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
-<a class="nav-link" href="category_management.php">⊞ ক্যাটাগরি</a>
-<a class="nav-link" href="users.php">♙ ব্যবহারকারী</a>
-<a class="nav-link" href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
-<a class="nav-link" href="logout.php">↪ লগ আউট</a>
-<a class="nav-link" href="#paste-import">▤ কপি-পেস্ট</a><a class="nav-link" href="#docx-import">◫ Word Import</a>
+<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
+<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
+<nav class="nav" aria-label="অ্যাডমিন মেনু">
+<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
+<a href="questions.php" class="active" aria-current="page"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
+<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
+<a href="notes.php"><span class="ico">◫</span>নোট</a>
+<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
+<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
+<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
+<a href="questions.php" class="active" aria-current="page"><span class="ico">♧</span>নোটিফিকেশন</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
+<a href="questions.php" class="active" aria-current="page"><span class="ico">☼</span>সেটিংস</a>
+<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
 </nav>
- <div class="sidebar-bottom">Fire Safety BD<br>Question Management</div>
 </aside>
 <main class="main">
 <header class="topbar"><div><div class="eyebrow">Admin / Question Bank</div><h1 class="page-title">প্রশ্ন ব্যবস্থাপনা</h1></div><div class="top-actions"><a class="btn light" href="fire_safety_job_prep_dashboard.php">Dashboard</a></div></header>
