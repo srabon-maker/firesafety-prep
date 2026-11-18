@@ -45,9 +45,11 @@ class AuthService {
   DateTime? _validatedAt;
   Future<Map<String, dynamic>?>? _validationInFlight;
   String? _validationInFlightToken;
+  int _sessionEpoch = 0;
   static const Duration _sessionCacheLifetime = Duration(minutes: 2);
 
   void _invalidateSessionSnapshot() {
+    _sessionEpoch++;
     _validatedSession = null;
     _validatedToken = null;
     _validatedAt = null;
@@ -355,7 +357,7 @@ class AuthService {
       return _validationInFlight!;
     }
 
-    final pending = _validateSessionFromServer(token);
+    final pending = _validateSessionFromServer(token, _sessionEpoch);
     _validationInFlight = pending;
     _validationInFlightToken = token;
     try {
@@ -370,6 +372,7 @@ class AuthService {
 
   Future<Map<String, dynamic>?> _validateSessionFromServer(
     String token,
+    int sessionEpoch,
   ) async {
     final response = await http.get(
       Uri.parse('${apiBaseUrl}me.php'),
@@ -398,7 +401,7 @@ class AuthService {
       return null;
     }
 
-    if (await getSessionToken() != token) {
+    if (await getSessionToken() != token || sessionEpoch != _sessionEpoch) {
       return null;
     }
     _validatedToken = token;
