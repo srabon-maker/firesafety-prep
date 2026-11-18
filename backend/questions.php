@@ -460,6 +460,7 @@ $token = csrf_token();
 @media(max-width:900px){.sidebar{width:205px;flex-basis:205px}.main{padding:22px}}
 @media(max-width:650px){.layout{display:block}.sidebar{width:100%;padding:12px 14px;display:block}.brand{display:flex;align-items:center;gap:11px;padding:0 3px 10px;border:0}.brand img{width:46px;height:46px;margin:0}.brand-name{font-size:17px}.nav-title,.sidebar-bottom{display:none}.nav-list{flex-direction:row;gap:6px;overflow-x:auto;padding-top:8px}.nav-link{white-space:nowrap;padding:8px 11px;font-size:12px;margin:0}.main{padding:18px 13px 30px}.topbar{align-items:flex-start}.page-title{font-size:21px}.stats{grid-template-columns:1fr 1fr;gap:9px}.stat-card{padding:12px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr}.question-head{display:block}.question-actions{margin-top:11px}}
 </style>
+<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 <body>
 <div class="layout">
