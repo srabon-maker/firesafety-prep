@@ -116,9 +116,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
         body: SafeArea(
           child: Form(
             key: _formKey,
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 Text(
                   tr('নাম, ফোন ও পেশাগত তথ্য পরিবর্তন করুন।',
                       'Update your name, phone and professional details.'),
@@ -174,7 +176,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ? tr('সংরক্ষণ হচ্ছে...', 'Saving...')
                       : tr('পরিবর্তন সংরক্ষণ করুন', 'Save changes')),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
