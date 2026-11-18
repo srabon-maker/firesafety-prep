@@ -212,7 +212,7 @@ class _MarketplaceCheckoutPageState extends State<MarketplaceCheckoutPage> {
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: const Text('অর্ডার সফল হয়েছে'),
-          content: Text('অর্ডার নম্বর: $number\\nপেমেন্ট: Cash on Delivery'),
+          content: Text('অর্ডার নম্বর: $number\nপেমেন্ট: Cash on Delivery'),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -329,7 +329,7 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
                 Card(child: ListTile(
                   title: Text(order.number),
                   subtitle: Text('স্ট্যাটাস: ${order.status} • '
-                      'পেমেন্ট: ${order.paymentStatus}\\n${order.createdAt}'),
+                      'পেমেন্ট: ${order.paymentStatus}\n${order.createdAt}'),
                   trailing: Text('৳${order.total.toStringAsFixed(2)}'),
                   isThreeLine: true,
                 )),
@@ -358,7 +358,7 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
                 Card(child: ListTile(
                   title: Text(request.serviceName.isEmpty
                       ? request.number : request.serviceName),
-                  subtitle: Text('${request.number}\\n'
+                  subtitle: Text('${request.number}\n'
                       'স্ট্যাটাস: ${request.status} • ${request.location}'
                       '${request.preferredDate == null ? '' : ' • ${request.preferredDate}'}'),
                   isThreeLine: true,
@@ -435,7 +435,7 @@ class _MarketplaceServiceBookingPageState
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: const Text('সার্ভিস অনুরোধ জমা হয়েছে'),
-          content: Text('অনুরোধ নম্বর: $number\\nআমাদের টিম যোগাযোগ করবে।'),
+          content: Text('অনুরোধ নম্বর: $number\nআমাদের টিম যোগাযোগ করবে।'),
           actions: [
             FilledButton(onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('ঠিক আছে')),
