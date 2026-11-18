@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/job_circular.dart';
 import '../utils/job_notice_sections.dart';
 import '../services/job_circular_service.dart';
+import '../services/auth_guard.dart';
+import 'submit_job_page.dart';
 
 const Color _maroon = Color(0xFF650D18);
 const Color _deepMaroon = Color(0xFF36060D);
@@ -54,6 +56,15 @@ class _JobsPageState extends State<JobsPage> {
     _jobs = JobCircularService.instance.fetchCirculars();
   }
 
+  Future<void> _openSubmit() async {
+    final allowed = await AuthGuard.ensureAuthenticated(context);
+    if (!mounted || !allowed) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SubmitJobPage()),
+    );
+    if (mounted) await _refresh();
+  }
+
   Future<void> _refresh() async {
     setState(_reload);
     try {
@@ -89,6 +100,11 @@ class _JobsPageState extends State<JobsPage> {
           foregroundColor: Colors.white,
           title: const Text('চাকরির সার্কুলার'),
           actions: [
+            IconButton(
+              tooltip: 'সার্কুলার জমা দিন',
+              onPressed: _openSubmit,
+              icon: const Icon(Icons.add_circle_outline),
+            ),
             IconButton(
               tooltip: 'রিফ্রেশ',
               onPressed: _refresh,
@@ -135,6 +151,12 @@ class _JobsPageState extends State<JobsPage> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _openSubmit,
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('আপনার চাকরির সার্কুলার জমা দিন'),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -560,6 +582,12 @@ class JobCircularDetailsPage extends StatelessWidget {
                     ),
                   if (job.vacancies.isNotEmpty)
                     _infoRow(Icons.groups_outlined, 'পদসংখ্যা', job.vacancies),
+                  if (job.contactMobile != null)
+                    _infoRow(Icons.phone_outlined, 'যোগাযোগের মোবাইল',
+                        job.contactMobile!),
+                  if (job.contactWhatsapp != null)
+                    _infoRow(Icons.chat_outlined, 'WhatsApp নম্বর',
+                        job.contactWhatsapp!),
                   if (validSalary.isNotEmpty)
                     _infoRow(Icons.payments_outlined, 'বেতন', validSalary),
                   _infoRow(
@@ -603,6 +631,38 @@ class JobCircularDetailsPage extends StatelessWidget {
               'আবেদনের আগে নিয়োগদাতার মূল বিজ্ঞপ্তি যাচাই করুন।',
               Icons.info_outline,
             ),
+          if (job.contactMobile != null || job.contactWhatsapp != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                if (job.contactMobile != null)
+                  OutlinedButton.icon(
+                    onPressed: () => _contactAction(
+                      context, Uri(scheme: 'tel', path: job.contactMobile!),
+                    ),
+                    icon: const Icon(Icons.call_outlined),
+                    label: const Text('কল করুন'),
+                  ),
+                if (job.contactWhatsapp != null)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      var number = job.contactWhatsapp!.replaceAll('+', '');
+                      if (number.startsWith('01') && number.length == 11) {
+                        number = '88' + number;
+                      }
+                      _contactAction(
+                        context,
+                        Uri.https('wa.me', '/' + number),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('WhatsApp'),
+                  ),
+              ],
+            ),
+          ],
           if (job.circularUrl != null) ...[
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -811,6 +871,19 @@ class JobCircularDetailsPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+Future<void> _contactAction(BuildContext context, Uri uri) async {
+  try {
+    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+  } catch (_) {
+    // Show a user-facing error below.
+  }
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('যোগাযোগের অ্যাপ খোলা যায়নি।')),
     );
   }
 }
