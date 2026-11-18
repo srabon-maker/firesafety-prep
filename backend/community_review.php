@@ -6,7 +6,6 @@ require_admin();
 require_once __DIR__ . '/db.php';
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 header('Cache-Control: no-store');
-
 function community_review_escape(mixed $value): string {
     return htmlspecialchars((string)($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
@@ -63,29 +62,7 @@ h1{margin:0 0 5px;font-size:22px}h2{font-size:20px}.muted{color:#65585c}.error{c
 .body{white-space:pre-wrap;overflow-wrap:anywhere}.photo{max-width:100%;max-height:350px;object-fit:contain;border-radius:12px}
 button{background:#650d18;color:white;border:0;border-radius:9px;padding:11px 15px;margin:8px 8px 0 0;cursor:pointer}
 button.reject{background:#666}button.hide{background:#a74a24}
-</style>
-<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
-<div class="fs-admin-shell">
-<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
-<nav class="nav" aria-label="অ্যাডমিন মেনু">
-<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
-<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
-<a href="notes.php"><span class="ico">◫</span>নোট</a>
-<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
-<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
-<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
-<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community" class="active" aria-current="page"><span class="ico">▱</span>কমিউনিটি</a>
-<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
-<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
-</nav>
-</aside>
-<div class="fs-admin-content">
-<a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>
-
+</style></head><body>
 <header><h1>Fire Safety BD — কমিউনিটি পোস্ট অনুমোদন</h1>
 <a href="job_submission_review.php">← Job Approval</a></header><main>
 <?php if ($error): ?><p class="error"><?= community_review_escape($error) ?></p><?php endif; ?>
@@ -96,7 +73,7 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <article>
 <div class="muted">#<?= (int)$p['id'] ?> · <?= community_review_escape($p['full_name']) ?> · <?= community_review_escape($p['created_at']) ?></div>
 <p class="body"><?= community_review_escape($p['body']) ?></p>
-<?php if ($p['image_path'] && preg_match('/^[a-f0-9]{32}\\.(jpg|png|webp)$/', $p['image_path'])): ?>
+<?php if ($p['image_path'] && preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/', $p['image_path'])): ?>
 <img class="photo" alt="পোস্টের ছবি" src="uploads/community/<?= community_review_escape($p['image_path']) ?>">
 <?php endif; ?>
 <form method="post" onsubmit="return confirm('এই সিদ্ধান্ত নিশ্চিত করবেন?');">
@@ -117,6 +94,4 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <button type="submit" name="decision" value="hide" class="hide">Hide post</button></form>
 <?php endif; ?></section>
 <?php endforeach; ?>
-</main></div>
-</div>
-</body></html>
+</main></body></html>

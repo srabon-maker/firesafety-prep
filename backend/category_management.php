@@ -856,7 +856,6 @@ td {
 }
 
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 
 <body>
@@ -865,23 +864,66 @@ td {
 
     <!-- SIDEBAR -->
 
-    <aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
-<nav class="nav" aria-label="অ্যাডমিন মেনু">
-<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
-<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
-<a href="notes.php"><span class="ico">◫</span>নোট</a>
-<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
-<a href="category_management.php" class="active" aria-current="page"><span class="ico">⊞</span>ক্যাটাগরি</a>
-<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
-<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
-<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
-<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
-</nav>
-</aside>
+    <aside class="sidebar">
+
+        <a class="brand"
+           href="fire_safety_job_prep_dashboard.php">
+
+            <img
+                src="assets/fire-safety-bd-logo.png"
+                alt="Fire Safety BD Logo"
+                onerror="this.style.display='none'"
+            >
+
+            <div>
+                <div class="brand-name">Fire Safety BD</div>
+                <div class="brand-sub">Admin Control Panel</div>
+            </div>
+
+        </a>
+
+        <div class="nav-title">MAIN MENU</div>
+
+        <nav class="nav-list">
+
+            <a class="nav-link"
+               href="fire_safety_job_prep_dashboard.php">
+                ▦ Dashboard
+            </a>
+
+            <a class="nav-link" href="questions.php">
+                ▤ Question Bank
+            </a>
+
+            <a class="nav-link" href="model_tests.php">
+                ☑ Model Tests
+            </a>
+
+            <a class="nav-link" href="notes.php">
+                ▤ Notes
+            </a>
+
+            <a class="nav-link" href="job_circulars.php">
+                ▣ Job Circulars
+            </a>
+
+            <a class="nav-link active"
+               href="category_management.php">
+                ▦ Categories
+            </a>
+
+            <a class="nav-link" href="logout.php">
+                ↪ Logout
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+            Fire Safety BD<br>
+            Admin Management System
+        </div>
+
+    </aside>
 
 
     <!-- MAIN CONTENT -->

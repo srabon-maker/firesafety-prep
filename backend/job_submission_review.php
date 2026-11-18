@@ -1,26 +1,21 @@
 <?php
 declare(strict_types=1);
-
-// Same admin login as the existing Fire Safety BD dashboard.
 require_once __DIR__ . '/admin_helpers.php';
 start_secure_session();
 require_admin();
 require_once __DIR__ . '/db.php';
-
 if (!isset($pdo) || !($pdo instanceof PDO)) {
     http_response_code(500);
     exit('Database unavailable.');
 }
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 header('Cache-Control: no-store');
-
 function review_h(mixed $value): string {
     return htmlspecialchars((string)($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 $error = '';
 $success = isset($_GET['saved']) ? 'সিদ্ধান্ত সংরক্ষিত হয়েছে।' : '';
 $csrf = csrf_token();
-
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     verify_csrf();
     $id = filter_var($_POST['submission_id'] ?? null, FILTER_VALIDATE_INT, [
@@ -113,31 +108,9 @@ button.reject{background:#6d6366}.muted{color:#6b5960}.error{color:#a90021}.succ
 .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px}
 table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;border-bottom:1px solid #eee}
 .scroll{overflow:auto}
-</style>
-<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
-<div class="fs-admin-shell">
-<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
-<nav class="nav" aria-label="অ্যাডমিন মেনু">
-<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
-<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
-<a href="notes.php"><span class="ico">◫</span>নোট</a>
-<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
-<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
-<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
-<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
-<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
-<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
-</nav>
-</aside>
-<div class="fs-admin-content">
-<a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>
-
+</style></head><body>
 <header><h1>Fire Safety BD — ইউজার সার্কুলার অনুমোদন</h1>
-<a href="job_circulars.php">← Job Circular Admin</a> &nbsp; | &nbsp; <a href="community_review.php">কমিউনিটি পোস্ট অনুমোদন</a></header>
+<a href="job_circulars.php">← Job Circular Admin</a></header>
 <main>
 <?php if ($error !== ''): ?><p class="error"><?= review_h($error) ?></p><?php endif; ?>
 <?php if ($success !== ''): ?><p class="success"><?= review_h($success) ?></p><?php endif; ?>
@@ -169,7 +142,7 @@ table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;bor
 <input type="hidden" name="submission_id" value="<?= (int)$s['id'] ?>">
 <label for="note<?= (int)$s['id'] ?>">Admin Note (ঐচ্ছিক; Reject করলে কারণ লিখুন)</label>
 <textarea id="note<?= (int)$s['id'] ?>" name="admin_note" maxlength="1000"></textarea>
-<button type="submit" name="decision" value="approve">✓ Approve & Publish</button>
+<button type="submit" name="decision" value="approve">✓ Approve &amp; Publish</button>
 <button type="submit" name="decision" value="reject" class="reject">✕ Reject</button>
 </form>
 </article>
@@ -184,6 +157,4 @@ table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;bor
 <a href="job_circulars.php?edit=<?= (int)$s['published_job_id'] ?>">#<?= (int)$s['published_job_id'] ?></a>
 <?php endif; ?></td></tr><?php endforeach; ?></tbody>
 </table></div></section>
-</main></div>
-</div>
-</body></html>
+</main></body></html>
