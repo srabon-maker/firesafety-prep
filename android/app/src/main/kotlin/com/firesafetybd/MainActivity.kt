@@ -37,11 +37,7 @@ class MainActivity : FlutterActivity() {
             val info = packageManager.getPackageInfo(
                 packageName, PackageManager.GET_SIGNING_CERTIFICATES
             ).signingInfo ?: error("Missing Android signing information")
-            if (info.hasMultipleSigners()) {
-                info.apkContentsSigners
-            } else {
-                info.signingCertificateHistory
-            }
+            info.apkContentsSigners
         } else {
             packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
         }
