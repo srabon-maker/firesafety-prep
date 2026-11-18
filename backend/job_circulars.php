@@ -216,14 +216,19 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
         <img src="assets/fire-safety-bd-logo.png" class="logo" alt="Logo">
         <div><div class="brand-title">Fire Safety BD</div><div class="brand-sub">অ্যাডমিন প্যানেল</div></div>
     </a>
-    <nav class="nav">
-        <a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
-        <a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
-        <a href="model_tests.php">☑ মডেল টেস্ট</a>
-        <a href="notes.php">◫ নোট</a>
-        <a href="job_circulars.php" class="active">▣ চাকরির সার্কুলার</a>
-        <a href="logout.php" class="logout">↪ লগ আউট</a>
-    </nav>
+    <nav class="nav" aria-label="অ্যাডমিন মেনু">
+<a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+<a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
+<a href="model_tests.php">☑ মডেল টেস্ট</a>
+<a href="notes.php">◫ নোট</a>
+<a class="active" href="job_circulars.php" aria-current="page">▣ চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
+<a href="category_management.php">⊞ ক্যাটাগরি</a>
+<a href="users.php">♙ ব্যবহারকারী</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
+<a href="logout.php">↪ লগ আউট</a>
+<a href="job_submission_review.php">✓ সার্কুলার অনুমোদন</a>
+</nav>
 </aside>
 
 <main class="main">
