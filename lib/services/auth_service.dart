@@ -398,11 +398,12 @@ class AuthService {
       return null;
     }
 
-    if (await getSessionToken() == token) {
-      _validatedToken = token;
-      _validatedSession = data;
-      _validatedAt = DateTime.now();
+    if (await getSessionToken() != token) {
+      return null;
     }
+    _validatedToken = token;
+    _validatedSession = data;
+    _validatedAt = DateTime.now();
     return data;
   }
 
