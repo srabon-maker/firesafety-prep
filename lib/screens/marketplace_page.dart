@@ -326,32 +326,61 @@ class _MarketplacePageState extends State<MarketplacePage> {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final columns = width >= 950 ? 4 : width >= 650 ? 3 : 2;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filtered.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 12,
-                mainAxisExtent: 346,
-              ),
-              itemBuilder: (context, index) {
-                final item = filtered[index];
-                return MarketplaceCatalogCard(
-                  key: ValueKey('${item.isService}-${item.id}'),
-                  item: item,
-                  actionBusy: _adding,
-                  onDetails: () => _showDetails(item),
-                  onAction: () {
-                    if (item.isService) {
-                      _bookService(item);
-                    } else {
-                      _add(item);
-                    }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.grid_view_rounded,
+                        color: marketMaroon, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      _tab == 0 ? 'আমাদের পণ্যসমূহ' : 'আমাদের সার্ভিসসমূহ',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: marketDeepMaroon,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${filtered.length}টি',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filtered.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 12,
+                    mainAxisExtent: 346,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    return MarketplaceCatalogCard(
+                      key: ValueKey('${item.isService}-${item.id}'),
+                      item: item,
+                      actionBusy: _adding,
+                      onDetails: () => _showDetails(item),
+                      onAction: () {
+                        if (item.isService) {
+                          _bookService(item);
+                        } else {
+                          _add(item);
+                        }
+                      },
+                    );
                   },
-                );
-              },
+                ),
+              ],
             );
           },
         );
