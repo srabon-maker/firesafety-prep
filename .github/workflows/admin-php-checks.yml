@@ -1,0 +1,37 @@
+name: Admin Panel PHP checks
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**/*.php'
+      - '.github/workflows/admin-php-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**/*.php'
+      - '.github/workflows/admin-php-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP version
+        run: php -v
+      - name: Syntax check all backend PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' php_files < <(find backend -type f -name '*.php' -print0)
+          if [ "${#php_files[@]}" -eq 0 ]; then
+            echo "No PHP files found" >&2
+            exit 1
+          fi
+          for file in "${php_files[@]}"; do
+            php -l "$file"
+          done
+          echo "Validated ${#php_files[@]} PHP files."
