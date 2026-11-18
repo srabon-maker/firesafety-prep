@@ -41,10 +41,14 @@ void main() {
       }),
     ));
 
+    // The save action is below the viewport, but the full form must remain
+    // mounted so validation also checks required fields above the viewport.
     final save = find.text('Save changes');
+    expect(save, findsOneWidget);
     await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
     await tester.tap(save);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('This field is required.'), findsNWidgets(2));
   });
 }
