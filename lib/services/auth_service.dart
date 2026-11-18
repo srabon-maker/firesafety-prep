@@ -342,6 +342,8 @@ class AuthService {
       return null;
     }
 
+    if (forceRefresh) _invalidateSessionSnapshot();
+
     final now = DateTime.now();
     if (!forceRefresh &&
         _validatedToken == token &&
