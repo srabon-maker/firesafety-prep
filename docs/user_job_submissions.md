@@ -27,7 +27,8 @@ Back up the existing database and PHP files; test on staging first.
 5. The live /job_circulars.php may be newer than the GitHub version.
    Keep the live parser/admin page and add a link to the moderation page
    manually; do not replace it with the older GitHub file.
-6. Merge PR #25 (structured details) first, then this submission PR.
+6. PR #26 has already been merged into the PR #25 feature branch.
+   Validate PR #25 and merge it into main only after checks pass.
    Build the APK from the updated main branch.
 
 ## Endpoints
