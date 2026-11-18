@@ -180,20 +180,20 @@ class HomePage extends StatelessWidget {
                 size: 24,
               ),
               const SizedBox(width: 9),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'ক্যাটাগরি',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: deepMaroon,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 '৬টি বিষয়',
                 style: TextStyle(
-                  color: Colors.brown,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -348,8 +348,8 @@ class HomePage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
         sliver: SliverToBoxAdapter(
           child: Row(
-            children: const [
-              Icon(Icons.bolt, color: maroon),
+            children: [
+              Icon(Icons.bolt, color: Theme.of(context).colorScheme.primary),
               SizedBox(width: 8),
               Text(
                 'দ্রুত প্রস্তুতি',
@@ -395,8 +395,8 @@ class HomePage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
         sliver: SliverToBoxAdapter(
           child: Row(
-            children: const [
-              Icon(Icons.campaign_outlined, color: maroon),
+            children: [
+              Icon(Icons.campaign_outlined, color: Theme.of(context).colorScheme.primary),
               SizedBox(width: 8),
               Text(
                 'সাম্প্রতিক আপডেট',
@@ -415,18 +415,21 @@ class HomePage extends StatelessWidget {
       SliverList(
         delegate: SliverChildListDelegate([
           _updateTile(
+            context,
             Icons.local_fire_department,
             red,
             'ফায়ার সেফটি প্রস্তুতি',
             'গুরুত্বপূর্ণ টপিক ও ইন্টারভিউ প্রশ্ন',
           ),
           _updateTile(
+            context,
             Icons.assignment_outlined,
             Colors.blue,
             'মডেল টেস্ট',
             'নিজের প্রস্তুতি যাচাই করুন',
           ),
           _updateTile(
+            context,
             Icons.menu_book_outlined,
             Colors.green,
             'নতুন নোট',
@@ -458,6 +461,7 @@ class HomePage extends StatelessWidget {
       );
 
   static Widget _updateTile(
+    BuildContext context,
     IconData icon,
     Color color,
     String title,
@@ -467,10 +471,10 @@ class HomePage extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFFF0E4DF),
+            color: Theme.of(context).dividerColor,
           ),
         ),
         child: Row(
@@ -486,23 +490,23 @@ class HomePage extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: ink,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: maroon),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
           ],
         ),
       );
