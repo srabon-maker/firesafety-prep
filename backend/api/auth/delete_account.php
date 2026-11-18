@@ -24,6 +24,26 @@ try {
         profileRespond(404, ['success' => false, 'message' => 'Account not found.']);
     }
 
+    // Do not erase transactions that staff may still be fulfilling.
+    $activeOrders = $pdo->prepare(
+        "SELECT COUNT(*) FROM market_orders WHERE user_id = ?
+         AND order_status IN ('pending', 'confirmed', 'processing', 'shipped')"
+    );
+    $activeOrders->execute([$userId]);
+    $activeRequests = $pdo->prepare(
+        "SELECT COUNT(*) FROM market_service_requests WHERE user_id = ?
+         AND status IN ('pending', 'reviewing', 'approved')"
+    );
+    $activeRequests->execute([$userId]);
+    if ((int) $activeOrders->fetchColumn() > 0 ||
+        (int) $activeRequests->fetchColumn() > 0) {
+        $pdo->rollBack();
+        profileRespond(409, [
+            'success' => false,
+            'message' => 'Complete or cancel active orders and service requests before deleting your account.'
+        ]);
+    }
+
     // The existing database schema restricts deletion while orders and
     // service requests reference the user. Remove these explicitly.
     // Order items cascade from market_orders. Other user-owned records
