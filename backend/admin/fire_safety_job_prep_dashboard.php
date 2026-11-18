@@ -1195,6 +1195,16 @@ tr:last-child td {
 @media(max-width:1200px){.community-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:850px){.community-list{grid-template-columns:1fr}}
 @media(max-width:640px){.community-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.community-stat{padding:13px;border-radius:15px}.community-stat .number{font-size:25px}.community-toolbar{display:grid;grid-template-columns:1fr 1fr}.community-toolbar label:first-of-type{grid-column:1/-1}.community-toolbar input,.community-toolbar select{min-width:0;width:100%}.community-toolbar button{grid-column:1/-1}.community-card{padding:15px}.community-heading h2{font-size:20px}}
+
+/* Consistent always-visible sidebar on every viewport. */
+@media(max-width:1050px){
+  .app{display:flex!important}
+  .sidebar{display:block!important;width:clamp(145px,25vw,280px)!important;flex:0 0 clamp(145px,25vw,280px)!important;min-height:100vh!important;padding:14px!important}
+  .nav{display:grid!important;grid-template-columns:1fr!important}
+  .nav a{font-size:clamp(11px,1.5vw,16px)!important;padding:11px 8px!important}
+  .mobile-toggle{display:none!important}
+  .main{min-width:0;padding:18px 14px!important}
+}
 </style>
 </head>
 
@@ -1288,11 +1298,7 @@ tr:last-child td {
 
         <div class="topline">
 
-            <button
-                class="mobile-toggle"
-                onclick="document.getElementById('sidebar').classList.toggle('open')"
-                aria-label="মেনু"
-            >☰</button>
+            
 
             <div>
                 <h1 class="page-title"><?= $isCommunity ? 'কমিউনিটি' : ($isMarketplace ? 'মার্কেটপ্লেস' : 'ড্যাশবোর্ড') ?></h1>
