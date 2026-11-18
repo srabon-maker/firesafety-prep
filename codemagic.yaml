@@ -5,9 +5,7 @@ workflows:
     max_build_duration: 15
     instance_type: mac_mini_m2
 
-    # Deliberately no webhook triggers. Start this workflow manually only.
-    triggering:
-      events: []
+    # No triggering section: this workflow is manual-only.
 
     environment:
       groups:
@@ -52,13 +50,13 @@ workflows:
 
           # The key and keystore intentionally share one strong secret.
           # Never print the password or commit this generated file to Git.
-          keytool -genkeypair -noprompt \\
-            -keystore "$OUTPUT" \\
-            -storetype JKS \\
-            -alias fire_safety_bd \\
-            -keyalg RSA -keysize 3072 -validity 10000 \\
-            -dname "CN=Fire Safety BD, OU=Mobile, O=Fire Safety BD, C=BD" \\
-            -storepass "$FSBD_KEYSTORE_PASSWORD" \\
+          keytool -genkeypair -noprompt \
+            -keystore "$OUTPUT" \
+            -storetype JKS \
+            -alias fire_safety_bd \
+            -keyalg RSA -keysize 3072 -validity 10000 \
+            -dname "CN=Fire Safety BD, OU=Mobile, O=Fire Safety BD, C=BD" \
+            -storepass "$FSBD_KEYSTORE_PASSWORD" \
             -keypass "$FSBD_KEYSTORE_PASSWORD" >/dev/null 2>&1
 
           test -s "$OUTPUT" || {
@@ -70,10 +68,10 @@ workflows:
           echo "Release keystore created successfully."
           echo "Alias: fire_safety_bd"
           echo "Certificate fingerprints (safe to register in Google OAuth):"
-          keytool -list -v \\
-            -keystore "$OUTPUT" \\
-            -alias fire_safety_bd \\
-            -storepass "$FSBD_KEYSTORE_PASSWORD" \\
+          keytool -list -v \
+            -keystore "$OUTPUT" \
+            -alias fire_safety_bd \
+            -storepass "$FSBD_KEYSTORE_PASSWORD" \
             | grep -E '^[[:space:]]*(SHA1:|SHA256:)'
 
           echo "IMPORTANT: Download the .jks from build Artifacts, back it up"
