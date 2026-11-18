@@ -192,7 +192,7 @@ class _CommentsPageState extends State<CommentsPage> {
                   widget.onChanged();
                 },
               ),
-              const Text(
+              Text(
                 'মন্তব্য',
                 style: TextStyle(
                   fontSize: 19,
