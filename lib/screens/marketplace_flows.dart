@@ -27,7 +27,7 @@ String? _required(String? value) =>
     (value == null || value.trim().isEmpty) ? 'এই তথ্যটি লিখুন' : null;
 
 String? _phone(String? value) {
-  if (value == null || !RegExp(r'^[0-9+\\- ]{10,20}$').hasMatch(value.trim())) {
+  if (value == null || !RegExp(r'^[0-9+ -]{10,20}$').hasMatch(value.trim())) {
     return '১০–২০ অক্ষরের সঠিক মোবাইল নম্বর দিন';
   }
   return null;
