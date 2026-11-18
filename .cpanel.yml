@@ -1,10 +1,12 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home2/manobiki/fire-safety-staging
-    - /bin/mkdir -p "$DEPLOYPATH"
-    - /bin/cp backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
-    - /bin/cp backend/community_review.php "$DEPLOYPATH/community_review.php"
-    - /bin/cp backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
-    - /bin/cp backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
-    - /bin/cp backend/users.php "$DEPLOYPATH/users.php"
+    - export DEPLOYPATH=/home2/manobiki/fire.manobikishwarganj.com
+    - export BACKUPPATH=/home2/manobiki/fire-safety-deploy-backups
+    - /bin/test -f "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
+    - /bin/test -f backend/admin/fire_safety_job_prep_dashboard.php
+    - /bin/test -f backend/users.php
+    - /bin/mkdir -p "$BACKUPPATH"
+    - /bin/test -f "$BACKUPPATH/fire_safety_job_prep_dashboard.pre-users-20261118.php" || /bin/cp -p "$DEPLOYPATH/fire_safety_job_prep_dashboard.php" "$BACKUPPATH/fire_safety_job_prep_dashboard.pre-users-20261118.php"
+    - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
+    - /bin/cp -p backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
