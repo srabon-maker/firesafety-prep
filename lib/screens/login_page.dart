@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
         final idToken = result['id_token']?.toString() ?? '';
 
         if (idToken.isEmpty) {
-          throw Exception('Google ID Token পাওয়া যায়নি।');
+          throw Exception('Could not get a Google ID token. Please try again.');
         }
 
         final registered = await Navigator.push<bool>(
@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
 
       throw Exception(
         result['message']?.toString() ??
-            'লগইন সম্পন্ন হয়নি। আবার চেষ্টা করুন।',
+            'Login was not completed. Please try again.',
       );
     } catch (e, stackTrace) {
       debugPrint('LOGIN PAGE ERROR: $e');
@@ -111,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('লগইন'),
+        title: const Text('Login'),
         backgroundColor: maroon,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -178,7 +178,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'অগ্নি নিরাপত্তায় আপনার বিশ্বস্ত সঙ্গী',
+                    'Welcome to Fire Safety BD',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -189,8 +189,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 9),
                   Text(
-                    'শিখুন, প্রস্তুতি নিন এবং নিরাপদ থাকুন।\n'
-                    'সব সেবা ব্যবহার করতে লগইন করুন।',
+                    'Login to access all services',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -229,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 const SizedBox(width: 12),
                                 const Flexible(
-                                  child: Text('অনুগ্রহ করে অপেক্ষা করুন...'),
+                                  child: Text('Please wait...'),
                                 ),
                               ],
                             )
@@ -241,7 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                                 SizedBox(width: 8),
                                 Flexible(
                                   child: Text(
-                                    'গুগল অ্যাকাউন্ট দিয়ে লগইন করুন',
+                                    'Continue with Google',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 16,
@@ -273,7 +272,7 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'লগইন সম্পন্ন হয়নি',
+                                  'Login Error',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -301,7 +300,7 @@ class _LoginPageState extends State<LoginPage> {
                               setState(() => _errorMessage = null);
                             },
                             icon: const Icon(Icons.close_rounded),
-                            label: const Text('বন্ধ করুন'),
+                            label: const Text('Dismiss'),
                           ),
                         ],
                       ),
@@ -309,8 +308,8 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                   const SizedBox(height: 22),
                   Text(
-                    'নতুন ব্যবহারকারী হলে গুগল লগইনের পর\n'
-                    'একবার নিবন্ধন সম্পন্ন করতে হবে।',
+                    'New users will need to complete registration\n'
+                    'after Google Login.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
