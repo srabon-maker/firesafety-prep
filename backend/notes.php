@@ -797,33 +797,7 @@ th {
 <a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>
 
 
-<header class="topbar">
 
-    <a href="fire_safety_job_prep_dashboard.php"
-       class="brand"
-       title="Dashboard-এ ফিরে যান">
-
-        <img
-            src="assets/fire-safety-bd-logo.png"
-            alt="Fire Safety BD Logo"
-            class="brand-logo"
-        >
-
-        <div>
-            <div class="brand-name">Fire Safety BD</div>
-            <div class="brand-subtitle">Admin Panel · Notes Management</div>
-        </div>
-
-    </a>
-
-    <nav class="nav-links">
-        <a href="fire_safety_job_prep_dashboard.php">Dashboard</a>
-        <a href="questions.php">Question Bank</a>
-        <a href="model_tests.php">Model Test</a>
-        <a href="logout.php">Logout</a>
-    </nav>
-
-</header>
 
 <main class="container">
 
