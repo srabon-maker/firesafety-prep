@@ -97,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Login'),
         backgroundColor: maroon,
@@ -134,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
 
@@ -146,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
 
@@ -157,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
 
@@ -281,7 +281,7 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
