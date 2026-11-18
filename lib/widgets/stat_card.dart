@@ -18,25 +18,25 @@ class StatCard extends StatelessWidget {
         horizontal: 6,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Text(
             number,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF650D18),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Colors.black54,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
