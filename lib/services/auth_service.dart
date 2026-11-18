@@ -14,10 +14,11 @@ class AuthService {
   static final AuthService instance = AuthService._();
 
   // Google OAuth Web Client ID
-  // Certificate registered in the Google Cloud Android OAuth client for
-  // Codemagic's permanent signing identity (not a secret).
+  // Fingerprint of the actual Codemagic permanent-release signing identity.
+  // This SHA-1 must also be registered in the Google Cloud Android OAuth
+  // client for package com.firesafetybd (registration is a separate step).
   static const String registeredReleaseSha1 =
-      '5E:FA:D5:39:A3:B4:1A:AB:50:8C:AF:D8:1D:8C:51:81:25:B0:EA:FC';
+      'B7:9C:E6:8D:E1:62:BC:4D:90:9D:85:2C:32:6F:7E:C3:8D:4E:C8:AF';
   static const MethodChannel _appIdentityChannel =
       MethodChannel('com.firesafetybd/app_identity');
 
@@ -214,9 +215,9 @@ class AuthService {
               installedPackage != 'com.firesafetybd');
       if (signingMismatch) {
         throw Exception(
-          'The installed APK signing identity differs from the Android OAuth '
-          'client. Register this APK package and SHA-1 in Google Cloud, or '
-          'install the intended permanent-release APK.\n'
+          'The installed APK signing identity differs from the pinned Codemagic '
+          'release signing identity. Verify the selected Codemagic signing key; '
+          'do not rotate the signing key.\n'
           '$diagnostic$apkIdentity',
         );
       }
