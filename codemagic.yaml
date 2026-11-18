@@ -129,6 +129,9 @@ workflows:
       - name: Run profile editor widget tests
         script: flutter test test/profile_edit_test.dart
 
+      - name: Run job circular API/model tests
+        script: flutter test test/job_circular_test.dart
+
       - name: Build Android APK with permanent release signing
         script: flutter build apk --release
 
