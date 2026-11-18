@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,13 @@ class AuthService {
   static final AuthService instance = AuthService._();
 
   // Google OAuth Web Client ID
+  // Certificate registered in the Google Cloud Android OAuth client for
+  // Codemagic's permanent signing identity (not a secret).
+  static const String registeredReleaseSha1 =
+      '5E:FA:D5:39:A3:B4:1A:AB:50:8C:AF:D8:1D:8C:51:81:25:B0:EA:FC';
+  static const MethodChannel _appIdentityChannel =
+      MethodChannel('com.firesafetybd/app_identity');
+
   static const String webClientId =
       '489619291156-dmva2n4skh4snd9qbl0ne2tionpm92b9.apps.googleusercontent.com';
 
@@ -64,6 +72,8 @@ class AuthService {
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
     var signInStage = 'initialization';
+    String? installedSha1;
+    String? installedPackage;
     _log('STEP 1: Google login started.');
 
     try {
@@ -71,6 +81,21 @@ class AuthService {
 
       // Do not sign out immediately before opening the account picker.
       // Explicit sign-out is handled by logout().
+
+      // Read the certificate from the APK actually installed on the device,
+      // not from the Codemagic build log or the uploaded keystore.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          final identity = await _appIdentityChannel
+              .invokeMapMethod<String, dynamic>('getSigningIdentity');
+          installedSha1 = identity?['sha1'] as String?;
+          installedPackage = identity?['packageName'] as String?;
+          _log('Installed APK package: $installedPackage');
+          _log('Installed APK signing SHA-1: $installedSha1');
+        } catch (_) {
+          _log('Installed APK signing information unavailable.');
+        }
+      }
 
       signInStage = 'google_account_authentication';
       _log('STEP 2: Waiting for Google account selection.');
@@ -164,16 +189,39 @@ class AuthService {
       // account. Include the non-secret SDK code and failing stage so that
       // support can distinguish this from a server or token failure.
       final diagnostic = 'Code: ${e.code.name}; Stage: $signInStage';
+      final nativeDescription = e.description ?? '';
+      final nativeHint = nativeDescription.contains('Account reauth failed')
+          ? 'Android detail: Account reauth failed.'
+          : nativeDescription.contains('Developer console is not set up')
+              ? 'Android detail: Developer console configuration error.'
+              : nativeDescription.contains('Network error')
+                  ? 'Android detail: Network error.'
+                  : '';
+      final apkIdentity = installedSha1 == null
+          ? ''
+          : '\\nInstalled APK SHA-1: $installedSha1';
+      final signingMismatch = installedSha1 != null &&
+          (installedSha1.toUpperCase() != registeredReleaseSha1 ||
+              installedPackage != 'com.firesafetybd');
+      if (signingMismatch) {
+        throw Exception(
+          'The installed APK signing identity differs from the Android OAuth '
+          'client. Register this APK package and SHA-1 in Google Cloud, or '
+          'install the intended permanent-release APK.\\n'
+          '$diagnostic$apkIdentity',
+        );
+      }
+      final extra = nativeHint.isEmpty ? '' : '\\n$nativeHint';
       _log('GOOGLE AUTH DIAGNOSTIC: $diagnostic');
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw Exception(
           'Google Sign-In was interrupted. Please try again.\n'
-          '$diagnostic',
+          '$diagnostic$extra$apkIdentity',
         );
       }
       throw Exception(
         'Google Sign-In failed. Please try again.\n'
-        '$diagnostic',
+        '$diagnostic$extra$apkIdentity',
       );
     } on TimeoutException {
       throw Exception('Login server-এর Response আসতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
