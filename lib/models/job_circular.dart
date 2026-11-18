@@ -17,6 +17,8 @@ class JobCircular {
     this.deadline,
     this.applyUrl,
     this.circularUrl,
+    this.contactMobile,
+    this.contactWhatsapp,
   });
 
   final int id;
@@ -34,6 +36,8 @@ class JobCircular {
   final DateTime? deadline;
   final String? applyUrl;
   final String? circularUrl;
+  final String? contactMobile;
+  final String? contactWhatsapp;
 
   bool get isExpired {
     final end = deadline;
@@ -52,6 +56,11 @@ class JobCircular {
     return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty
         ? text
         : null;
+  }
+
+  static String? _phone(dynamic value) {
+    final phone = _text(value);
+    return RegExp(r'^\+?[0-9]{8,15}$').hasMatch(phone) ? phone : null;
   }
 
   factory JobCircular.fromJson(Map<String, dynamic> json) {
@@ -88,6 +97,8 @@ class JobCircular {
       deadline: deadline,
       applyUrl: _httpsUrl(json['apply_url']),
       circularUrl: _httpsUrl(json['circular_url']),
+      contactMobile: _phone(json['contact_mobile']),
+      contactWhatsapp: _phone(json['contact_whatsapp']),
     );
   }
 }
