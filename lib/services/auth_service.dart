@@ -68,13 +68,8 @@ class AuthService {
     try {
       await _initializeGoogleSignIn();
 
-      // Clear previous Google Sign-In session.
-      try {
-        await _googleSignIn.signOut();
-        _log('Previous Google Sign-In session cleared.');
-      } catch (e) {
-        _log('Previous Google Sign-Out warning: $e');
-      }
+      // Do not sign out immediately before opening the account picker.
+      // Explicit sign-out is handled by logout().
 
       _log('STEP 2: Waiting for Google account selection.');
 
@@ -161,9 +156,18 @@ class AuthService {
       _log('GOOGLE SIGN-IN EXCEPTION: ${e.code}');
       _log('Google error details: $e');
       _log('$stackTrace');
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        // This code can also be returned when the account picker closes
+        // unexpectedly. Do not assert that OAuth SHA-1 is the cause.
+        throw Exception(
+          'Google Sign-In সম্পন্ন হয়নি। আবার চেষ্টা করুন। '
+          'অ্যাকাউন্ট নির্বাচন না করেই বারবার বন্ধ হলে '
+          'APK Signing SHA-1 এবং Google OAuth সেটিংস যাচাই করুন।',
+        );
+      }
       throw Exception(
         'Google Sign-In ব্যর্থ (${e.code}). '
-        'Android OAuth package name, APK signing SHA-1 এবং Web Client ID যাচাই করুন।',
+        'Android OAuth package name, Release APK SHA-1 এবং Web Client ID যাচাই করুন।',
       );
     } on TimeoutException {
       throw Exception('Login server-এর Response আসতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
