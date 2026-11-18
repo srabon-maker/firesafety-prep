@@ -356,7 +356,7 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
-                  color: deepMaroon,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -403,7 +403,7 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
-                  color: deepMaroon,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
