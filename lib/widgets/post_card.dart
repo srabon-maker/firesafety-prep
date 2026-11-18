@@ -106,7 +106,7 @@ class PostCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.more_horiz_rounded,
+                Icon(Icons.public_rounded,
                     color: scheme.onSurfaceVariant, size: 22),
               ],
             ),
