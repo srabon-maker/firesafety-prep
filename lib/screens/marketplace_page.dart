@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/marketplace_category.dart';
 import '../models/marketplace_item.dart';
 import '../services/marketplace_api_service.dart';
 
@@ -18,12 +19,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
   final Map<String, int> _cart = {};
   final Map<String, MarketplaceItem> _cartItems = {};
   final TextEditingController _search = TextEditingController();
-  final List<String> _categories = const [
-    'সব পণ্য', 'Fire Equipment', 'PPE', 'Fire Alarm', 'Safety Sign', 'Others',
-  ];
   int _tab = 0;
-  int _category = 0;
+  String? _categoryId;
   late Future<List<MarketplaceItem>> _catalog;
+  late Future<List<MarketplaceCategory>> _categoryOptions;
 
   @override
   void initState() {
@@ -33,6 +32,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
   void _reload() {
     _catalog = MarketplaceApiService.instance.fetchCatalog(
+      isService: _tab == 1,
+    );
+    _categoryOptions = MarketplaceApiService.instance.fetchCategories(
       isService: _tab == 1,
     );
   }
@@ -147,10 +149,22 @@ class _MarketplacePageState extends State<MarketplacePage> {
             const SizedBox(height: 18),
             Text(item.name, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
-            Text(item.category),
+            if (item.category.isNotEmpty) Text(item.category),
             const SizedBox(height: 8),
             Text(item.priceLabel,
                 style: Theme.of(context).textTheme.titleLarge),
+            if (item.comparePrice != null &&
+                item.price != null &&
+                item.comparePrice! > item.price!)
+              Text(
+                '৳${item.comparePrice!.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey,
+                ),
+              ),
+            if (!item.isService)
+              Text('মজুত: ${item.stock ?? 0}টি'),
             const SizedBox(height: 16),
             Text(item.description.isEmpty
                 ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
@@ -175,7 +189,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget _itemImage(MarketplaceItem item, {double height = 130}) {
     final uri = Uri.tryParse(item.imageUrl ?? '');
     final valid = uri != null &&
-        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.scheme == 'https' &&
         uri.host.isNotEmpty;
     if (!valid) {
       return Container(
@@ -229,9 +243,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
         }
         final query = _search.text.trim().toLowerCase();
         final filtered = (snapshot.data ?? []).where((item) {
-          final categoryMatches = _category == 0 ||
-              item.category.toLowerCase() ==
-                  _categories[_category].toLowerCase();
+          final categoryMatches =
+              _categoryId == null || item.categoryId == _categoryId;
           final queryMatches = query.isEmpty ||
               item.name.toLowerCase().contains(query) ||
               item.description.toLowerCase().contains(query);
@@ -241,7 +254,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           return Padding(
             padding: const EdgeInsets.all(40),
             child: Center(
-              child: Text(query.isNotEmpty || _category != 0
+              child: Text(query.isNotEmpty || _categoryId != null
                   ? 'এই অনুসন্ধানে কিছু পাওয়া যায়নি।'
                   : 'এখনো কোনো ${_tab == 0 ? 'পণ্য' : 'সার্ভিস'} প্রকাশ করা হয়নি।'),
             ),
@@ -279,6 +292,18 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             const SizedBox(height: 5),
                             Text(item.priceLabel, maxLines: 1,
                                 overflow: TextOverflow.ellipsis),
+                            if (item.comparePrice != null &&
+                                item.price != null &&
+                                item.comparePrice! > item.price!)
+                              Text(
+                                '৳${item.comparePrice!.toStringAsFixed(2)}',
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                ),
+                              ),
                             const Spacer(),
                             SizedBox(
                               width: double.infinity,
@@ -315,7 +340,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     appBar: AppBar(
       backgroundColor: marketDeepMaroon,
       foregroundColor: Colors.white,
-      title: const Text('Marketplace'),
+      title: const Text('মার্কেটপ্লেস'),
       actions: [
         Badge(
           isLabelVisible: _cartCount > 0,
@@ -354,7 +379,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               children: [
                 Icon(Icons.local_fire_department, color: Colors.white, size: 32),
                 SizedBox(height: 10),
-                Text('Fire Safety Marketplace',
+                Text('ফায়ার সেফটি মার্কেটপ্লেস',
                     style: TextStyle(color: Colors.white,
                         fontWeight: FontWeight.bold, fontSize: 20)),
                 SizedBox(height: 5),
@@ -388,7 +413,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             selected: {_tab},
             onSelectionChanged: (selection) => setState(() {
               _tab = selection.first;
-              _category = 0;
+              _categoryId = null;
               _reload();
             }),
           ),
@@ -396,18 +421,49 @@ class _MarketplacePageState extends State<MarketplacePage> {
           const Text('ক্যাটাগরি',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => ChoiceChip(
-                label: Text(_categories[i]),
-                selected: _category == i,
-                onSelected: (_) => setState(() => _category = i),
-              ),
-            ),
+          FutureBuilder<List<MarketplaceCategory>>(
+            future: _categoryOptions,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Row(
+                  children: [
+                    const Expanded(
+                      child: Text('ক্যাটাগরি লোড করা যায়নি।'),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(_reload),
+                      child: const Text('আবার চেষ্টা'),
+                    ),
+                  ],
+                );
+              }
+              if (!snapshot.hasData) {
+                return const SizedBox(
+                  height: 44,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final categories = snapshot.data!;
+              return SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categories.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final category = i == 0 ? null : categories[i - 1];
+                    final id = category?.id;
+                    return ChoiceChip(
+                      label: Text(category?.name ??
+                          (_tab == 0 ? 'সব পণ্য' : 'সব সেবা')),
+                      selected: _categoryId == id,
+                      onSelected: (_) =>
+                          setState(() => _categoryId = id),
+                    );
+                  },
+                ),
+              );
+            },
           ),
           const SizedBox(height: 18),
           _catalogView(),
