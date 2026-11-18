@@ -36,10 +36,7 @@ workflows:
             exit 1
           }
 
-          keytool -list \\
-            -keystore "$CM_KEYSTORE_PATH" \\
-            -alias "$CM_KEY_ALIAS" \\
-            -storepass "$CM_KEYSTORE_PASSWORD" >/dev/null
+          keytool -list -keystore "$CM_KEYSTORE_PATH" -alias "$CM_KEY_ALIAS" -storepass "$CM_KEYSTORE_PASSWORD" >/dev/null
 
           echo "Permanent release signing identity verified."
 
