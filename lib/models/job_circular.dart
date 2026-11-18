@@ -60,46 +60,7 @@ class JobCircular {
 
   static String? _phone(dynamic value) {
     final phone = _text(value);
-    return RegExp(r'^\+?[0-9]{8,15}
-    final id = int.tryParse(_text(json['id']));
-    final organization = _text(json['organization']);
-    final title = _text(json['title']);
-    if (id == null || id <= 0 || title.isEmpty) {
-      throw const FormatException('চাকরির বিজ্ঞপ্তির তথ্য অসম্পূর্ণ।');
-    }
-    final publishedAt = DateTime.tryParse(_text(json['published_at']));
-    if (publishedAt == null) {
-      throw const FormatException('চাকরির প্রকাশের তারিখ সঠিক নয়।');
-    }
-    final deadlineText = _text(json['application_deadline']);
-    final deadline = deadlineText.isEmpty
-        ? null
-        : DateTime.tryParse(deadlineText);
-    if (deadlineText.isNotEmpty && deadline == null) {
-      throw const FormatException('আবেদনের শেষ তারিখ সঠিক নয়।');
-    }
-    return JobCircular(
-      id: id,
-      organization: organization,
-      title: title,
-      publishedAt: publishedAt,
-      location: _text(json['location']),
-      category: _text(json['category']),
-      vacancies: _text(json['vacancies']),
-      isPinned: _text(json['is_pinned']) == '1' || json['is_pinned'] == true,
-      employmentType: _text(json['employment_type']),
-      description: _text(json['description']),
-      requirements: _text(json['requirements']),
-      salary: _text(json['salary']),
-      deadline: deadline,
-      applyUrl: _httpsUrl(json['apply_url']),
-      circularUrl: _httpsUrl(json['circular_url']),
-      contactMobile: _phone(json['contact_mobile']),
-      contactWhatsapp: _phone(json['contact_whatsapp']),
-    );
-  }
-}
-).hasMatch(phone) ? phone : null;
+    return RegExp(r'^\+?[0-9]{8,15}$').hasMatch(phone) ? phone : null;
   }
 
   factory JobCircular.fromJson(Map<String, dynamic> json) {
