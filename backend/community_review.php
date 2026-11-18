@@ -87,7 +87,7 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <h2>সাম্প্রতিক পোস্ট</h2>
 <?php foreach ($recent as $p): ?>
 <section><strong>#<?= (int)$p['id'] ?> — <?= community_review_escape($p['status']) ?></strong>
-<p class="body"><?= community_review_escape(mb_strimwidth((string)$p['body'],0,220,'…','UTF-8')) ?></p>
+<p class="body"><?= community_review_escape(function_exists('mb_strimwidth') ? mb_strimwidth((string)$p['body'],0,220,'…','UTF-8') : substr((string)$p['body'],0,220)) ?></p>
 <?php if ($p['status'] === 'approved'): ?>
 <form method="post" onsubmit="return confirm('পোস্টটি লুকাবেন?');">
 <input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
