@@ -193,7 +193,21 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
 .inline-form{display:inline-block}.section-note{padding:12px;background:#fff5e6;border-radius:10px;color:#6d4a12;font-size:13px;line-height:1.6;margin-bottom:15px}
 @media(max-width:1000px){.sidebar{width:220px}.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.layout{display:block}.sidebar{width:100%;padding:14px}.nav{grid-template-columns:repeat(2,1fr)}.main{padding:17px 12px}.header{align-items:flex-start;flex-direction:column}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cards{gap:9px}.card{padding:13px}.card-value{font-size:25px}.panel{padding:15px}.searchbar{flex-wrap:wrap}.searchbar input{flex-basis:100%}}
+
+.parsed-summary{border:1px solid #e8d7cf;border-radius:14px;background:#fffaf6;padding:16px;margin-bottom:18px}
+.parsed-summary h3{margin:0 0 12px;font-size:18px}
+.parsed-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.parsed-item{background:white;border:1px solid #f0e3dc;border-radius:10px;padding:11px}
+.parsed-item b{display:block;font-size:12px;color:#795e5e;margin-bottom:6px}
+.parsed-item span{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.parsed-missing{color:#a11919;font-style:italic}
+.parsed-sections{display:grid;gap:9px;margin-top:14px}
+.parsed-sections details{background:white;border:1px solid #f0e3dc;border-radius:10px;padding:12px}
+.parsed-sections summary{font-weight:bold;cursor:pointer}
+.parsed-sections pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;margin:10px 0 0}
+@media(max-width:700px){.parsed-grid{grid-template-columns:1fr}}
 </style>
+<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 <body>
 <div class="layout">
@@ -208,7 +222,6 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
         <a href="model_tests.php">☑ মডেল টেস্ট</a>
         <a href="notes.php">◫ নোট</a>
         <a href="job_circulars.php" class="active">▣ চাকরির সার্কুলার</a>
-        <a href="job_submission_review.php">✓ ইউজার সার্কুলার অনুমোদন</a>
         <a href="logout.php" class="logout">↪ লগ আউট</a>
     </nav>
 </aside>
@@ -235,7 +248,7 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
         <div class="field">
             <label for="source_text">সম্পূর্ণ চাকরির বিজ্ঞপ্তি কপি করে এখানে পেস্ট করুন</label>
             <textarea id="source_text" class="paste-box" placeholder="প্রতিষ্ঠানের নাম, পদের নাম, যোগ্যতা, বেতন, আবেদনের শেষ তারিখসহ সম্পূর্ণ বিজ্ঞপ্তি এখানে পেস্ট করুন..."></textarea>
-            <p class="hint">“তথ্য সাজান” চাপলে পরিচিত বাংলা/ইংরেজি শিরোনাম ও লেবেল থেকে তথ্য শনাক্ত করার চেষ্টা করবে। সব তথ্য নির্ভুলভাবে শনাক্ত নাও হতে পারে—তাই নিচের Preview ফর্ম অবশ্যই যাচাই করবেন।</p>
+            <p class="hint">“তথ্য সাজান” চাপলে Bdjobs-এর মতো বাংলা/ইংরেজি বিজ্ঞপ্তির Education, Experience, Responsibilities, Skills, Benefits, Location ইত্যাদি আলাদা করে Preview দেখাবে। বিজ্ঞপ্তিতে যে তথ্য নেই সেগুলোর ঘর খালি থাকবে—আপনি ম্যানুয়ালি লিখবেন। আবেদনের লিংক সবসময় নিজে দেবেন; এটি স্বয়ংক্রিয়ভাবে বসানো হবে না। সংরক্ষণের আগে অবশ্যই যাচাই করুন।</p>
             <div class="actions">
                 <button type="button" class="btn dark" id="parseBtn">✦ তথ্য সাজান</button>
                 <button type="button" class="btn gray" id="manualEntryBtn">＋ ম্যানুয়ালি সার্কুলার যোগ করুন</button>
@@ -245,7 +258,8 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
         <?php endif; ?>
 
         <div id="previewArea" <?= $editItem ? '' : 'hidden' ?>>
-            <div class="section-note"><strong>Preview ও সংশোধন:</strong> নিচের প্রতিটি ঘর যাচাই করুন। মূল বিজ্ঞপ্তির সম্পূর্ণ লেখা বিবরণে রাখা হবে, যাতে কোনো তথ্য বাদ না যায়। প্রকাশের আগে অবস্থা Draft রাখুন; যাচাই শেষে Published করুন।</div>
+            <div class="section-note"><strong>Preview ও সংশোধন:</strong> প্রতিটি শনাক্ত করা সেকশন নিচে আলাদা করে দেখানো হবে। মূল বিজ্ঞপ্তির সম্পূর্ণ লেখা বিবরণে রাখা হবে, যাতে কোনো তথ্য বাদ না যায়। অনুপস্থিত তথ্য নিজে পূরণ করুন এবং আবেদনের লিংক ম্যানুয়ালি লিখুন। আগে পূরণ করা ম্যানুয়াল তথ্য আবার “তথ্য সাজান” চাপলেও মুছে যাবে না। প্রথমে Draft রাখুন, যাচাই শেষে Published করুন।</div>
+            <?php if (!$editItem): ?><div id="structuredPreview" class="parsed-summary" hidden aria-live="polite"></div><?php endif; ?>
 
             <form method="post" action="job_circulars.php<?= $editItem ? '?edit=' . (int)$editItem['id'] : '' ?>">
                 <input type="hidden" name="csrf_token" value="<?= e($csrf) ?>">
@@ -260,7 +274,7 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
                     <div class="field"><label>বেতন</label><input id="salary" name="salary" maxlength="120" value="<?= e($editItem['salary'] ?? '') ?>"></div>
                     <div class="field"><label>পদসংখ্যা</label><input id="vacancies" name="vacancies" maxlength="80" value="<?= e($editItem['vacancies'] ?? '') ?>"></div>
                     <div class="field"><label>আবেদনের শেষ তারিখ</label><input id="application_deadline" type="date" name="application_deadline" value="<?= e($editItem['application_deadline'] ?? '') ?>"></div>
-                    <div class="field"><label>আবেদনের লিংক</label><input id="application_url" type="url" name="application_url" value="<?= e($editItem['application_url'] ?? '') ?>" placeholder="https://example.com/apply"></div>
+                    <div class="field"><label for="application_url">আবেদনের লিংক (ম্যানুয়ালি দিন)</label><input id="application_url" type="url" name="application_url" inputmode="url" value="<?= e($editItem['application_url'] ?? '') ?>" placeholder="https://example.com/apply"><p class="hint">এই লিংক আপনি নিজে দেবেন। স্বয়ংক্রিয়ভাবে কোনো লিংক বসানো হবে না।</p></div>
                     <div class="field full"><label>চাকরির বিবরণ *</label><textarea id="description" name="description" required placeholder="চাকরির বিস্তারিত বিবরণ"><?= e($editItem['description'] ?? '') ?></textarea></div>
                     <div class="field full"><label>যোগ্যতা ও শর্তাবলি</label><textarea id="requirements" name="requirements" placeholder="শিক্ষাগত যোগ্যতা, অভিজ্ঞতা ও অন্যান্য শর্ত"><?= e($editItem['requirements'] ?? '') ?></textarea></div>
                     <div class="field"><label>প্রকাশের অবস্থা</label><select name="status">
@@ -308,102 +322,198 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
 </div>
 
 <script>
+/* Section-aware, offline parser for copied Bangla/English job notices.
+ * It never invents absent fields and retains the complete source notice.
+ */
+function parseJobCircular(sourceText) {
+    const source = String(sourceText || '').replace(/\r\n?/g, '\n').trim();
+    const aliases = [
+        ['additional_requirements', 'Additional Requirements', ['additional requirements','other requirements','অতিরিক্ত যোগ্যতা','অন্যান্য যোগ্যতা','অতিরিক্ত শর্ত']],
+        ['responsibilities', 'Responsibilities & Context', ['responsibilities & context','responsibilities and context','job responsibilities','responsibilities','duties and responsibilities','দায়িত্ব ও কর্তব্য','দায়িত্ব ও কর্তব্য','কাজের দায়িত্ব','কাজের দায়িত্ব']],
+        ['other_skills', 'Other Relevant Skills', ['other relevant skills','other skills','অন্যান্য দক্ষতা']],
+        ['skills', 'Skills & Expertise', ['skills & expertise','skills and expertise','skills','দক্ষতা']],
+        ['benefits', 'Compensation & Other Benefits', ['compensation & other benefits','compensation and other benefits','other benefits','benefits','সুযোগ সুবিধা','সুযোগ-সুবিধা','বেতন ও অন্যান্য সুবিধা']],
+        ['education', 'Education', ['education','educational requirements','educational qualification','শিক্ষাগত যোগ্যতা','শিক্ষাগত যোগ্যতা ও প্রশিক্ষণ']],
+        ['experience', 'Experience', ['experience','experience requirements','অভিজ্ঞতা']],
+        ['workplace', 'Workplace', ['workplace','কর্মপদ্ধতি','কাজের ধরন']],
+        ['employment', 'Employment Status', ['employment status','employment type','job type','চাকরির ধরন','নিয়োগের ধরন','নিয়োগের ধরন']],
+        ['gender', 'Gender', ['gender','লিঙ্গ']],
+        ['location', 'Job Location', ['job location','location','কর্মস্থল','কর্ম এলাকা','কর্মের স্থান']],
+        ['salary', 'Salary', ['salary','monthly salary','বেতন','মাসিক বেতন']],
+        ['vacancies', 'Vacancies', ['number of vacancies','no. of posts','vacancies','পদসংখ্যা','শূন্যপদ']],
+        ['deadline', 'Application Deadline', ['application deadline','apply deadline','last date','deadline','আবেদনের শেষ তারিখ','আবেদনের শেষ সময়','আবেদনের শেষ সময়']],
+        ['application_url', 'Application URL', ['application url','application link','apply link','আবেদনের লিংক','আবেদনের লিঙ্ক']],
+        ['title', 'Job Title', ['job title','position','designation','post name','পদের নাম','নিয়োগের পদ','নিয়োগের পদ']],
+        ['organization', 'Organization', ['organization','company name','employer','প্রতিষ্ঠানের নাম','নিয়োগকারী প্রতিষ্ঠান','নিয়োগকারী প্রতিষ্ঠান']]
+    ];
+    const labelMap = new Map();
+    for (const [key, title, names] of aliases) for (const name of names) labelMap.set(name.toLowerCase(), {key, title});
+    const stripMarkdown = line => line.trim()
+        .replace(/^#{1,6}\s*/, '')
+        .replace(/^\*\*(.*?)\*\*$/, '$1')
+        .replace(/^__(.*?)__$/, '$1')
+        .replace(/\*\*/g, '').trim();
+    const isDivider = line => /^(?:-{3,}|\*{3,}|_{3,})$/.test(line.trim());
+    const sections = [];
+    const byKey = {};
+    let active = null;
+    const looseLines = [];
+    const originalLines = source.split('\n');
+    for (const originalLine of originalLines) {
+        if (isDivider(originalLine)) continue;
+        const line = stripMarkdown(originalLine);
+        if (!line || /^[-*•]\s*$/.test(line)) continue;
+        const header = line.match(/^([^:：]{2,70}?)(?:\s*[:：]\s*(.*))?$/);
+        const name = header && header[1].trim().toLowerCase();
+        const known = name && labelMap.get(name);
+        if (known) {
+            active = {key: known.key, title: known.title, lines: []};
+            sections.push(active);
+            if (!byKey[known.key]) byKey[known.key] = [];
+            byKey[known.key].push(active);
+            if (header[2] && header[2].trim()) active.lines.push(header[2].trim());
+            continue;
+        }
+        // 'Requirements' is a parent heading in Bdjobs notices, not a job title.
+        if (/^(requirements|job requirements|যোগ্যতা|শর্তাবলি)$/i.test(line)) {
+            active = null;
+            continue;
+        }
+        if (active) active.lines.push(line.replace(/^[-*•]\s+/, '• ').trim());
+        else looseLines.push(line);
+    }
+    const sectionText = key => (byKey[key] || []).flatMap(s => s.lines).join('\n').trim();
+    const scalar = key => {
+        const s = sectionText(key).split('\n').find(Boolean);
+        return s ? s.replace(/^•\s*/, '').trim() : '';
+    };
+    const explicit = key => {
+        const entries = byKey[key] || [];
+        return entries.map(s => s.lines.join(' ').replace(/^•\s*/, '').trim()).find(Boolean) || '';
+    };
+    // Fallback only for a recognizable non-heading title line; never use a section name.
+    const title = explicit('title') || '';
+    const organization = explicit('organization') || '';
+    const location = scalar('location');
+    const employment = scalar('employment');
+    const salary = scalar('salary');
+    const vacancies = scalar('vacancies');
+    const workplace = scalar('workplace');
+    const gender = scalar('gender');
+    const rawDeadline = scalar('deadline');
+    let deadline = '';
+    const iso = rawDeadline.match(/\b(20\d{2})[\/.\-](\d{1,2})[\/.\-](\d{1,2})\b/);
+    const dmy = rawDeadline.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](20\d{2})\b/);
+    if (iso) deadline = `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+    else if (dmy) deadline = `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+    else {
+        const months = {'জানুয়ারি':'01','জানুয়ারি':'01','ফেব্রুয়ারি':'02','ফেব্রুয়ারি':'02','মার্চ':'03','এপ্রিল':'04','মে':'05','জুন':'06','জুলাই':'07','আগস্ট':'08','সেপ্টেম্বর':'09','অক্টোবর':'10','নভেম্বর':'11','ডিসেম্বর':'12'};
+        const bn = rawDeadline.match(/(\d{1,2})\s*(জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*(20\d{2})/);
+        if (bn) deadline = `${bn[3]}-${months[bn[2]]}-${bn[1].padStart(2,'0')}`;
+    }
+    if (deadline) {
+        const d = new Date(`${deadline}T00:00:00Z`);
+        if (Number.isNaN(d.getTime()) || d.toISOString().slice(0,10) !== deadline) deadline = '';
+    }
+    // Application URL is entered manually by the admin; do not auto-detect links.
+    const url = '';
+    const requirementsKeys = new Set(['education','experience','additional_requirements','skills','other_skills','gender']);
+    const requirements = sections.filter(s => requirementsKeys.has(s.key) && s.lines.length)
+        .map(s => `${s.title}\n${s.lines.join('\n')}`).join('\n\n');
+    const presentSections = sections.filter(s => s.lines.length);
+    return {title, organization, location, employment, salary, vacancies,
+        deadline, url, workplace, gender, description: source, requirements,
+        sections: presentSections, looseLines};
+}
+
+</script>
+<script>
 (function () {
     const parseButton = document.getElementById('parseBtn');
     if (!parseButton) return;
-
     const source = document.getElementById('source_text');
     const preview = document.getElementById('previewArea');
     const status = document.getElementById('parseStatus');
-
-    const setField = (id, value, overwrite = false) => {
+    const structured = document.getElementById('structuredPreview');
+    // A second parse must never erase or replace an admin's manual edits.
+    const manuallyEdited = new Set();
+    const editableIds = ['title', 'organization', 'location', 'employment_type',
+        'salary', 'vacancies', 'application_deadline', 'application_url',
+        'description', 'requirements'];
+    for (const id of editableIds) {
+        const field = document.getElementById(id);
+        if (field) field.addEventListener('input', () => manuallyEdited.add(id));
+    }
+    const setField = (id, value) => {
         const el = document.getElementById(id);
-        if (el && value && (overwrite || !el.value.trim())) el.value = value.trim();
+        if (el && !manuallyEdited.has(id)) el.value = value || '';
     };
-
-    const clean = value => value.replace(/^[\s:：\-–—|]+|[\s:：\-–—|]+$/g, '').trim();
-
-    function findLabelValue(text, labels) {
-        const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            for (const label of labels) {
-                const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const re = new RegExp('^\\s*(?:' + escaped + ')\\s*(?:[:：=\\-]|\\s)\\s*(.*)$', 'i');
-                const match = line.match(re);
-                if (match && clean(match[1])) return clean(match[1]);
-                if (new RegExp('^\\s*' + escaped + '\\s*[:：]?\\s*$', 'i').test(line) && lines[i + 1]) {
-                    return clean(lines[i + 1]);
-                }
-            }
+    const make = (tag, className, value) => {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (value !== undefined) el.textContent = value;
+        return el;
+    };
+    function renderStructured(result) {
+        structured.replaceChildren();
+        structured.appendChild(make('h3', '', 'শনাক্ত করা তথ্য — যাচাই করুন'));
+        const grid = make('div', 'parsed-grid');
+        const fields = [
+            ['পদের নাম', result.title], ['প্রতিষ্ঠানের নাম', result.organization],
+            ['কর্মস্থল', result.location], ['চাকরির ধরন', result.employment],
+            ['কর্মপদ্ধতি', result.workplace], ['বেতন', result.salary],
+            ['পদসংখ্যা', result.vacancies], ['আবেদনের শেষ তারিখ', result.deadline],
+            ['আবেদনের লিংক (ম্যানুয়াল)', 'নিজে লিখুন'], ['লিঙ্গ', result.gender]
+        ];
+        for (const [label, value] of fields) {
+            const item = make('div', 'parsed-item');
+            item.appendChild(make('b', '', label));
+            item.appendChild(make('span', value ? '' : 'parsed-missing', value || 'বিজ্ঞপ্তিতে উল্লেখ নেই'));
+            grid.appendChild(item);
         }
-        return '';
+        structured.appendChild(grid);
+        const sectionWrap = make('div', 'parsed-sections');
+        for (const section of result.sections) {
+            const details = make('details');
+            // Expand Education, Experience and Responsibilities by default.
+            if (['education','experience','responsibilities'].includes(section.key)) details.open = true;
+            details.appendChild(make('summary', '', `${section.title} (${section.lines.length}টি লাইন)`));
+            details.appendChild(make('pre', '', section.lines.join('\n')));
+            sectionWrap.appendChild(details);
+        }
+        structured.appendChild(sectionWrap);
+        structured.hidden = false;
     }
-
-    function findDate(text) {
-        const labels = ['আবেদনের শেষ তারিখ','আবেদনের শেষ সময়','আবেদনের শেষ সময়','শেষ তারিখ','আবেদনের সময়সীমা','আবেদনের সময়সীমা','deadline','last date','application deadline'];
-        const labeled = findLabelValue(text, labels);
-        const candidate = labeled || (text.match(/\b(?:deadline|last date)\s*[:：-]?\s*([^\n]+)/i) || [,''])[1];
-        if (!candidate) return '';
-        let m = candidate.match(/\b(20\d{2})[\/.-](\d{1,2})[\/.-](\d{1,2})\b/);
-        if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
-        m = candidate.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/);
-        if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-        const months = {'জানুয়ারি':'01','জানুয়ারি':'01','ফেব্রুয়ারি':'02','ফেব্রুয়ারি':'02','মার্চ':'03','এপ্রিল':'04','মে':'05','জুন':'06','জুলাই':'07','আগস্ট':'08','সেপ্টেম্বর':'09','অক্টোবর':'10','নভেম্বর':'11','ডিসেম্বর':'12'};
-        const bn = candidate.match(/(\d{1,2})\s*(জানুয়ারি|জানুয়ারি|ফেব্রুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*(20\d{2})/);
-        if (bn) return `${bn[3]}-${months[bn[2]]}-${bn[1].padStart(2,'0')}`;
-        return '';
-    }
-
-    function extractUrl(text) {
-        const labeled = text.match(/(?:আবেদনের\s*(?:লিংক|লিঙ্ক)|apply\s*(?:link|online)|application\s*url)\s*[:：]?\s*(https?:\/\/[^\s]+)/i);
-        const any = text.match(/https?:\/\/[^\s<>"']+/i);
-        return (labeled && labeled[1] || any && any[0] || '').replace(/[),।]+$/,'');
-    }
-
     document.getElementById('manualEntryBtn')?.addEventListener('click', function () {
         preview.hidden = false;
+        structured.hidden = true;
         status.textContent = 'ম্যানুয়াল ফর্ম খুলেছে। প্রয়োজনীয় তথ্য নিজে পূরণ করে সংরক্ষণ করুন।';
         preview.scrollIntoView({behavior:'smooth', block:'start'});
     });
-
     parseButton.addEventListener('click', function () {
         const text = source.value.trim();
         if (text.length < 20) {
             status.textContent = 'অনুগ্রহ করে সম্পূর্ণ বিজ্ঞপ্তিটি পেস্ট করুন।';
             return;
         }
-
-        const title = findLabelValue(text, ['পদের নাম','পদের বিবরণ','নিয়োগের পদ','নিয়োগের পদ','position','job title','post name','designation']) ||
-            (text.split(/\r?\n/).map(x=>x.trim()).find(x=>x && x.length < 100) || '');
-        const organization = findLabelValue(text, ['প্রতিষ্ঠানের নাম','নিয়োগকারী প্রতিষ্ঠান','নিয়োগকারী প্রতিষ্ঠান','প্রতিষ্ঠান','company name','organization','employer']);
-        const location = findLabelValue(text, ['কর্মস্থল','কর্ম এলাকা','কর্মের স্থান','কর্মস্থানের ঠিকানা','job location','location','workplace']);
-        const employment = findLabelValue(text, ['চাকরির ধরন','কর্মের ধরন','নিয়োগের ধরন','নিয়োগের ধরন','employment type','job type']);
-        const salary = findLabelValue(text, ['বেতন','বেতন-ভাতা','মাসিক বেতন','salary','compensation']);
-        const vacancies = findLabelValue(text, ['পদসংখ্যা','শূন্য পদ','শূন্যপদ','নিয়োগ সংখ্যা','নিয়োগ সংখ্যা','কতজন নিয়োগ','কতজন নিয়োগ','number of vacancies','vacancies','no. of posts']);
-        const requirements = findLabelValue(text, ['যোগ্যতা ও অভিজ্ঞতা','শিক্ষাগত যোগ্যতা','যোগ্যতা','প্রয়োজনীয় যোগ্যতা','প্রয়োজনীয় যোগ্যতা','requirements','qualifications','educational qualification']);
-        const url = extractUrl(text);
-        const date = findDate(text);
-
-        setField('title', title);
-        setField('organization', organization);
-        setField('location', location);
-        setField('employment_type', employment);
-        setField('salary', salary);
-        setField('vacancies', vacancies);
-        setField('application_url', url);
-        setField('application_deadline', date);
-
-        // Preserve the complete pasted notice in description so no source details are discarded.
-        setField('description', text);
-        if (requirements) setField('requirements', requirements);
-
+        const result = parseJobCircular(text);
+        setField('title', result.title);
+        setField('organization', result.organization);
+        setField('location', result.location);
+        setField('employment_type', result.employment);
+        setField('salary', result.salary);
+        setField('vacancies', result.vacancies);
+        // Application URL is exclusively manual. Never touch this field on parse.
+        setField('application_deadline', result.deadline);
+        setField('description', result.description);
+        setField('requirements', result.requirements);
+        renderStructured(result);
         preview.hidden = false;
         preview.scrollIntoView({behavior:'smooth', block:'start'});
-        const found = [title,organization,location,employment,salary,vacancies,date,url].filter(Boolean).length;
-        status.textContent = `${found}টি তথ্য শনাক্ত হয়েছে। নিচের ফর্ম যাচাই ও প্রয়োজনমতো সংশোধন করুন।`;
+        const missing = [!result.title && 'পদের নাম', !result.organization && 'প্রতিষ্ঠান', !result.salary && 'বেতন', !result.vacancies && 'পদসংখ্যা', !result.deadline && 'শেষ তারিখ'].filter(Boolean);
+        status.textContent = `${result.sections.length}টি সেকশন শনাক্ত হয়েছে। ` +
+            (missing.length ? `অনুপস্থিত তথ্য: ${missing.join(', ')} — নিজে পূরণ করতে পারবেন। ` : 'প্রতিটি ফিল্ড যাচাই করুন। ') + 'আবেদনের লিংক ম্যানুয়ালি দিন।';
     });
-
     document.getElementById('hidePreviewBtn')?.addEventListener('click', () => {
         preview.hidden = true;
         status.textContent = 'Preview বন্ধ করা হয়েছে।';
