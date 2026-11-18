@@ -151,7 +151,22 @@ workflows:
             exit 1
           fi
 
-          "$APKSIGNER" verify --print-certs "$APK"
+          CERT_DETAILS=$("$APKSIGNER" verify --print-certs "$APK")
+          echo "$CERT_DETAILS"
+
+          # Catch accidental signing identity changes before distributing an
+          # APK whose SHA-1 is not registered in the Android OAuth client.
+          EXPECTED_SHA1="5EFAD539A3B41AAB508CAFD81D8C518125B0EAFC"
+          ACTUAL_SHA1=$(printf '%s\\n' "$CERT_DETAILS" \\
+            | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' \\
+            | tr -d ':\\r' \\
+            | tr '[:lower:]' '[:upper:]')
+          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
+            echo "ERROR: Built APK SHA-1 does not match the registered Google Android OAuth client."
+            echo "Do not regenerate or replace the permanent signing key."
+            exit 1
+          fi
+          echo "Release APK signing SHA-1 matches the registered Google OAuth certificate."
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
