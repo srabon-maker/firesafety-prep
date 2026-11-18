@@ -7,7 +7,9 @@ class JobCircular {
     required this.title,
     required this.publishedAt,
     this.location = '',
-    this.jobType = '',
+    this.category = '',
+    this.vacancies = '',
+    this.isPinned = false,
     this.employmentType = '',
     this.description = '',
     this.requirements = '',
@@ -22,7 +24,9 @@ class JobCircular {
   final String title;
   final DateTime publishedAt;
   final String location;
-  final String jobType;
+  final String category;
+  final String vacancies;
+  final bool isPinned;
   final String employmentType;
   final String description;
   final String requirements;
@@ -40,8 +44,6 @@ class JobCircular {
     );
   }
 
-  bool get isGovernment => jobType.toLowerCase() == 'government';
-
   static String _text(dynamic value) => value?.toString().trim() ?? '';
 
   static String? _httpsUrl(dynamic value) {
@@ -56,7 +58,7 @@ class JobCircular {
     final id = int.tryParse(_text(json['id']));
     final organization = _text(json['organization']);
     final title = _text(json['title']);
-    if (id == null || id <= 0 || organization.isEmpty || title.isEmpty) {
+    if (id == null || id <= 0 || title.isEmpty) {
       throw const FormatException('চাকরির বিজ্ঞপ্তির তথ্য অসম্পূর্ণ।');
     }
     final publishedAt = DateTime.tryParse(_text(json['published_at']));
@@ -76,7 +78,9 @@ class JobCircular {
       title: title,
       publishedAt: publishedAt,
       location: _text(json['location']),
-      jobType: _text(json['job_type']),
+      category: _text(json['category']),
+      vacancies: _text(json['vacancies']),
+      isPinned: _text(json['is_pinned']) == '1' || json['is_pinned'] == true,
       employmentType: _text(json['employment_type']),
       description: _text(json['description']),
       requirements: _text(json['requirements']),

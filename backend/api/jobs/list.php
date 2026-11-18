@@ -5,34 +5,39 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=60');
 header('X-Content-Type-Options: nosniff');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
     header('Allow: GET');
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'GET required.']);
     exit;
 }
 
-require_once __DIR__ . '/../../db.php';
-
 try {
+    require_once __DIR__ . '/../../db.php';
     if (!isset($pdo) || !$pdo instanceof PDO) {
         throw new RuntimeException('PDO database connection unavailable.');
     }
-    // Never expose draft or archived jobs to the public API.
+    // Uses the existing manobiki_firesafetyjobprep.sql schema unchanged.
+    // Do not invent government/private classifications or circular URLs.
     $statement = $pdo->query(
-        "SELECT id, organization, title, job_type, employment_type,
-                location, salary, description, requirements,
-                DATE_FORMAT(application_deadline, '%Y-%m-%d') AS application_deadline,
-                DATE_FORMAT(published_at, '%Y-%m-%dT%H:%i:%s') AS published_at,
-                apply_url, circular_url
-         FROM job_circulars
-         WHERE status = 'published'
-         ORDER BY published_at DESC, id DESC
+        "SELECT j.id, j.organization, j.title, j.employment_type,
+                j.location, j.salary, j.vacancies, j.description,
+                j.requirements,
+                DATE_FORMAT(j.application_deadline, '%Y-%m-%d') AS application_deadline,
+                DATE_FORMAT(COALESCE(j.published_at, j.created_at),
+                    '%Y-%m-%dT%H:%i:%s') AS published_at,
+                j.application_url AS apply_url,
+                j.category_id, c.name AS category,
+                j.is_pinned
+         FROM job_circulars j
+         LEFT JOIN categories c ON c.id = j.category_id
+         WHERE j.status = 'published'
+         ORDER BY j.is_pinned DESC,
+                  COALESCE(j.published_at, j.created_at) DESC, j.id DESC
          LIMIT 200"
     );
-    $items = $statement->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode(
-        ['success' => true, 'data' => $items],
+        ['success' => true, 'data' => $statement->fetchAll(PDO::FETCH_ASSOC)],
         JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
     );
 } catch (Throwable $error) {
