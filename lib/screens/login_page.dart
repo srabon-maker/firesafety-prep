@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
 
       throw Exception(
         result['message']?.toString() ??
-            'Login সফল হয়নি। আবার চেষ্টা করুন।',
+            'লগইন সম্পন্ন হয়নি। আবার চেষ্টা করুন।',
       );
     } catch (e, stackTrace) {
       debugPrint('LOGIN PAGE ERROR: $e');
@@ -96,10 +96,22 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final errorBackground = isDark
+        ? const Color(0xFF3A2028)
+        : const Color(0xFFFFF0F0);
+    final errorForeground = isDark
+        ? const Color(0xFFFFCDD2)
+        : const Color(0xFF9B1C25);
+    final errorBorder = isDark
+        ? const Color(0xFF87505A)
+        : const Color(0xFFE6A3A9);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('লগইন'),
         backgroundColor: maroon,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -107,184 +119,207 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // App Logo
-                Image.asset(
-                  'assets/fire_safety_job_prep_logo.png',
-                  height: 125,
-                  width: 125,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.local_fire_department,
-                      size: 110,
-                      color: maroon,
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                Text(
-                  'Fire Safety BD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  'Welcome to Fire Safety BD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'Login to access all services',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-
-                const SizedBox(height: 35),
-
-                // Google Login Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: OutlinedButton(
-                    onPressed: _loading ? null : _login,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.primary,
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 1.5,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _loading
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                height: 21,
-                                width: 21,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Please wait...'),
-                            ],
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.g_mobiledata,
-                                size: 34,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Continue with Google',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-
-                // Detailed error display
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 22),
-
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Keep the original logo artwork; round only its corners.
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      border: Border.all(
-                        color: Colors.red.shade300,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red.shade800,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Login Error',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade900,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SelectableText(
-                          _errorMessage!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
-                            color: Colors.red.shade900,
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: scheme.outlineVariant),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.25 : 0.10,
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _errorMessage = null;
-                            });
-                          },
-                          icon: const Icon(Icons.close),
-                          label: const Text('Dismiss'),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(21),
+                      child: Image.asset(
+                        'assets/fire_safety_job_prep_logo.png',
+                        height: 136,
+                        width: 136,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 136,
+                            width: 136,
+                            alignment: Alignment.center,
+                            color: scheme.surfaceContainerHighest,
+                            child: Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 76,
+                              color: scheme.primary,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  Text(
+                    'Fire Safety BD',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'অগ্নি নিরাপত্তায় আপনার বিশ্বস্ত সঙ্গী',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      height: 1.45,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    'শিখুন, প্রস্তুতি নিন এবং নিরাপদ থাকুন।\n'
+                    'সব সেবা ব্যবহার করতে লগইন করুন।',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _login,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        disabledBackgroundColor:
+                            scheme.surfaceContainerHighest,
+                        disabledForegroundColor: scheme.onSurfaceVariant,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                      ),
+                      child: _loading
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 21,
+                                  width: 21,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Flexible(
+                                  child: Text('অনুগ্রহ করে অপেক্ষা করুন...'),
+                                ),
+                              ],
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.g_mobiledata, size: 34),
+                                SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'গুগল অ্যাকাউন্ট দিয়ে লগইন করুন',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: errorBackground,
+                        border: Border.all(color: errorBorder),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.error_outline_rounded,
+                                  color: errorForeground),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'লগইন সম্পন্ন হয়নি',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: errorForeground,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SelectableText(
+                            _errorMessage!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.55,
+                              color: errorForeground,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: errorForeground,
+                            ),
+                            onPressed: () {
+                              setState(() => _errorMessage = null);
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                            label: const Text('বন্ধ করুন'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  Text(
+                    'নতুন ব্যবহারকারী হলে গুগল লগইনের পর\n'
+                    'একবার নিবন্ধন সম্পন্ন করতে হবে।',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
-
-                const SizedBox(height: 25),
-
-                Text(
-                  'New users will need to complete registration '
-                  'after Google Login.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
