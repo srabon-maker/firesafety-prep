@@ -24,28 +24,28 @@ class NotesPage extends StatelessWidget {
         body: ListView(
           padding: const EdgeInsets.all(14),
           children: [
-            const Text(
+            Text(
               'ফায়ার সেফটি স্টাডি নোট',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: deepMaroon,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 5),
-            const Text(
+            Text(
               'গুরুত্বপূর্ণ স্ট্যান্ডার্ড ও ইন্টারভিউ প্রস্তুতি',
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
             for (int i = 0; i < AppData.notes.length; i++)
               Card(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(
-                    color: Color(0xFFF0E3DE),
+                  side: BorderSide(
+                    color: Theme.of(context).dividerColor,
                   ),
                 ),
                 child: ListTile(
@@ -75,15 +75,15 @@ class NotesPage extends StatelessWidget {
                   ),
                   title: Text(
                     AppData.notes[i],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: ink,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   subtitle: const Text('স্টাডি নোট • পড়তে ট্যাপ করুন'),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -120,10 +120,10 @@ class NoteDetailPage extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 23,
                   fontWeight: FontWeight.w800,
-                  color: deepMaroon,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 14),
@@ -135,10 +135,10 @@ class NoteDetailPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'নোটের বিষয়বস্তু বর্তমানে ডেমো হিসেবে রাখা হয়েছে। আপনার বিদ্যমান নোট/PDF যুক্ত করলে সেগুলো এখানে দেখানো যাবে।',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.6,
                 ),
               ),
