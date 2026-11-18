@@ -83,7 +83,7 @@ a{text-decoration:none;color:inherit}
 .shell{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:100vh}
 .sidebar{background:linear-gradient(180deg,#3e0711,#650d1d);color:#fff;padding:25px 15px}
 .brand{display:flex;gap:12px;align-items:center;padding:5px 6px 24px;border-bottom:1px solid #ffffff24}
-.brand-logo{display:grid;place-items:center;width:52px;height:52px;border:1px solid #ffffff75;border-radius:14px;background:#780e20;color:#fff;font-size:25px}
+.brand-logo{display:grid;place-items:center;width:52px;height:52px;overflow:hidden;border:1px solid #ffffff75;border-radius:14px;background:#780e20}.brand-logo img{display:block;width:100%;height:100%;object-fit:contain}
 .brand-title{font-size:17px;line-height:1.3;font-weight:850}.brand small{font-size:12px;color:#f2c8c9}
 .side-nav{display:grid;gap:7px;margin-top:23px}
 .side-nav a{display:flex;align-items:center;gap:12px;border-radius:13px;padding:12px 14px;font-weight:650;color:#f9e9e9}
@@ -146,7 +146,7 @@ tbody tr:hover{background:#fffbf8}
 <body>
 <div class="shell">
 <aside class="sidebar">
-<div class="brand"><div class="brand-logo">♨</div><div><div class="brand-title">Fire Safety<br>BD</div><small>অ্যাডমিন প্যানেল</small></div></div>
+<div class="brand"><div class="brand-logo"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo" width="52" height="52"></div><div><div class="brand-title">Fire Safety<br>BD</div><small>অ্যাডমিন প্যানেল</small></div></div>
 <nav class="side-nav" aria-label="অ্যাডমিন মেনু">
 <a href="fire_safety_job_prep_dashboard.php"><span class="icon">▦</span> ড্যাশবোর্ড</a>
 <a href="questions.php"><span class="icon">ⓘ</span> প্রশ্ন ব্যাংক</a>
