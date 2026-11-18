@@ -122,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Future<void> _deleteAccount() async {
+  Future<void> _deleteAccount(String email) async {
     if (_deleting) return;
     var typedConfirmation = '';
     final confirmed = await showDialog<bool>(
@@ -137,8 +137,8 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Text(_tr(
                 context,
-                'এতে আপনার প্রোফাইল, পোস্ট, পরীক্ষার ফলাফল, কার্ট, অর্ডার ও সার্ভিস রিকোয়েস্টের তথ্য স্থায়ীভাবে মুছে যাবে। এই কাজ ফেরানো যাবে না।',
-                'Your profile, posts, test history, cart, orders and service requests will be permanently deleted. This cannot be undone.',
+                'এতে আপনার প্রোফাইল, পোস্ট, পরীক্ষার ফলাফল, কার্ট, অর্ডার ও সার্ভিস রিকোয়েস্টের তথ্য স্থায়ীভাবে মুছে যাবে। চলমান অর্ডার বা সার্ভিস রিকোয়েস্ট থাকলে আগে সেগুলো শেষ করতে হবে। এই কাজ ফেরানো যাবে না।',
+                'Your profile, posts, test history, cart, orders and service requests will be permanently deleted. Active orders and service requests must be completed or cancelled first. This cannot be undone.',
               )),
               const SizedBox(height: 14),
               Text(_tr(context, 'নিশ্চিত করতে DELETE লিখুন।',
@@ -175,7 +175,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     setState(() => _deleting = true);
     try {
-      await AuthService.instance.deleteAccount();
+      await AuthService.instance.deleteAccount(email: email);
       if (!mounted) return;
       widget.onLogout();
     } catch (error) {
@@ -502,7 +502,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ? const SizedBox(width: 20, height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.chevron_right),
-                  onTap: _deleting ? null : _deleteAccount,
+                  onTap: _deleting ? null : () => _deleteAccount(email),
                 ),
               ),
             ],
