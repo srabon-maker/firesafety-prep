@@ -281,6 +281,92 @@ class AuthService {
   }
 
   // --------------------------------------------------
+  // PROFILE MANAGEMENT (authenticated server endpoints)
+  // --------------------------------------------------
+
+  Future<void> updateProfile({
+    required String fullName,
+    required String mobileNumber,
+    required String currentStatus,
+    required String companyName,
+    required String designation,
+    required String jobLocation,
+    required String currentAddress,
+  }) async {
+    final token = await getSessionToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('সেশন শেষ হয়েছে। আবার লগইন করুন।');
+    }
+
+    final response = await http.post(
+      Uri.parse('${apiBaseUrl}update_profile.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'full_name': fullName,
+        'mobile_number': mobileNumber,
+        'current_status': currentStatus,
+        'company_name': companyName,
+        'designation': designation,
+        'job_location': jobLocation,
+        'current_address': currentAddress,
+      }),
+    ).timeout(_requestTimeout);
+
+    final data = _decodeResponse(response);
+    if (data['success'] != true) {
+      throw Exception('প্রোফাইল আপডেট নিশ্চিত করা যায়নি।');
+    }
+  }
+
+  /// Delete the authenticated account on the server before removing the
+  /// local session. A failed request never signs the user out or pretends
+  /// that their data was deleted.
+  Future<void> deleteAccount({required String email}) async {
+    final token = await getSessionToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('সেশন শেষ হয়েছে। আবার লগইন করুন।');
+    }
+
+    final response = await http.post(
+      Uri.parse('${apiBaseUrl}delete_account.php'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'confirmation': 'DELETE_MY_ACCOUNT'}),
+    ).timeout(_requestTimeout);
+
+    final data = _decodeResponse(response);
+    if (data['success'] != true || data['deleted'] != true) {
+      throw Exception('সার্ভার অ্যাকাউন্ট মুছে ফেলা নিশ্চিত করেনি।');
+    }
+
+    // Clear locally cached registration suggestions for this Google email.
+    try {
+      final emailKey = email.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+      await _storage.delete(key: 'registration_suggestions_$emailKey');
+    } catch (e) {
+      _log('Could not clear cached registration suggestions: $e');
+    }
+    await _clearLocalSession();
+  }
+
+  Future<void> _clearLocalSession() async {
+    await _storage.delete(key: _sessionKey);
+    try {
+      await _initializeGoogleSignIn();
+      await _googleSignIn.signOut();
+    } catch (e) {
+      _log('Google sign-out error: $e');
+    }
+  }
+
+  // --------------------------------------------------
   // LOGOUT
   // --------------------------------------------------
 
@@ -298,16 +384,7 @@ class AuthService {
         ).timeout(_requestTimeout);
       }
     } finally {
-      await _storage.delete(key: _sessionKey);
-
-      try {
-        await _initializeGoogleSignIn();
-        await _googleSignIn.signOut();
-
-        _log('Google sign-out completed.');
-      } catch (e) {
-        _log('Google sign-out error: $e');
-      }
+      await _clearLocalSession();
     }
   }
 

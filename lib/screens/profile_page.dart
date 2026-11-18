@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../settings/app_settings.dart';
 import 'settings_page.dart';
+import 'edit_profile_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -22,6 +23,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>?> _profileFuture;
+  bool _deleting = false;
 
   @override
   void initState() {
@@ -106,6 +108,86 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _editProfile(Map<String, dynamic> user) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditProfilePage(user: user),
+      ),
+    );
+    if (!mounted || saved != true) return;
+    await _refreshProfile();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_tr(context, 'প্রোফাইল আপডেট হয়েছে।', 'Profile updated.'))),
+    );
+  }
+
+  Future<void> _deleteAccount(String email) async {
+    if (_deleting) return;
+    var typedConfirmation = '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(_tr(context, 'অ্যাকাউন্ট স্থায়ীভাবে মুছবেন?',
+              'Permanently delete account?')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_tr(
+                context,
+                'এতে আপনার প্রোফাইল, পোস্ট, পরীক্ষার ফলাফল, কার্ট, অর্ডার ও সার্ভিস রিকোয়েস্টের তথ্য স্থায়ীভাবে মুছে যাবে। চলমান অর্ডার বা সার্ভিস রিকোয়েস্ট থাকলে আগে সেগুলো শেষ করতে হবে। এই কাজ ফেরানো যাবে না।',
+                'Your profile, posts, test history, cart, orders and service requests will be permanently deleted. Active orders and service requests must be completed or cancelled first. This cannot be undone.',
+              )),
+              const SizedBox(height: 14),
+              Text(_tr(context, 'নিশ্চিত করতে DELETE লিখুন।',
+                  'Type DELETE to confirm.')),
+              const SizedBox(height: 8),
+              TextField(
+                autocorrect: false,
+                enableSuggestions: false,
+                onChanged: (value) => setDialogState(() => typedConfirmation = value),
+                decoration: const InputDecoration(hintText: 'DELETE'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_tr(context, 'বাতিল', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: typedConfirmation.trim() == 'DELETE'
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              child: Text(_tr(context, 'স্থায়ীভাবে মুছুন', 'Delete permanently')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      await AuthService.instance.deleteAccount(email: email);
+      if (!mounted) return;
+      widget.onLogout();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
   String _value(dynamic value) {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? '—' : text;
@@ -122,7 +204,7 @@ class _ProfilePageState extends State<ProfilePage> {
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 9),
       child: ListTile(
-        leading: Icon(icon, color: maroon),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(
           title,
           style: TextStyle(
@@ -148,20 +230,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            top: 20,
-            bottom: 10,
-          ),
-          child: Text(
-            _tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ),
         _profileInformation(
           Icons.person_outline,
           _tr(context, 'পূর্ণ নাম', 'Full name'),
@@ -367,7 +435,30 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
 
-              _personalInformation(user),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 0,
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  leading: Icon(Icons.badge_outlined,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: Text(_tr(context, 'ব্যক্তিগত তথ্য', 'Personal information')),
+                  subtitle: Text(_tr(context, 'দেখতে ট্যাপ করুন',
+                      'Tap to view your details')),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: _personalInformation(user),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => _editProfile(user),
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(_tr(context, 'প্রোফাইল এডিট করুন', 'Edit profile')),
+              ),
 
               const SizedBox(height: 12),
 
@@ -382,7 +473,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Card(
                   elevation: 0,
                   child: ListTile(
-                    leading: Icon(item.$1, color: maroon),
+                    leading: Icon(item.$1, color: Theme.of(context).colorScheme.primary),
                     title: Text(item.$2),
                     trailing:
                         const Icon(Icons.chevron_right),
@@ -395,6 +486,25 @@ class _ProfilePageState extends State<ProfilePage> {
                             : null,
                   ),
                 ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                child: ListTile(
+                  leading: Icon(Icons.delete_forever_outlined,
+                      color: Theme.of(context).colorScheme.error),
+                  title: Text(
+                    _tr(context, 'অ্যাকাউন্ট ডিলিট করুন', 'Delete account'),
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                  subtitle: Text(_tr(context, 'স্থায়ীভাবে সব অ্যাকাউন্ট তথ্য মুছে ফেলুন',
+                      'Permanently remove your account and data')),
+                  trailing: _deleting
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.chevron_right),
+                  onTap: _deleting ? null : () => _deleteAccount(email),
+                ),
+              ),
             ],
           ),
         );

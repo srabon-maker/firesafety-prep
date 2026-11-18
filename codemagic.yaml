@@ -126,6 +126,9 @@ workflows:
       - name: Run marketplace regression tests
         script: flutter test test/marketplace_catalog_test.dart test/marketplace_transactions_test.dart
 
+      - name: Run profile editor widget tests
+        script: flutter test test/profile_edit_test.dart
+
       - name: Build Android APK with permanent release signing
         script: flutter build apk --release
 
