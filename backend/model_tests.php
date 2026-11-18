@@ -216,6 +216,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 @media(max-width:650px){.layout{display:block}.sidebar{position:relative;width:100%;height:auto;padding:12px}.brand{padding-bottom:10px}.nav-title{padding-top:12px}.nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}.nav a{font-size:12px;padding:9px}.main{margin:0;width:100%;padding:18px 12px 35px}.top{align-items:flex-start}.top h1{font-size:21px}.cards{gap:9px}.stat{padding:13px}.stat strong{font-size:23px}.panel{padding:15px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="layout">
