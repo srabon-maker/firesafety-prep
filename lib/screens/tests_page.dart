@@ -93,10 +93,10 @@ class TestsPage extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: const Color(0xFFF0E3DE),
+                    color: Theme.of(context).dividerColor,
                   ),
                 ),
                 child: Row(
@@ -118,17 +118,17 @@ class TestsPage extends StatelessWidget {
                         children: [
                           Text(
                             t.$1,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w800,
-                              color: ink,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             t.$2,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black54,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -146,6 +146,7 @@ class TestsPage extends StatelessWidget {
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: maroon,
+                        foregroundColor: Colors.white,
                       ),
                       child: const Text('শুরু করুন'),
                     ),

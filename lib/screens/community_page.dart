@@ -49,7 +49,7 @@ class _CommunityPageState extends State<CommunityPage> {
     body: Column(
       children: [
         Container(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
           child: Row(
             children: [
@@ -67,12 +67,12 @@ class _CommunityPageState extends State<CommunityPage> {
                       vertical: 13,
                     ),
                     decoration: BoxDecoration(
-                      color: cream,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(22),
                     ),
-                    child: const Text(
+                    child: Text(
                       'ফায়ার সেফটি বিষয়ে পোস্ট লিখুন...',
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ),
@@ -82,6 +82,7 @@ class _CommunityPageState extends State<CommunityPage> {
                 onPressed: () => _createPost(context),
                 style: FilledButton.styleFrom(
                   backgroundColor: red,
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('পোস্ট'),
               ),
@@ -110,7 +111,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   child: ChoiceChip(
                     label: Text(f),
                     selected: filter == f,
-                    selectedColor: const Color(0xFFFFD9D0),
+                    selectedColor: Theme.of(context).colorScheme.primaryContainer,
                     onSelected: (_) {
                       setState(() => filter = f);
                     },
@@ -162,7 +163,7 @@ class _CommunityPageState extends State<CommunityPage> {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: cream,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: EdgeInsets.fromLTRB(
@@ -175,12 +176,12 @@ class _CommunityPageState extends State<CommunityPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'নতুন পোস্ট',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: deepMaroon,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -241,6 +242,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: maroon,
+                    foregroundColor: Colors.white,
                   ),
                   child: const Text('পোস্ট প্রকাশ করুন'),
                 ),

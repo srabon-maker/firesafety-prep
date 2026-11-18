@@ -163,7 +163,7 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
               const Text('ডেলিভারি চার্জ: ৳০.০০ (বর্তমান সার্ভার নিয়ম অনুযায়ী)'),
               const SizedBox(height: 14),
               FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: _maroon),
+                style: FilledButton.styleFrom(backgroundColor: _maroon, foregroundColor: Colors.white),
                 onPressed: _busy || cart.items.any((e) => e.quantity > e.stock)
                     ? null : () => _checkout(cart),
                 icon: const Icon(Icons.shopping_bag_outlined),
@@ -266,7 +266,7 @@ class _MarketplaceCheckoutPageState extends State<MarketplaceCheckoutPage> {
             decoration: _field('অতিরিক্ত নির্দেশনা (ঐচ্ছিক)')),
         const SizedBox(height: 14),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: _maroon),
+          style: FilledButton.styleFrom(backgroundColor: _maroon, foregroundColor: Colors.white),
           onPressed: _submitting ? null : _submit,
           child: _submitting
               ? const CircularProgressIndicator(color: Colors.white)
@@ -487,7 +487,7 @@ class _MarketplaceServiceBookingPageState
         ),
         const SizedBox(height: 14),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: _maroon),
+          style: FilledButton.styleFrom(backgroundColor: _maroon, foregroundColor: Colors.white),
           onPressed: _submitting ? null : _submit,
           child: _submitting
               ? const CircularProgressIndicator(color: Colors.white)

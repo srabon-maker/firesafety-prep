@@ -9,23 +9,68 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: const Color(0xFF151417),
-    colorScheme: ColorScheme.fromSeed(
+  static ThemeData get darkTheme {
+    const surface = Color(0xFF211D21);
+    const background = Color(0xFF151417);
+    const foreground = Color(0xFFF8F0F2);
+    const muted = Color(0xFFD3C3C8);
+    const accent = Color(0xFFFFB3BC);
+
+    final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.maroon,
       brightness: Brightness.dark,
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF27171B),
-      foregroundColor: Colors.white,
-    ),
-    cardTheme: const CardThemeData(color: Color(0xFF242127)),
-    navigationBarTheme: const NavigationBarThemeData(
-      backgroundColor: Color(0xFF242127),
-    ),
-  );
+    ).copyWith(
+      primary: accent,
+      onPrimary: const Color(0xFF400811),
+      surface: surface,
+      onSurface: foreground,
+      onSurfaceVariant: muted,
+      outlineVariant: const Color(0xFF55474D),
+      surfaceContainerHighest: const Color(0xFF383037),
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: background,
+      colorScheme: scheme,
+      cardColor: surface,
+      dividerColor: scheme.outlineVariant,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF27171B),
+        foregroundColor: Colors.white,
+      ),
+      cardTheme: CardThemeData(
+        color: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: scheme.primaryContainer,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF342C32),
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+        prefixIconColor: scheme.onSurfaceVariant,
+        suffixIconColor: scheme.onSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+    );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

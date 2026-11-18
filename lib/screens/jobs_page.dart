@@ -52,18 +52,18 @@ class JobsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(14),
         children: [
-          const Text(
+          Text(
             'ফায়ার ও সেফটি চাকরি',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: deepMaroon,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 5),
-          const Text(
+          Text(
             'আবেদনের আগে মূল বিজ্ঞপ্তি ও শেষ তারিখ যাচাই করুন।',
-            style: TextStyle(color: Colors.black54),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
 
@@ -72,10 +72,10 @@ class JobsPage extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: const Color(0xFFF0E3DE),
+                  color: Theme.of(context).dividerColor,
                 ),
               ),
               child: Row(
@@ -100,16 +100,16 @@ class JobsPage extends StatelessWidget {
                       children: [
                         Text(
                           job.$1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
-                            color: ink,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           job.$2,
-                          style: const TextStyle(
-                            color: maroon,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -117,17 +117,17 @@ class JobsPage extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           job.$3,
-                          style: const TextStyle(
-                            color: Colors.black54,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ],
               ),

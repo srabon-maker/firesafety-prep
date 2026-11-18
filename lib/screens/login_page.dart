@@ -97,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Login'),
         backgroundColor: maroon,
@@ -128,36 +128,36 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                const Text(
+                Text(
                   'Fire Safety BD',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
 
                 const SizedBox(height: 10),
 
-                const Text(
+                Text(
                   'Welcome to Fire Safety BD',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
 
                 const SizedBox(height: 8),
 
-                const Text(
+                Text(
                   'Login to access all services',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
 
@@ -170,9 +170,9 @@ class _LoginPageState extends State<LoginPage> {
                   child: OutlinedButton(
                     onPressed: _loading ? null : _login,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: maroon,
-                      side: const BorderSide(
-                        color: maroon,
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     child: _loading
-                        ? const Row(
+                        ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SizedBox(
@@ -188,7 +188,7 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 21,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: maroon,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               SizedBox(width: 12),
@@ -275,13 +275,13 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 25),
 
-                const Text(
+                Text(
                   'New users will need to complete registration '
                   'after Google Login.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
