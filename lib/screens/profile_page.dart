@@ -195,82 +195,115 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _tr(BuildContext context, String bn, String en) => AppText.of(context, bn, en);
 
-  Widget _profileInformation(
-    IconData icon,
-    String title,
-    dynamic value,
-  ) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 9),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        subtitle: Text(
-          _value(value),
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+
+  void _openAccountManagement(String email) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _AccountManagementPage(
+          email: email,
+          onLogout: () => _logout(context),
+          onDelete: () => _deleteAccount(email),
         ),
       ),
     );
   }
 
-  Widget _personalInformation(
-    Map<String, dynamic> user,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _profileInformation(
-          Icons.person_outline,
-          _tr(context, 'পূর্ণ নাম', 'Full name'),
-          user['full_name'],
+  Widget _sectionHeading(String title, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 9),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: scheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    VoidCallback? onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final enabled = onTap != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(17),
+          side: BorderSide(color: scheme.outlineVariant),
         ),
-        _profileInformation(
-          Icons.email_outlined,
-          _tr(context, 'ইমেইল', 'Email'),
-          user['email'],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(icon, size: 21, color: scheme.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 5),
+                if (enabled)
+                  Icon(Icons.chevron_right_rounded,
+                      color: scheme.onSurfaceVariant)
+                else
+                  Text(
+                    _tr(context, 'শীঘ্রই', 'Soon'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-        _profileInformation(
-          Icons.phone_android,
-          _tr(context, 'মোবাইল নম্বর', 'Phone number'),
-          user['mobile_number'],
-        ),
-        _profileInformation(
-          Icons.work_outline,
-          _tr(context, 'বর্তমান অবস্থা', 'Employment status'),
-          user['current_status'],
-        ),
-        _profileInformation(
-          Icons.business_outlined,
-          _tr(context, 'কোম্পানির নাম', 'Company'),
-          user['company_name'],
-        ),
-        _profileInformation(
-          Icons.badge_outlined,
-          _tr(context, 'পদবি', 'Designation'),
-          user['designation'],
-        ),
-        _profileInformation(
-          Icons.location_on_outlined,
-          _tr(context, 'কর্মস্থল', 'Workplace'),
-          user['job_location'],
-        ),
-        _profileInformation(
-          Icons.home_outlined,
-          _tr(context, 'বর্তমান ঠিকানা', 'Current address'),
-          user['current_address'],
-        ),
-      ],
+      ),
     );
   }
 
@@ -278,16 +311,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _profileFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
             child: CircularProgressIndicator(
               color: Theme.of(context).colorScheme.primary,
             ),
           );
         }
-
-        if (snapshot.hasError) {
+        if (snapshot.hasError || snapshot.data == null) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -295,17 +326,23 @@ class _ProfilePageState extends State<ProfilePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.cloud_off_outlined,
-                    size: 45,
+                    snapshot.hasError
+                        ? Icons.cloud_off_outlined
+                        : Icons.person_off_outlined,
+                    size: 44,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।', 'Could not load profile information.'),
+                    snapshot.hasError
+                        ? _tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।',
+                            'Could not load profile information.')
+                        : _tr(context, 'প্রোফাইল তথ্য পাওয়া যায়নি।',
+                            'Profile information not found.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-                  ElevatedButton(
+                  FilledButton.tonal(
                     onPressed: _refreshProfile,
                     child: Text(_tr(context, 'আবার চেষ্টা করুন', 'Try again')),
                   ),
@@ -315,194 +352,230 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         }
 
-        final user = snapshot.data;
-
-        if (user == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.person_off_outlined,
-                    size: 45,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _tr(context, 'প্রোফাইল তথ্য পাওয়া যায়নি।', 'Profile information not found.'),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _refreshProfile,
-                    child: Text(_tr(context, 'আবার চেষ্টা করুন', 'Try again')),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+        final user = snapshot.data!;
         final name = _value(user['full_name']);
         final email = _value(user['email']);
         final photo = user['profile_photo']?.toString();
+        final scheme = Theme.of(context).colorScheme;
 
         return RefreshIndicator(
-          color: Theme.of(context).colorScheme.primary,
           onRefresh: _refreshProfile,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [deepMaroon, maroon],
+                    colors: [deepMaroon, maroon, Color(0xFF891C32)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(23),
+                  boxShadow: [
+                    BoxShadow(
+                      color: maroon.withValues(alpha: 0.16),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 38,
-                      backgroundColor: Colors.white,
-                      backgroundImage:
-                          photo != null && photo.isNotEmpty
-                              ? NetworkImage(photo)
-                              : null,
-                      child: photo == null || photo.isEmpty
-                          ? const Icon(
-                              Icons.person,
-                              color: maroon,
-                              size: 45,
-                            )
-                          : null,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 34,
+                            backgroundColor: const Color(0xFFFFEDF0),
+                            backgroundImage: photo != null && photo.isNotEmpty
+                                ? NetworkImage(photo)
+                                : null,
+                            child: photo == null || photo.isEmpty
+                                ? const Icon(
+                                    Icons.person_rounded,
+                                    color: maroon,
+                                    size: 36,
+                                  )
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFFF1CBD2),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 9),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _tr(context, 'Fire Safety BD সদস্য',
+                                      'Fire Safety BD member'),
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFE4E9),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _tr(context, 'Fire Safety BD সদস্য', 'Fire Safety BD member'),
-                      style: TextStyle(
-                        color: Colors.white70,
+                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _editProfile(user),
+                        icon: const Icon(Icons.edit_outlined, size: 14),
+                        label: Text(
+                          _tr(context, 'এডিট', 'Edit'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.60),
+                          ),
+                          minimumSize: const Size(0, 32),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13,
+                            vertical: 5,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 18),
-
+              const SizedBox(height: 17),
               Row(
                 children: [
                   Expanded(
                     child: _StatCard(
                       number: '০',
                       label: _tr(context, 'মডেল টেস্ট', 'Model tests'),
+                      icon: Icons.fact_check_outlined,
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: _StatCard(
                       number: '০',
                       label: _tr(context, 'পোস্ট', 'Posts'),
+                      icon: Icons.article_outlined,
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: _StatCard(
                       number: '০%',
                       label: _tr(context, 'অগ্রগতি', 'Progress'),
+                      icon: Icons.trending_up_rounded,
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                child: ExpansionTile(
-                  initiallyExpanded: false,
-                  leading: Icon(Icons.badge_outlined,
-                      color: Theme.of(context).colorScheme.primary),
-                  title: Text(_tr(context, 'ব্যক্তিগত তথ্য', 'Personal information')),
-                  subtitle: Text(_tr(context, 'দেখতে ট্যাপ করুন',
-                      'Tap to view your details')),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: _personalInformation(user),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 22),
+              _sectionHeading(
+                _tr(context, 'আপনার কার্যক্রম', 'Your activity'),
+                Icons.grid_view_rounded,
               ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () => _editProfile(user),
-                icon: const Icon(Icons.edit_outlined),
-                label: Text(_tr(context, 'প্রোফাইল এডিট করুন', 'Edit profile')),
+              _menuTile(
+                icon: Icons.history_rounded,
+                title: _tr(context, 'মডেল টেস্টের ফলাফল', 'Model test results'),
+                subtitle: _tr(context, 'পরীক্ষার ফলাফল ও ইতিহাস',
+                    'Your scores and history'),
               ),
-
-              const SizedBox(height: 12),
-
-              for (final item in [
-                (Icons.history, _tr(context, 'মডেল টেস্টের ফলাফল', 'Model test results')),
-                (Icons.bookmark_border, _tr(context, 'সংরক্ষিত নোট', 'Saved notes')),
-                (Icons.notifications_none, _tr(context, 'নোটিফিকেশন', 'Notifications')),
-                (Icons.settings_outlined, _tr(context, 'সেটিংস', 'Settings')),
-                (Icons.info_outline, _tr(context, 'অ্যাপ সম্পর্কে', 'About app')),
-                (Icons.logout, _tr(context, 'লগ আউট', 'Log out')),
-              ])
-                Card(
-                  elevation: 0,
-                  child: ListTile(
-                    leading: Icon(item.$1, color: Theme.of(context).colorScheme.primary),
-                    title: Text(item.$2),
-                    trailing:
-                        const Icon(Icons.chevron_right),
-                    onTap: item.$2 == _tr(context, 'লগ আউট', 'Log out')
-                        ? () => _logout(context)
-                        : item.$2 == _tr(context, 'সেটিংস', 'Settings')
-                            ? () => Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => const SettingsPage(),
-                                ))
-                            : null,
+              _menuTile(
+                icon: Icons.bookmark_border_rounded,
+                title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
+                subtitle: _tr(context, 'আপনার বুকমার্ক করা নোট',
+                    'Your bookmarked notes'),
+              ),
+              const SizedBox(height: 11),
+              _sectionHeading(
+                _tr(context, 'অ্যাপ ও অ্যাকাউন্ট', 'App & account'),
+                Icons.tune_rounded,
+              ),
+              _menuTile(
+                icon: Icons.settings_outlined,
+                title: _tr(context, 'অ্যাপ সেটিংস', 'App settings'),
+                subtitle: _tr(context, 'ভাষা ও থিম পরিবর্তন',
+                    'Language and appearance'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsPage(),
                   ),
                 ),
-              const SizedBox(height: 12),
-              Card(
-                elevation: 0,
-                child: ListTile(
-                  leading: Icon(Icons.delete_forever_outlined,
-                      color: Theme.of(context).colorScheme.error),
-                  title: Text(
-                    _tr(context, 'অ্যাকাউন্ট ডিলিট করুন', 'Delete account'),
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              _menuTile(
+                icon: Icons.notifications_none_rounded,
+                title: _tr(context, 'নোটিফিকেশন', 'Notifications'),
+              ),
+              _menuTile(
+                icon: Icons.info_outline_rounded,
+                title: _tr(context, 'অ্যাপ সম্পর্কে', 'About app'),
+              ),
+              _menuTile(
+                icon: Icons.manage_accounts_outlined,
+                title: _tr(context, 'অ্যাকাউন্ট ও নিরাপত্তা',
+                    'Account & security'),
+                subtitle: _tr(context, 'লগআউট ও অ্যাকাউন্ট ম্যানেজমেন্ট',
+                    'Log out and manage your account'),
+                onTap: () => _openAccountManagement(email),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Fire Safety BD',
+                  style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 1.2,
+                    color: scheme.onSurfaceVariant,
                   ),
-                  subtitle: Text(_tr(context, 'স্থায়ীভাবে সব অ্যাকাউন্ট তথ্য মুছে ফেলুন',
-                      'Permanently remove your account and data')),
-                  trailing: _deleting
-                      ? const SizedBox(width: 20, height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.chevron_right),
-                  onTap: _deleting ? null : () => _deleteAccount(email),
                 ),
               ),
             ],
@@ -520,8 +593,8 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             onPressed: _refreshProfile,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'তথ্য আপডেট করুন',
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: _tr(context, 'তথ্য আপডেট করুন', 'Refresh profile'),
           ),
         ],
       ),
@@ -530,44 +603,180 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
+class _AccountManagementPage extends StatelessWidget {
+  const _AccountManagementPage({
+    required this.email,
+    required this.onLogout,
+    required this.onDelete,
+  });
+
+  final String email;
+  final VoidCallback onLogout;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    String tr(String bn, String en) => AppText.of(context, bn, en);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(tr('অ্যাকাউন্ট ও নিরাপত্তা', 'Account & security')),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(17),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(19),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.verified_user_outlined,
+                    size: 28, color: scheme.primary),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('আপনার অ্যাকাউন্ট', 'Your account'),
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            child: ListTile(
+              leading: Icon(Icons.logout_rounded, color: scheme.primary),
+              title: Text(tr('লগআউট করুন', 'Log out')),
+              subtitle: Text(tr('এই ডিভাইস থেকে সাইন আউট করুন',
+                  'Sign out from this device')),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: onLogout,
+            ),
+          ),
+          const SizedBox(height: 26),
+          Padding(
+            padding: const EdgeInsets.only(left: 5, bottom: 8),
+            child: Text(
+              tr('বিপজ্জনক কার্যক্রম', 'Danger zone'),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: scheme.error,
+              ),
+            ),
+          ),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+              side: BorderSide(
+                color: scheme.error.withValues(alpha: 0.35),
+              ),
+            ),
+            child: ListTile(
+              leading: Icon(Icons.delete_forever_outlined,
+                  color: scheme.error),
+              title: Text(
+                tr('অ্যাকাউন্ট ডিলিট করুন', 'Delete account'),
+                style: TextStyle(
+                  color: scheme.error,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: Text(
+                tr('স্থায়ীভাবে মুছে ফেলার আগে নিশ্চিতকরণ প্রয়োজন',
+                    'Confirmation required before permanent deletion'),
+              ),
+              trailing: Icon(Icons.chevron_right_rounded,
+                  color: scheme.error),
+              onTap: onDelete,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Text(
+              tr('অ্যাকাউন্ট মুছে ফেললে তথ্য ফেরত আনা যাবে না।',
+                  'Deleting your account cannot be undone.'),
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.5,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.number,
     required this.label,
+    required this.icon,
   });
 
   final String number;
   final String label;
+  final IconData icon;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 6,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(
-              number,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(height: 6),
+          Text(
+            number,
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              color: scheme.primary,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: scheme.onSurfaceVariant,
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
