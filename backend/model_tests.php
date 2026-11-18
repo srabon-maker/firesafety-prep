@@ -215,26 +215,20 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 @media(max-width:900px){.sidebar{width:220px}.main{margin-left:220px;width:calc(100% - 220px);padding:22px 18px}.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.layout{display:block}.sidebar{position:relative;width:100%;height:auto;padding:12px}.brand{padding-bottom:10px}.nav-title{padding-top:12px}.nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}.nav a{font-size:12px;padding:9px}.main{margin:0;width:100%;padding:18px 12px 35px}.top{align-items:flex-start}.top h1{font-size:21px}.cards{gap:9px}.stat{padding:13px}.stat strong{font-size:23px}.panel{padding:15px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 <body>
 <div class="layout">
-<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
-<nav class="nav" aria-label="অ্যাডমিন মেনু">
-<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
-<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php" class="active" aria-current="page"><span class="ico">☑</span>মডেল টেস্ট</a>
-<a href="notes.php"><span class="ico">◫</span>নোট</a>
-<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
-<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
-<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
-<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
-<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
-<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
-</nav>
+<aside class="sidebar">
+ <div class="brand"><img src="assets/fire-safety-bd-logo.png" alt="Logo" onerror="this.style.display='none'"><div><strong>Fire Safety Job Prep</strong><small>Admin Control Panel</small></div></div>
+ <div class="nav-title">MODEL TEST MANAGEMENT</div>
+ <nav class="nav">
+  <a class="active" href="#dashboard"><span class="ico">▦</span>মডেল টেস্ট ড্যাশবোর্ড</a>
+  <a href="#create"><span class="ico">＋</span>নতুন মডেল টেস্ট তৈরি</a>
+  <a href="#all-tests"><span class="ico">☷</span>সকল মডেল টেস্ট</a>
+  <a href="#scheduled"><span class="ico">◷</span>নির্ধারিত পরীক্ষা</a>
+  <a href="#results"><span class="ico">✓</span>পরীক্ষার ফলাফল</a>
+  <a href="#performance"><span class="ico">▤</span>পারফরম্যান্স বিশ্লেষণ</a>
+ </nav>
 </aside>
 <main class="main">
 <header class="top"><div><h1>মডেল টেস্ট ব্যবস্থাপনা</h1><p>পরীক্ষা তৈরি, প্রশ্ন নির্বাচন ও প্রকাশনা পরিচালনা করুন।</p></div><a class="btn" href="#create">＋ নতুন পরীক্ষা</a></header>
