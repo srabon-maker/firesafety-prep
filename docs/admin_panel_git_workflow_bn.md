@@ -6,8 +6,8 @@ Flutter অ্যাপ ও PHP Admin Panel একই GitHub রিপোজি�
 ## বর্তমান অবস্থা
 - Flutter কোড: `lib/`
 - বিদ্যমান PHP API ও কিছু admin page: `backend/`
-- cPanel-এর মূল Admin Dashboard (`fire_safety_job_prep_dashboard.php`) এবং অন্যান্য লাইভ PHP ফাইলগুলোর **সম্পূর্ণ, যাচাইকৃত বর্তমান কপি** এখনও রিপোজিটরিতে নেই।
-- প্রথমে লাইভ ফাইলগুলোর নিরাপদ ব্যাকআপ/ইনভেন্টরি নিয়ে source control-এ আনতে হবে।
+- মূল Admin Dashboard (`backend/admin/fire_safety_job_prep_dashboard.php`) সর্বশেষ পরীক্ষিত সংস্করণ থেকে GitHub-এ আনা হয়েছে। অন্যান্য লাইভ PHP ফাইলগুলোর **সম্পূর্ণ, যাচাইকৃত বর্তমান কপি** এখনও রিপোজিটরিতে নেই।
+- বাকি লাইভ ফাইলগুলোর নিরাপদ ব্যাকআপ/ইনভেন্টরি নিয়ে source control-এ আনতে হবে।
 - **GitHub-এ commit বা PR merge করলেই লাইভ cPanel বদলাবে না।**
 
 ## প্রস্তাবিত ফাইল ম্যাপিং
