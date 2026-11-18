@@ -10,7 +10,7 @@ const COMMUNITY_IMAGE_BASE = 'https://fire.manobikishwarganj.com/uploads/communi
 const COMMUNITY_MAX_IMAGE = 5242880; // 5 MiB
 const COMMUNITY_MAX_TEXT = 3000;
 
-function community_reply(int $status, array $body): never {
+function community_reply(int $status, array $body): void {
     http_response_code($status);
     echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
