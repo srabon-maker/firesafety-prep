@@ -319,7 +319,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: marketBackground,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     appBar: AppBar(
       backgroundColor: marketDeepMaroon,
       foregroundColor: Colors.white,
@@ -384,7 +384,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               prefixIcon: const Icon(Icons.search),
               hintText: 'পণ্য বা সার্ভিস খুঁজুন',
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
