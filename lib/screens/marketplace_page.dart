@@ -296,6 +296,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                                     : () => _showDetails(item),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: marketMaroon,
+                                  foregroundColor: Colors.white,
                                   padding: EdgeInsets.zero,
                                 ),
                                 child: Text(item.canAddToCart
