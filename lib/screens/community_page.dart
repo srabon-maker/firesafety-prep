@@ -391,7 +391,11 @@ class _CreateCommunityPostPageState extends State<CreateCommunityPostPage> {
             style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           TextButton(
-            onPressed: _sending ? null : _publish,
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: _sending ||
+                    (_text.text.trim().isEmpty && _photo == null)
+                ? null
+                : _publish,
             child: _sending
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
