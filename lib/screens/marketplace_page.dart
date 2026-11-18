@@ -6,6 +6,7 @@ import '../services/marketplace_api_service.dart';
 import '../services/marketplace_transaction_service.dart';
 import '../services/auth_service.dart';
 import '../services/auth_guard.dart';
+import '../widgets/marketplace_catalog_card.dart';
 import 'marketplace_flows.dart';
 
 const Color marketMaroon = Color(0xFF650D18);
@@ -118,81 +119,159 @@ class _MarketplacePageState extends State<MarketplacePage> {
   }
 
   void _showDetails(MarketplaceItem item) {
+    final hasDiscount = item.price != null &&
+        item.comparePrice != null &&
+        item.comparePrice! > item.price!;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('বিস্তারিত')),
+        backgroundColor: marketBackground,
+        appBar: AppBar(
+          title: Text(item.isService ? 'সার্ভিস বিস্তারিত' : 'পণ্যের বিস্তারিত'),
+          backgroundColor: marketDeepMaroon,
+          foregroundColor: Colors.white,
+        ),
         body: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           children: [
-            _itemImage(item, height: 210),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                height: 260,
+                child: MarketplaceCatalogImage(item: item),
+              ),
+            ),
             const SizedBox(height: 18),
-            Text(item.name, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            if (item.category.isNotEmpty) Text(item.category),
-            const SizedBox(height: 8),
-            Text(item.priceLabel,
-                style: Theme.of(context).textTheme.titleLarge),
-            if (item.comparePrice != null &&
-                item.price != null &&
-                item.comparePrice! > item.price!)
+            if (item.category.isNotEmpty)
               Text(
-                '৳${item.comparePrice!.toStringAsFixed(2)}',
+                item.category,
                 style: const TextStyle(
-                  decoration: TextDecoration.lineThrough,
-                  color: Colors.grey,
+                  color: marketMaroon,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
                 ),
               ),
-            if (!item.isService)
-              Text('মজুত: ${item.stock ?? 0}টি'),
-            const SizedBox(height: 16),
-            Text(item.description.isEmpty
-                ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
-                : item.description),
+            const SizedBox(height: 6),
+            Text(
+              item.name,
+              style: const TextStyle(
+                color: marketDeepMaroon,
+                fontWeight: FontWeight.w800,
+                fontSize: 23,
+                height: 1.25,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                Text(
+                  item.priceLabel,
+                  style: const TextStyle(
+                    color: marketMaroon,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (hasDiscount)
+                  Text(
+                    '৳${item.comparePrice!.toStringAsFixed(item.comparePrice! % 1 == 0 ? 0 : 2)}',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 15,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+              ],
+            ),
+            if (!item.isService) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    item.canAddToCart
+                        ? Icons.check_circle_outline
+                        : Icons.info_outline,
+                    color: item.canAddToCart
+                        ? const Color(0xFF27815A)
+                        : marketMaroon,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    item.canAddToCart
+                        ? 'স্টকে আছে · ${item.stock}টি'
+                        : 'বর্তমানে স্টকে নেই',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'বিস্তারিত বিবরণ',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: marketDeepMaroon,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    item.description.isEmpty
+                        ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
+                        : item.description,
+                    style: const TextStyle(height: 1.55, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
-            if (item.isService)
-              FilledButton.icon(
-                onPressed: () => _bookService(item),
-                icon: const Icon(Icons.calendar_month),
-                label: const Text('সার্ভিস বুকিং করুন'),
-              )
-            else if (item.canAddToCart)
-              FilledButton.icon(
-                onPressed: _adding ? null : () => _add(item),
-                icon: const Icon(Icons.add_shopping_cart),
-                label: const Text('কার্টে যোগ করুন'),
-              )
-            else
-              const Text('এই পণ্যটি বর্তমানে কার্টে যোগ করা যাচ্ছে না।'),
           ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: SizedBox(
+              height: 50,
+              child: item.isService
+                  ? FilledButton.icon(
+                      onPressed: () => _bookService(item),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: marketMaroon,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      label: const Text('সার্ভিস বুকিং করুন'),
+                    )
+                  : FilledButton.icon(
+                      onPressed: item.canAddToCart && !_adding
+                          ? () => _add(item)
+                          : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: marketMaroon,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.add_shopping_cart_outlined),
+                      label: Text(item.canAddToCart
+                          ? 'কার্টে যোগ করুন'
+                          : 'স্টকে নেই'),
+                    ),
+            ),
+          ),
         ),
       ),
     ));
-  }
-
-  Widget _itemImage(MarketplaceItem item, {double height = 130}) {
-    final uri = Uri.tryParse(item.imageUrl ?? '');
-    final valid = uri != null &&
-        uri.scheme == 'https' &&
-        uri.host.isNotEmpty;
-    if (!valid) {
-      return Container(
-        height: height,
-        color: const Color(0xFFF4E7E9),
-        child: Icon(item.isService ? Icons.engineering : Icons.fire_extinguisher,
-            color: marketMaroon, size: 44),
-      );
-    }
-    return Image.network(
-      item.imageUrl!,
-      height: height,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
-        height: height,
-        color: const Color(0xFFF4E7E9),
-        child: const Icon(Icons.image_not_supported_outlined),
-      ),
-    );
   }
 
   Widget _catalogView() {
@@ -243,74 +322,36 @@ class _MarketplacePageState extends State<MarketplacePage> {
             ),
           );
         }
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filtered.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: .68,
-          ),
-          itemBuilder: (context, index) {
-            final item = filtered[index];
-            return Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () => _showDetails(item),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _itemImage(item),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(9),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.name, maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 5),
-                            Text(item.priceLabel, maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                            if (item.comparePrice != null &&
-                                item.price != null &&
-                                item.comparePrice! > item.price!)
-                              Text(
-                                '৳${item.comparePrice!.toStringAsFixed(2)}',
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: Colors.grey,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            const Spacer(),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton(
-                                onPressed: item.canAddToCart
-                                    ? () => _add(item)
-                                    : () => _showDetails(item),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: marketMaroon,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: Text(item.canAddToCart
-                                    ? 'কার্টে যোগ'
-                                    : 'বিস্তারিত'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final columns = width >= 950 ? 4 : width >= 650 ? 3 : 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filtered.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 12,
+                mainAxisExtent: 346,
               ),
+              itemBuilder: (context, index) {
+                final item = filtered[index];
+                return MarketplaceCatalogCard(
+                  key: ValueKey('${item.isService}-${item.id}'),
+                  item: item,
+                  actionBusy: _adding,
+                  onDetails: () => _showDetails(item),
+                  onAction: () {
+                    if (item.isService) {
+                      _bookService(item);
+                    } else {
+                      _add(item);
+                    }
+                  },
+                );
+              },
             );
           },
         );
