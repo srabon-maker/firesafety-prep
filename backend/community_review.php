@@ -63,7 +63,8 @@ h1{margin:0 0 5px;font-size:22px}h2{font-size:20px}.muted{color:#65585c}.error{c
 .body{white-space:pre-wrap;overflow-wrap:anywhere}.photo{max-width:100%;max-height:350px;object-fit:contain;border-radius:12px}
 button{background:#650d18;color:white;border:0;border-radius:9px;padding:11px 15px;margin:8px 8px 0 0;cursor:pointer}
 button.reject{background:#666}button.hide{background:#a74a24}
-</style></head><body>
+</style>
+<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
 <header><h1>Fire Safety BD — কমিউনিটি পোস্ট অনুমোদন</h1>
 <a href="job_submission_review.php">← Job Approval</a></header><main>
 <?php if ($error): ?><p class="error"><?= community_review_escape($error) ?></p><?php endif; ?>
