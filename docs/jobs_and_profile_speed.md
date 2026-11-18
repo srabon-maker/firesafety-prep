@@ -8,14 +8,15 @@ The user previously uploaded `manobiki_firesafetyjobprep.sql` (Nov 18, 2026). It
 ## What this patch changes
 - Public `api/jobs/list.php` uses the **existing** table and aliases `application_url AS apply_url` for the Flutter API; category names come from `categories`, and `is_pinned` controls ordering.
 - Flutter displays real categories, vacancies and pinned status, and does not invent government/private sector labels (the uploaded SQL does not store that distinction).
-- New `backend/job_circulars.php` provides the publisher page **within the existing admin login**. The original dashboard already links to this filename. No second admin password or `FIRE_SAFETY_JOBS_ADMIN_PASSWORD_HASH` is required.
+- `backend/job_circulars.php` now preserves the **user's uploaded original, fully designed Admin page**, including paste-full-circular → extract fields → preview → edit → publish, search, counters, pin/unpin and delete. It reuses the existing admin login, session and CSRF token. No second admin password or `FIRE_SAFETY_JOBS_ADMIN_PASSWORD_HASH` is required.
+- Only two small protections were added to the uploaded source: require HTTPS application URLs (matching the Flutter link policy) and avoid showing raw PDO exception details in the browser.
 - `backend/admin/jobs.php` is a backward-compatible redirect after the existing admin auth check.
 - Published circulars appear in the public API; draft and archived circulars do not. New published posts receive `published_at`; old published posts with NULL dates use `created_at` for display and ordering.
 
 ## cPanel deployment (manual, not performed by GitHub)
 1. Back up your live MySQL database and existing `job_circulars.php` (if present). **Do not re-import the complete SQL dump.**
 2. In phpMyAdmin, select the existing `manobiki_firesafetyjobprep` database and run the **read-only** queries in `backend/sql/job_circulars.sql` to confirm the current live schema matches the previously uploaded snapshot.
-3. In the subdomain document root containing `db.php`, `admin_helpers.php` and `fire_safety_job_prep_dashboard.php`, upload `backend/job_circulars.php` as `job_circulars.php` **after reviewing any existing file for features/data you want to preserve**.
+3. In the subdomain document root containing `db.php`, `admin_helpers.php` and `fire_safety_job_prep_dashboard.php`, upload `backend/job_circulars.php` as `job_circulars.php` **after backing up the live file**. This is the user's full-featured original page, not the simplified replacement from the previous PR.
 4. In the same document root, upload `backend/api/jobs/list.php` to `api/jobs/list.php`. No schema migration is needed for the verified dump.
 5. Optional: upload `backend/admin/jobs.php` to `admin/jobs.php` for redirects from older links. The normal dashboard link goes directly to `job_circulars.php`.
 6. Test the existing dashboard login, open `/job_circulars.php`, create a draft and then publish a verified real circular. Check `https://fire.manobikishwarganj.com/api/jobs/list.php` returns `{"success":true,"data":[...]}`. No drafts should be returned.
