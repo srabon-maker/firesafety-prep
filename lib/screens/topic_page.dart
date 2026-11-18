@@ -51,12 +51,12 @@ class TopicPage extends StatelessWidget {
               'মডেল প্রশ্ন',
             ])
               Card(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 child: ListTile(
                   title: Text(item),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
