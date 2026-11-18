@@ -41,11 +41,13 @@ try {
     $where = '';
     $params = [];
     if ($search !== '' && $searchColumns) {
-        $where = ' WHERE ' . implode(' OR ', array_map(
-            static fn(string $c): string => users_identifier($c) . ' LIKE :q',
-            $searchColumns
-        ));
-        $params[':q'] = '%' . $search . '%';
+        $conditions = [];
+        foreach ($searchColumns as $index => $column) {
+            $parameter = ':q' . $index;
+            $conditions[] = users_identifier($column) . ' LIKE ' . $parameter;
+            $params[$parameter] = '%' . $search . '%';
+        }
+        $where = ' WHERE ' . implode(' OR ', $conditions);
     }
     $count = $pdo->prepare('SELECT COUNT(*) FROM users' . $where);
     $count->execute($params);
