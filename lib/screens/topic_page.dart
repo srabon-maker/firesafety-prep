@@ -23,12 +23,16 @@ class TopicPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: color.withOpacity(.1),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.primaryContainer
+                    : color.withOpacity(.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  Icon(icon, size: 38, color: color),
+                  Icon(icon, size: 38, color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.primary
+                      : color),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -36,7 +40,9 @@ class TopicPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: color,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).colorScheme.onPrimaryContainer
+                            : color,
                       ),
                     ),
                   ),
