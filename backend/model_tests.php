@@ -222,14 +222,19 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <aside class="sidebar">
  <div class="brand"><img src="assets/fire-safety-bd-logo.png" alt="Logo" onerror="this.style.display='none'"><div><strong>Fire Safety Job Prep</strong><small>Admin Control Panel</small></div></div>
  <div class="nav-title">MODEL TEST MANAGEMENT</div>
- <nav class="nav">
-  <a class="active" href="#dashboard"><span class="ico">▦</span>মডেল টেস্ট ড্যাশবোর্ড</a>
-  <a href="#create"><span class="ico">＋</span>নতুন মডেল টেস্ট তৈরি</a>
-  <a href="#all-tests"><span class="ico">☷</span>সকল মডেল টেস্ট</a>
-  <a href="#scheduled"><span class="ico">◷</span>নির্ধারিত পরীক্ষা</a>
-  <a href="#results"><span class="ico">✓</span>পরীক্ষার ফলাফল</a>
-  <a href="#performance"><span class="ico">▤</span>পারফরম্যান্স বিশ্লেষণ</a>
- </nav>
+ <nav class="nav" aria-label="অ্যাডমিন মেনু">
+<a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+<a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
+<a class="active" href="model_tests.php" aria-current="page">☑ মডেল টেস্ট</a>
+<a href="notes.php">◫ নোট</a>
+<a href="job_circulars.php">▣ চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
+<a href="category_management.php">⊞ ক্যাটাগরি</a>
+<a href="users.php">♙ ব্যবহারকারী</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
+<a href="logout.php">↪ লগ আউট</a>
+<div class="fs-section-heading">মডেল টেস্টের বিভাগ</div><a href="#dashboard">▦ মডেল টেস্ট ড্যাশবোর্ড</a><a href="#create">＋ নতুন মডেল টেস্ট তৈরি</a><a href="#all-tests">☷ সকল মডেল টেস্ট</a><a href="#scheduled">◷ নির্ধারিত পরীক্ষা</a><a href="#results">✓ পরীক্ষার ফলাফল</a><a href="#performance">▤ পারফরম্যান্স বিশ্লেষণ</a>
+</nav>
 </aside>
 <main class="main">
 <header class="top"><div><h1>মডেল টেস্ট ব্যবস্থাপনা</h1><p>পরীক্ষা তৈরি, প্রশ্ন নির্বাচন ও প্রকাশনা পরিচালনা করুন।</p></div><a class="btn" href="#create">＋ নতুন পরীক্ষা</a></header>
