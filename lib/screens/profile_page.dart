@@ -196,12 +196,13 @@ class _ProfilePageState extends State<ProfilePage> {
   String _tr(BuildContext context, String bn, String en) => AppText.of(context, bn, en);
 
 
-  void _openAccountManagement(String email) {
+  void _openAccountManagement(Map<String, dynamic> user) {
+    final email = _value(user['email']);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => _AccountManagementPage(
           email: email,
-          onLogout: () => _logout(context),
+          onEdit: () => _editProfile(user),
           onDelete: () => _deleteAccount(email),
         ),
       ),
@@ -457,36 +458,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _editProfile(user),
-                        icon: const Icon(Icons.edit_outlined, size: 14),
-                        label: Text(
-                          _tr(context, 'এডিট', 'Edit'),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.60),
-                          ),
-                          minimumSize: const Size(0, 32),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 13,
-                            vertical: 5,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -563,11 +534,33 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.manage_accounts_outlined,
                 title: _tr(context, 'অ্যাকাউন্ট ও নিরাপত্তা',
                     'Account & security'),
-                subtitle: _tr(context, 'লগআউট ও অ্যাকাউন্ট ম্যানেজমেন্ট',
-                    'Log out and manage your account'),
-                onTap: () => _openAccountManagement(email),
+                subtitle: _tr(context, 'প্রোফাইল এডিট ও অ্যাকাউন্ট ডিলিট',
+                    'Edit profile and delete account'),
+                onTap: () => _openAccountManagement(user),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _logout(context),
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: Text(
+                  _tr(context, 'লগআউট করুন', 'Log out'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: scheme.primary,
+                  side: BorderSide(
+                    color: scheme.primary.withValues(alpha: 0.45),
+                  ),
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Center(
                 child: Text(
                   'Fire Safety BD',
@@ -606,12 +599,12 @@ class _ProfilePageState extends State<ProfilePage> {
 class _AccountManagementPage extends StatelessWidget {
   const _AccountManagementPage({
     required this.email,
-    required this.onLogout,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final String email;
-  final VoidCallback onLogout;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -665,13 +658,17 @@ class _AccountManagementPage extends StatelessWidget {
           const SizedBox(height: 16),
           Card(
             elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
             child: ListTile(
-              leading: Icon(Icons.logout_rounded, color: scheme.primary),
-              title: Text(tr('লগআউট করুন', 'Log out')),
-              subtitle: Text(tr('এই ডিভাইস থেকে সাইন আউট করুন',
-                  'Sign out from this device')),
+              leading: Icon(Icons.edit_outlined, color: scheme.primary),
+              title: Text(tr('প্রোফাইল এডিট করুন', 'Edit profile')),
+              subtitle: Text(tr('নাম, মোবাইল ও পেশাগত তথ্য পরিবর্তন',
+                  'Update name, mobile and professional details')),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: onLogout,
+              onTap: onEdit,
             ),
           ),
           const SizedBox(height: 26),
