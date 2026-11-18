@@ -11,6 +11,7 @@ on:
       - 'backend/job_circulars.php'
       - 'backend/migrations/**'
       - 'lib/screens/jobs_page.dart'
+      - 'lib/screens/profile_page.dart'
       - 'lib/screens/submit_job_page.dart'
       - 'lib/models/job_circular.dart'
       - 'lib/utils/job_notice_sections.dart'
@@ -43,6 +44,6 @@ jobs:
       - run: flutter pub get
       - name: Analyze changed Flutter code
         run: |
-          flutter analyze --no-fatal-infos --no-fatal-warnings lib/models/job_circular.dart lib/utils/job_notice_sections.dart lib/services/job_submission_service.dart lib/screens/submit_job_page.dart lib/screens/jobs_page.dart lib/screens/home_page.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/models/job_circular.dart lib/utils/job_notice_sections.dart lib/services/job_submission_service.dart lib/screens/submit_job_page.dart lib/screens/jobs_page.dart lib/screens/home_page.dart lib/screens/profile_page.dart
       - name: Test jobs parser and submission contact mapping
         run: flutter test test/job_notice_sections_test.dart test/job_submission_contacts_test.dart test/job_circular_test.dart
