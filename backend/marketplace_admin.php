@@ -148,21 +148,24 @@ function checked(array|null $edit,string $name,bool $default = false): string { 
 <style>
 :root{font-family:Arial,'Noto Sans Bengali',sans-serif;color:#271519;background:#f8f5f5}*{box-sizing:border-box}body{margin:0}header{background:#36060d;color:white;padding:20px}header a{color:white}main{max-width:1160px;margin:auto;padding:20px}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.tabs a{padding:11px 16px;background:#fff;border:1px solid #ddd;border-radius:10px;color:#650d18;text-decoration:none}.tabs a.active{background:#650d18;color:white}.panel{background:white;border:1px solid #e7d8d8;border-radius:14px;padding:18px;margin-bottom:22px}form.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label{font-size:14px;font-weight:bold;display:block}input,select,textarea{display:block;width:100%;margin-top:6px;padding:11px;border:1px solid #d6caca;border-radius:8px;font:inherit}textarea{min-height:100px}.wide{grid-column:1/-1}button{background:#650d18;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #eee;text-align:left;padding:11px;vertical-align:top}td a{color:#650d18}small{color:#666}.scroll{overflow-x:auto}.error{background:#ffe8e8;padding:14px;border-radius:8px}.success{background:#e6f7ed;padding:14px;border-radius:8px}@media(max-width:650px){form.grid{grid-template-columns:1fr}.wide{grid-column:1}main{padding:12px}}
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css">
-<script src="assets/admin-shell.js" defer></script></head><body>
+<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
 <div class="fs-admin-shell">
-<aside class="fs-admin-side" aria-label="অ্যাডমিন নেভিগেশন">
-<a class="fs-admin-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
-<nav class="fs-admin-menu"><a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
-<a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php">☑ মডেল টেস্ট</a>
-<a href="notes.php">◫ নোট</a>
-<a href="job_circulars.php">▣ চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace" aria-current="page">▤ মার্কেটপ্লেস</a>
-<a href="category_management.php">⊞ ক্যাটাগরি</a>
-<a href="users.php">♙ ব্যবহারকারী</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
-<a href="logout.php">↪ লগ আউট</a></nav>
+<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
+<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
+<nav class="nav" aria-label="অ্যাডমিন মেনু">
+<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
+<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
+<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
+<a href="notes.php"><span class="ico">◫</span>নোট</a>
+<a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
+<a href="fire_safety_job_prep_dashboard.php?section=marketplace" class="active" aria-current="page"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
+<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
+<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
+<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
+<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
+<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
+<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
+</nav>
 </aside>
 <div class="fs-admin-content">
 <a class="fs-admin-mobile-return" href="fire_safety_job_prep_dashboard.php">← ড্যাশবোর্ডে ফিরুন</a>

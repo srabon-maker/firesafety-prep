@@ -139,3 +139,39 @@ body{margin:0;background:var(--fs-bg);color:var(--fs-ink);font-family:Arial,"Not
   .layout>.main table,.shell>.main table,.fs-admin-content table{width:100%}
 }
 
+
+/* Canonical Dashboard sidebar on every secondary page and at every width. */
+.layout,.shell,.fs-admin-shell{display:flex!important;align-items:stretch;min-height:100vh}
+.layout>.fs-unified-side,.shell>.fs-unified-side,.fs-admin-shell>.fs-unified-side{
+  display:block!important;width:280px;flex:0 0 280px;min-height:100vh;
+  padding:24px 16px;background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7
+}
+.fs-unified-side .brand{display:block!important;padding:4px 9px 26px!important;margin:0!important;border:0!important}
+.fs-unified-side .fs-brand-home{display:flex;align-items:center;gap:13px;text-decoration:none;color:#fff}
+.fs-unified-side .fs-brand-home img.logo{width:65px;height:65px;flex:0 0 65px;display:block;border:2px solid #fff;border-radius:13px;object-fit:contain;background:#510d18;padding:0;margin:0}
+.fs-unified-side .fs-brand-home span{display:block;min-width:0}
+.fs-unified-side .fs-brand-home .brand-name{display:block;font-size:20px;line-height:1.25;font-weight:800;color:#fff}
+.fs-unified-side .fs-brand-home .brand-sub{display:block;font-size:14px;line-height:1.4;color:#e0bfc2;margin-top:5px}
+.fs-unified-side .nav{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;overflow:visible!important;margin:0!important;padding:0!important}
+.fs-unified-side .nav a{display:flex!important;align-items:center;gap:13px;min-width:0;margin:0!important;padding:13px 15px!important;border-radius:14px;color:#f4dfe0!important;font-size:16px!important;font-weight:400;text-decoration:none;white-space:normal!important}
+.fs-unified-side .nav .ico{width:22px;flex:0 0 22px;text-align:center;font-size:19px}
+.fs-unified-side .nav a.active{background:#ffa400!important;color:#29170b!important;font-weight:800!important}
+.fs-unified-side .nav a.logout{margin-top:15px!important;border:1px solid #ffffff40!important;color:#ffd6d6!important}
+.fs-unified-side .nav a:hover{background:#ffffff12}
+.layout>.main,.shell>.main,.fs-admin-shell>.fs-admin-content{flex:1;min-width:0;background:#fff8f5}
+.fs-admin-menu-toggle{display:none!important}
+@media(max-width:1050px){
+  .layout,.shell,.fs-admin-shell{display:flex!important}
+  .layout>.fs-unified-side,.shell>.fs-unified-side,.fs-admin-shell>.fs-unified-side{
+    display:block!important;width:clamp(145px,25vw,280px)!important;flex:0 0 clamp(145px,25vw,280px)!important;
+    min-height:100vh!important;padding:14px!important
+  }
+  .fs-unified-side .nav{display:grid!important;grid-template-columns:1fr!important}
+  .fs-unified-side .nav a{font-size:clamp(11px,1.5vw,16px)!important;padding:11px 8px!important;gap:7px}
+  .fs-unified-side .nav .ico{width:18px;flex-basis:18px;font-size:15px}
+  .fs-unified-side .fs-brand-home{gap:8px}
+  .fs-unified-side .fs-brand-home img.logo{width:clamp(40px,6vw,65px);height:clamp(40px,6vw,65px);flex-basis:clamp(40px,6vw,65px)}
+  .fs-unified-side .fs-brand-home .brand-name{font-size:clamp(12px,1.8vw,20px)}
+  .fs-unified-side .fs-brand-home .brand-sub{font-size:clamp(10px,1.4vw,14px)}
+  .layout>.main,.shell>.main,.fs-admin-shell>.fs-admin-content{padding:18px 14px!important}
+}
