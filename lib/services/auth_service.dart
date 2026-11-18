@@ -167,15 +167,13 @@ class AuthService {
       _log('GOOGLE AUTH DIAGNOSTIC: $diagnostic');
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw Exception(
-          'Google Account নির্বাচন করার পর Sign-In বন্ধ হয়ে গেলে '
-          'Android Google Sign-In / Credential Manager-এর সমস্যা হতে পারে। '
-          'Google Play services আপডেট করে আবার চেষ্টা করুন। '
-          'সমস্যা থাকলে নিচের Diagnostic Code জানান।\n$diagnostic',
+          'Google Sign-In was interrupted. Please try again.\n'
+          '$diagnostic',
         );
       }
       throw Exception(
-        'Google Sign-In ব্যর্থ হয়েছে। '
-        'সমস্যা থাকলে নিচের Diagnostic Code জানান।\n$diagnostic',
+        'Google Sign-In failed. Please try again.\n'
+        '$diagnostic',
       );
     } on TimeoutException {
       throw Exception('Login server-এর Response আসতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
