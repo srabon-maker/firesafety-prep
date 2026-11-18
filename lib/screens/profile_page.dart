@@ -124,7 +124,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _deleteAccount() async {
     if (_deleting) return;
-    final controller = TextEditingController();
+    var typedConfirmation = '';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -145,10 +145,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   'Type DELETE to confirm.')),
               const SizedBox(height: 8),
               TextField(
-                controller: controller,
                 autocorrect: false,
                 enableSuggestions: false,
-                onChanged: (_) => setDialogState(() {}),
+                onChanged: (value) => setDialogState(() => typedConfirmation = value),
                 decoration: const InputDecoration(hintText: 'DELETE'),
               ),
             ],
@@ -159,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Text(_tr(context, 'বাতিল', 'Cancel')),
             ),
             FilledButton(
-              onPressed: controller.text.trim() == 'DELETE'
+              onPressed: typedConfirmation.trim() == 'DELETE'
                   ? () => Navigator.pop(dialogContext, true)
                   : null,
               style: FilledButton.styleFrom(
@@ -172,7 +171,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
-    controller.dispose();
     if (confirmed != true || !mounted) return;
 
     setState(() => _deleting = true);
