@@ -1,8 +1,8 @@
 # Fire Safety BD — Admin Panel source
 
-The live cPanel dashboard source will be added here after confirming the current deployed version and screening for credentials.
+The working cPanel dashboard source is now tracked in this folder, based on the latest working community dashboard version (Nov 18, 2026). Verify against the live file before deploying any later changes.
 
-**Expected initial file:** `fire_safety_job_prep_dashboard.php` → cPanel document root `fire_safety_job_prep_dashboard.php`.
+**Tracked dashboard:** `fire_safety_job_prep_dashboard.php` → cPanel document root `fire_safety_job_prep_dashboard.php`.
 
 Other existing admin PHP pages are already tracked in the parent `backend/` directory, including `community_review.php` and `job_circulars.php`.
 
