@@ -207,26 +207,22 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
 .parsed-sections pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;margin:10px 0 0}
 @media(max-width:700px){.parsed-grid{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 <body>
 <div class="layout">
-<aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
-<nav class="nav" aria-label="অ্যাডমিন মেনু">
-<a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
-<a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
-<a href="model_tests.php"><span class="ico">☑</span>মডেল টেস্ট</a>
-<a href="notes.php"><span class="ico">◫</span>নোট</a>
-<a href="job_circulars.php" class="active" aria-current="page"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-<a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
-<a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
-<a href="users.php"><span class="ico">♙</span>ব্যবহারকারী</a>
-<a href="questions.php"><span class="ico">♧</span>নোটিফিকেশন</a>
-<a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
-<a href="questions.php"><span class="ico">☼</span>সেটিংস</a>
-<a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
-</nav>
+<aside class="sidebar">
+    <a href="fire_safety_job_prep_dashboard.php" class="brand">
+        <img src="assets/fire-safety-bd-logo.png" class="logo" alt="Logo">
+        <div><div class="brand-title">Fire Safety BD</div><div class="brand-sub">অ্যাডমিন প্যানেল</div></div>
+    </a>
+    <nav class="nav">
+        <a href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+        <a href="questions.php">ⓘ প্রশ্ন ব্যাংক</a>
+        <a href="model_tests.php">☑ মডেল টেস্ট</a>
+        <a href="notes.php">◫ নোট</a>
+        <a href="job_circulars.php" class="active">▣ চাকরির সার্কুলার</a>
+        <a href="logout.php" class="logout">↪ লগ আউট</a>
+    </nav>
 </aside>
 
 <main class="main">
