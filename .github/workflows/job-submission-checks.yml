@@ -7,11 +7,18 @@ on:
   pull_request:
     paths:
       - 'backend/api/jobs/**'
+      - 'backend/api/community/**'
+      - 'backend/community_review.php'
       - 'backend/job_submission_review.php'
       - 'backend/job_circulars.php'
       - 'backend/migrations/**'
       - 'lib/screens/jobs_page.dart'
-      - 'lib/screens/profile_page.dart'
+      - 'lib/screens/community_page.dart'
+      - 'lib/widgets/post_card.dart'
+      - 'lib/models/community_post.dart'
+      - 'lib/services/community_service.dart'
+      - 'pubspec.yaml'
+      - 'lib/screens/profile_page.dart lib/screens/community_page.dart lib/widgets/post_card.dart lib/models/community_post.dart lib/services/community_service.dart'
       - 'lib/screens/submit_job_page.dart'
       - 'lib/models/job_circular.dart'
       - 'lib/utils/job_notice_sections.dart'
@@ -33,6 +40,8 @@ jobs:
           php -l backend/api/jobs/my_submissions.php
           php -l backend/job_submission_review.php
           php -l backend/job_circulars.php
+          php -l backend/api/community/index.php
+          php -l backend/community_review.php
   flutter-checks:
     runs-on: ubuntu-latest
     steps:
