@@ -467,11 +467,23 @@ $token = csrf_token();
 <aside class="sidebar">
  <div class="brand"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD logo" onerror="this.style.display='none'"><div><div class="brand-name">Fire Safety BD</div><div class="brand-sub">Question Management</div></div></div>
  <div class="nav-title">Main menu</div>
- <nav class="nav-list"><a class="nav-link" href="index.php">▦ Dashboard</a><a class="nav-link active" href="questions.php">▤ Question Bank</a><a class="nav-link" href="#paste-import">কপি-পেস্ট</a><a class="nav-link" href="#docx-import">Word Import</a><a class="nav-link" href="model_tests.php">☑ Model Tests</a><a class="nav-link" href="logout.php">↪ Logout</a></nav>
+ <nav class="nav-list" aria-label="অ্যাডমিন মেনু">
+<a class="nav-link" href="fire_safety_job_prep_dashboard.php">▦ ড্যাশবোর্ড</a>
+<a class="nav-link active" href="questions.php" aria-current="page">ⓘ প্রশ্ন ব্যাংক</a>
+<a class="nav-link" href="model_tests.php">☑ মডেল টেস্ট</a>
+<a class="nav-link" href="notes.php">◫ নোট</a>
+<a class="nav-link" href="job_circulars.php">▣ চাকরির সার্কুলার</a>
+<a class="nav-link" href="fire_safety_job_prep_dashboard.php?section=marketplace">▤ মার্কেটপ্লেস</a>
+<a class="nav-link" href="category_management.php">⊞ ক্যাটাগরি</a>
+<a class="nav-link" href="users.php">♙ ব্যবহারকারী</a>
+<a class="nav-link" href="fire_safety_job_prep_dashboard.php?section=community">▱ কমিউনিটি</a>
+<a class="nav-link" href="logout.php">↪ লগ আউট</a>
+<a class="nav-link" href="#paste-import">▤ কপি-পেস্ট</a><a class="nav-link" href="#docx-import">◫ Word Import</a>
+</nav>
  <div class="sidebar-bottom">Fire Safety BD<br>Question Management</div>
 </aside>
 <main class="main">
-<header class="topbar"><div><div class="eyebrow">Admin / Question Bank</div><h1 class="page-title">প্রশ্ন ব্যবস্থাপনা</h1></div><div class="top-actions"><a class="btn light" href="index.php">Dashboard</a></div></header>
+<header class="topbar"><div><div class="eyebrow">Admin / Question Bank</div><h1 class="page-title">প্রশ্ন ব্যবস্থাপনা</h1></div><div class="top-actions"><a class="btn light" href="fire_safety_job_prep_dashboard.php">Dashboard</a></div></header>
 <?php if ($message !== ''): ?><div class="alert <?= qh($messageType) ?>"><?= qh($message) ?></div><?php endif; ?>
 
 <section class="stats">
