@@ -114,7 +114,8 @@ button.reject{background:#6d6366}.muted{color:#6b5960}.error{color:#a90021}.succ
 table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;border-bottom:1px solid #eee}
 .scroll{overflow:auto}
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
+<link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script></head><body>
 <div class="fs-admin-shell">
 <aside class="fs-admin-side" aria-label="অ্যাডমিন নেভিগেশন">
 <a class="fs-admin-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
