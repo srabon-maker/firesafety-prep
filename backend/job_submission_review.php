@@ -113,7 +113,8 @@ button.reject{background:#6d6366}.muted{color:#6b5960}.error{color:#a90021}.succ
 .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px}
 table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;border-bottom:1px solid #eee}
 .scroll{overflow:auto}
-</style></head><body>
+</style>
+<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
 <header><h1>Fire Safety BD — ইউজার সার্কুলার অনুমোদন</h1>
 <a href="job_circulars.php">← Job Circular Admin</a> &nbsp; | &nbsp; <a href="community_review.php">কমিউনিটি পোস্ট অনুমোদন</a></header>
 <main>
