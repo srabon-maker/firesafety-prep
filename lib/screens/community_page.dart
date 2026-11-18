@@ -395,7 +395,7 @@ class _CreateCommunityPostPageState extends State<CreateCommunityPostPage> {
             child: _sending
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('প্রকাশ করুন',
+                : const Text('জমা দিন',
                     style: TextStyle(fontWeight: FontWeight.w800)),
           ),
           const SizedBox(width: 7),
