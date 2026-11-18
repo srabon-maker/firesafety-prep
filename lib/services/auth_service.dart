@@ -38,6 +38,25 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   bool _googleInitialized = false;
+  // A short-lived, token-bound snapshot avoids repeated me.php calls when
+  // switching between Home, Community and Profile.
+  Map<String, dynamic>? _validatedSession;
+  String? _validatedToken;
+  DateTime? _validatedAt;
+  Future<Map<String, dynamic>?>? _validationInFlight;
+  String? _validationInFlightToken;
+  int _sessionEpoch = 0;
+  static const Duration _sessionCacheLifetime = Duration(minutes: 2);
+
+  void _invalidateSessionSnapshot() {
+    _sessionEpoch++;
+    _validatedSession = null;
+    _validatedToken = null;
+    _validatedAt = null;
+    _validationInFlight = null;
+    _validationInFlightToken = null;
+  }
+
 
   void _log(String message) {
     debugPrint('[FIRE SAFETY AUTH] $message');
@@ -178,6 +197,7 @@ class AuthService {
         );
       }
 
+      _invalidateSessionSnapshot();
       await _storage.write(
         key: _sessionKey,
         value: token.toString(),
@@ -290,6 +310,7 @@ class AuthService {
       );
     }
 
+    _invalidateSessionSnapshot();
     await _storage.write(
       key: _sessionKey,
       value: token.toString(),
@@ -312,13 +333,49 @@ class AuthService {
   // VALIDATE SESSION WITH SERVER
   // --------------------------------------------------
 
-  Future<Map<String, dynamic>?> validateSession() async {
+  Future<Map<String, dynamic>?> validateSession({
+    bool forceRefresh = false,
+  }) async {
     final token = await getSessionToken();
-
     if (token == null || token.isEmpty) {
+      _invalidateSessionSnapshot();
       return null;
     }
 
+    if (forceRefresh) _invalidateSessionSnapshot();
+
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _validatedToken == token &&
+        _validatedSession != null &&
+        _validatedAt != null &&
+        now.difference(_validatedAt!) < _sessionCacheLifetime) {
+      return _validatedSession;
+    }
+
+    if (!forceRefresh &&
+        _validationInFlight != null &&
+        _validationInFlightToken == token) {
+      return _validationInFlight!;
+    }
+
+    final pending = _validateSessionFromServer(token, _sessionEpoch);
+    _validationInFlight = pending;
+    _validationInFlightToken = token;
+    try {
+      return await pending;
+    } finally {
+      if (identical(_validationInFlight, pending)) {
+        _validationInFlight = null;
+        _validationInFlightToken = null;
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>?> _validateSessionFromServer(
+    String token,
+    int sessionEpoch,
+  ) async {
     final response = await http.get(
       Uri.parse('${apiBaseUrl}me.php'),
       headers: {
@@ -327,20 +384,31 @@ class AuthService {
       },
     ).timeout(_requestTimeout);
 
-    if (response.statusCode == 401 ||
-        response.statusCode == 403) {
-      await _storage.delete(key: _sessionKey);
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      // An older in-flight request must never delete a newer login token.
+      if (await getSessionToken() == token) {
+        await _storage.delete(key: _sessionKey);
+        _invalidateSessionSnapshot();
+      }
       return null;
     }
 
     final data = _decodeResponse(response);
-
     if (data['success'] == false ||
         data['authenticated'] == false) {
-      await _storage.delete(key: _sessionKey);
+      if (await getSessionToken() == token) {
+        await _storage.delete(key: _sessionKey);
+        _invalidateSessionSnapshot();
+      }
       return null;
     }
 
+    if (await getSessionToken() != token || sessionEpoch != _sessionEpoch) {
+      return null;
+    }
+    _validatedToken = token;
+    _validatedSession = data;
+    _validatedAt = DateTime.now();
     return data;
   }
 
@@ -384,6 +452,7 @@ class AuthService {
     if (data['success'] != true) {
       throw Exception('প্রোফাইল আপডেট নিশ্চিত করা যায়নি।');
     }
+    _invalidateSessionSnapshot();
   }
 
   /// Delete the authenticated account on the server before removing the
@@ -421,6 +490,7 @@ class AuthService {
   }
 
   Future<void> _clearLocalSession() async {
+    _invalidateSessionSnapshot();
     await _storage.delete(key: _sessionKey);
     try {
       await _initializeGoogleSignIn();

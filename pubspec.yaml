@@ -26,6 +26,9 @@ dependencies:
   # Connect Flutter with PHP APIs
   http: ^1.5.0
 
+  # Open verified official job circular and application links externally
+  url_launcher: ^6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

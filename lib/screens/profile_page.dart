@@ -31,9 +31,9 @@ class _ProfilePageState extends State<ProfilePage> {
     _profileFuture = _loadProfile();
   }
 
-  Future<Map<String, dynamic>?> _loadProfile() async {
+  Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
     final session =
-        await AuthService.instance.validateSession();
+        await AuthService.instance.validateSession(forceRefresh: forceRefresh);
 
     if (session == null) return null;
 
@@ -48,7 +48,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _refreshProfile() async {
     setState(() {
-      _profileFuture = _loadProfile();
+      _profileFuture = _loadProfile(forceRefresh: true);
     });
 
     try {
