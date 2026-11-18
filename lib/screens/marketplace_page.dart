@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/marketplace_category.dart';
 import '../models/marketplace_item.dart';
 import '../services/marketplace_api_service.dart';
+import '../services/marketplace_transaction_service.dart';
+import '../services/auth_service.dart';
+import '../services/auth_guard.dart';
+import 'marketplace_flows.dart';
 
 const Color marketMaroon = Color(0xFF650D18);
 const Color marketDeepMaroon = Color(0xFF36060D);
@@ -16,8 +20,8 @@ class MarketplacePage extends StatefulWidget {
 }
 
 class _MarketplacePageState extends State<MarketplacePage> {
-  final Map<String, int> _cart = {};
-  final Map<String, MarketplaceItem> _cartItems = {};
+  int _cartCount = 0;
+  bool _adding = false;
   final TextEditingController _search = TextEditingController();
   int _tab = 0;
   String? _categoryId;
@@ -28,6 +32,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   void initState() {
     super.initState();
     _reload();
+    _loadCartCount();
   }
 
   void _reload() {
@@ -45,96 +50,70 @@ class _MarketplacePageState extends State<MarketplacePage> {
     super.dispose();
   }
 
-  void _add(MarketplaceItem item) {
-    if (!item.canAddToCart) return;
-    final quantity = _cart[item.id] ?? 0;
-    if (item.stock != null && quantity >= item.stock!) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('স্টকের বেশি যোগ করা যাবে না।')),
-      );
-      return;
-    }
-    setState(() {
-      _cart[item.id] = quantity + 1;
-      _cartItems[item.id] = item;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('কার্টে যোগ হয়েছে।')),
-    );
-  }
-
-  void _changeQuantity(String id, int delta) {
-    final next = (_cart[id] ?? 0) + delta;
-    final item = _cartItems[id];
-    if (item == null || (item.stock != null && next > item.stock!)) return;
-    setState(() {
-      if (next <= 0) {
-        _cart.remove(id);
-        _cartItems.remove(id);
-      } else {
-        _cart[id] = next;
+  Future<void> _loadCartCount() async {
+    try {
+      final token = await AuthService.instance.getSessionToken();
+      if (token == null || token.isEmpty) {
+        if (mounted) setState(() => _cartCount = 0);
+        return;
       }
-    });
+      final cart = await MarketplaceTransactionService.instance.getCart();
+      if (mounted) setState(() => _cartCount = cart.count);
+    } catch (_) {
+      // The public catalog remains usable even when a session expires.
+      if (mounted) setState(() => _cartCount = 0);
+    }
   }
 
-  int get _cartCount => _cart.values.fold(0, (sum, qty) => sum + qty);
+  Future<void> _add(MarketplaceItem item) async {
+    if (_adding || !item.canAddToCart) return;
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    final id = int.tryParse(item.id);
+    if (id == null || id < 1) return;
+    setState(() => _adding = true);
+    try {
+      final service = MarketplaceTransactionService.instance;
+      final cart = await service.getCart();
+      final existing = cart.items.where((line) => line.productId == id);
+      final quantity = existing.isEmpty ? 0 : existing.first.quantity;
+      if (quantity >= 99 || quantity >= (item.stock ?? 0)) {
+        throw Exception('স্টকের বেশি পণ্য যোগ করা যাবে না।');
+      }
+      final updated = await service.setQuantity(id, quantity + 1);
+      if (!mounted) return;
+      setState(() => _cartCount = updated.count);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('কার্টে যোগ হয়েছে।')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
 
-  void _showCart() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('আমার কার্ট')),
-        body: StatefulBuilder(
-          builder: (context, updateDialog) {
-            final items = _cartItems.values.toList();
-            final total = items.fold<double>(
-              0, (sum, item) => sum + (item.price ?? 0) * (_cart[item.id] ?? 0),
-            );
-            if (items.isEmpty) {
-              return const Center(child: Text('আপনার কার্ট খালি।'));
-            }
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ...items.map((item) => Card(
-                  child: ListTile(
-                    title: Text(item.name),
-                    subtitle: Text('${item.priceLabel} × ${_cart[item.id]}'),
-                    trailing: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        IconButton(
-                          tooltip: 'কমাতে',
-                          onPressed: () {
-                            _changeQuantity(item.id, -1);
-                            updateDialog(() {});
-                          },
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        Text('${_cart[item.id]}'),
-                        IconButton(
-                          tooltip: 'বাড়াতে',
-                          onPressed: () {
-                            _changeQuantity(item.id, 1);
-                            updateDialog(() {});
-                          },
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                )),
-                const SizedBox(height: 16),
-                Text('মোট: ৳${total.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                const Text(
-                  'Checkout এখনো চালু হয়নি। সার্ভারের Order API যাচাই করে পরবর্তী ধাপে যুক্ত করা হবে।',
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+  Future<void> _showCart() async {
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const MarketplaceCartPage(),
+    ));
+    if (mounted) await _loadCartCount();
+  }
+
+  Future<void> _showHistory() async {
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const MarketplaceHistoryPage(),
+    ));
+  }
+
+  Future<void> _bookService(MarketplaceItem item) async {
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => MarketplaceServiceBookingPage(service: item),
     ));
   }
 
@@ -170,16 +149,20 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
                 : item.description),
             const SizedBox(height: 24),
-            if (item.canAddToCart)
+            if (item.isService)
               FilledButton.icon(
-                onPressed: () => _add(item),
+                onPressed: () => _bookService(item),
+                icon: const Icon(Icons.calendar_month),
+                label: const Text('সার্ভিস বুকিং করুন'),
+              )
+            else if (item.canAddToCart)
+              FilledButton.icon(
+                onPressed: _adding ? null : () => _add(item),
                 icon: const Icon(Icons.add_shopping_cart),
                 label: const Text('কার্টে যোগ করুন'),
               )
             else
-              Text(item.isService
-                  ? 'সার্ভিস বুকিং এখনো চালু হয়নি।'
-                  : 'এই পণ্যটি বর্তমানে কার্টে যোগ করা যাচ্ছে না।'),
+              const Text('এই পণ্যটি বর্তমানে কার্টে যোগ করা যাচ্ছে না।'),
           ],
         ),
       ),
@@ -342,6 +325,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
       foregroundColor: Colors.white,
       title: const Text('মার্কেটপ্লেস'),
       actions: [
+        IconButton(
+          tooltip: 'অর্ডার ও বুকিং ইতিহাস',
+          onPressed: _showHistory,
+          icon: const Icon(Icons.receipt_long_outlined),
+        ),
         Badge(
           isLabelVisible: _cartCount > 0,
           label: Text('$_cartCount'),
