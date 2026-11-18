@@ -170,9 +170,9 @@ class _LoginPageState extends State<LoginPage> {
                   child: OutlinedButton(
                     onPressed: _loading ? null : _login,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: maroon,
-                      side: const BorderSide(
-                        color: maroon,
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     child: _loading
-                        ? const Row(
+                        ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SizedBox(
@@ -188,7 +188,7 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 21,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: maroon,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               SizedBox(width: 12),
