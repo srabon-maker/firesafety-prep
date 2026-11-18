@@ -142,6 +142,7 @@ tbody tr:hover{background:#fffbf8}
 @media(max-width:900px){.shell{display:block}.sidebar{display:none}.main{padding:18px 14px 42px}.mobile-home{display:inline-flex;background:#fff;border:1px solid #edddd7;border-radius:10px;padding:9px 13px;color:#751a2b;font-weight:800;font-size:13px}.topbar{margin-bottom:20px}.table-scroll{display:none}.mobile-list{display:block}}
 @media(max-width:560px){.stat-grid{grid-template-columns:1fr 1fr;gap:9px}.stat{padding:15px;border-radius:15px}.stat strong{font-size:25px}.stat:last-child{grid-column:1/-1}.heading{margin-bottom:17px}.subtitle{font-size:13px}.panel-head{padding:17px 14px}.panel-head h2{font-size:18px}.search{width:100%;max-width:none}.search input{min-width:0}.search button{padding:11px 15px}.details{grid-template-columns:1fr 1fr}.user-card{padding:14px}}
 </style>
+<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 <body>
 <div class="shell">
