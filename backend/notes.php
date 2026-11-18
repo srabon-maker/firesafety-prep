@@ -774,6 +774,7 @@ th {
     }
 }
 </style>
+<link rel="stylesheet" href="assets/admin-unified.css">
 </head>
 
 <body>
