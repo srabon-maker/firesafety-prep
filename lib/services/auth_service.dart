@@ -199,7 +199,7 @@ class AuthService {
                   : '';
       final apkIdentity = installedSha1 == null
           ? ''
-          : '\\nInstalled APK SHA-1: $installedSha1';
+          : '\nInstalled APK SHA-1: $installedSha1';
       final signingMismatch = installedSha1 != null &&
           (installedSha1.toUpperCase() != registeredReleaseSha1 ||
               installedPackage != 'com.firesafetybd');
@@ -207,11 +207,11 @@ class AuthService {
         throw Exception(
           'The installed APK signing identity differs from the Android OAuth '
           'client. Register this APK package and SHA-1 in Google Cloud, or '
-          'install the intended permanent-release APK.\\n'
+          'install the intended permanent-release APK.\n'
           '$diagnostic$apkIdentity',
         );
       }
-      final extra = nativeHint.isEmpty ? '' : '\\n$nativeHint';
+      final extra = nativeHint.isEmpty ? '' : '\n$nativeHint';
       _log('GOOGLE AUTH DIAGNOSTIC: $diagnostic');
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw Exception(
