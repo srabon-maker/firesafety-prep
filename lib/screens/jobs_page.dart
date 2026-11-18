@@ -40,7 +40,7 @@ class JobsPage extends StatefulWidget {
 class _JobsPageState extends State<JobsPage> {
   late Future<List<JobCircular>> _jobs;
   final _search = TextEditingController();
-  String _sector = 'all';
+  bool _pinnedOnly = false;
   String _deadline = 'active';
 
   @override
@@ -71,8 +71,7 @@ class _JobsPageState extends State<JobsPage> {
   List<JobCircular> _filter(List<JobCircular> jobs) {
     final query = _search.text.trim().toLowerCase();
     return jobs.where((job) {
-      if (_sector == 'government' && !job.isGovernment) return false;
-      if (_sector == 'private' && job.isGovernment) return false;
+      if (_pinnedOnly && !job.isPinned) return false;
       if (_deadline == 'active' && job.isExpired) return false;
       if (_deadline == 'expired' && !job.isExpired) return false;
       return query.isEmpty ||
@@ -160,19 +159,15 @@ class _JobsPageState extends State<JobsPage> {
                 runSpacing: 4,
                 children: [
                   ChoiceChip(
-                    label: const Text('সব চাকরি'),
-                    selected: _sector == 'all',
-                    onSelected: (_) => setState(() => _sector = 'all'),
+                    label: const Text('সব সার্কুলার'),
+                    selected: !_pinnedOnly,
+                    onSelected: (_) => setState(() => _pinnedOnly = false),
                   ),
                   ChoiceChip(
-                    label: const Text('সরকারি'),
-                    selected: _sector == 'government',
-                    onSelected: (_) => setState(() => _sector = 'government'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('বেসরকারি'),
-                    selected: _sector == 'private',
-                    onSelected: (_) => setState(() => _sector = 'private'),
+                    avatar: const Icon(Icons.push_pin_outlined, size: 16),
+                    label: const Text('পিন করা'),
+                    selected: _pinnedOnly,
+                    onSelected: (_) => setState(() => _pinnedOnly = true),
                   ),
                 ],
               ),
@@ -346,7 +341,8 @@ class _JobCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(job.organization,
+                        Text(job.organization.isEmpty
+                            ? 'প্রতিষ্ঠান উল্লেখ নেই' : job.organization,
                             style: TextStyle(
                               fontSize: 12,
                               color: scheme.onSurfaceVariant,
@@ -373,7 +369,9 @@ class _JobCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 7,
                 children: [
-                  _tag(job.isGovernment ? 'সরকারি' : 'বেসরকারি', _maroon),
+                  if (job.isPinned) _tag('পিন করা', _maroon),
+                  if (job.category.isNotEmpty)
+                    _tag(job.category, _maroon),
                   if (job.location.isNotEmpty)
                     _tag(job.location, scheme.onSurfaceVariant),
                   _tag(
@@ -447,7 +445,8 @@ class JobCircularDetailsPage extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Text(
-              job.organization,
+              job.organization.isEmpty
+                  ? 'প্রতিষ্ঠান উল্লেখ নেই' : job.organization,
               style: const TextStyle(
                 fontSize: 14,
                 color: _maroon,
@@ -462,8 +461,10 @@ class JobCircularDetailsPage extends StatelessWidget {
             const SizedBox(height: 16),
             _fact(Icons.location_on_outlined, 'কর্মস্থল',
                 job.location.isEmpty ? 'উল্লেখ নেই' : job.location),
-            _fact(Icons.work_outline, 'চাকরির ধরন',
-                job.isGovernment ? 'সরকারি' : 'বেসরকারি'),
+            if (job.category.isNotEmpty)
+              _fact(Icons.category_outlined, 'ক্যাটাগরি', job.category),
+            if (job.vacancies.isNotEmpty)
+              _fact(Icons.groups_outlined, 'পদসংখ্যা', job.vacancies),
             if (job.employmentType.isNotEmpty)
               _fact(Icons.schedule_outlined, 'নিয়োগের ধরন',
                   job.employmentType),
