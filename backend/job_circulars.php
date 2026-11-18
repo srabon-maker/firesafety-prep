@@ -192,7 +192,7 @@ table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px s
 .scroll{overflow-x:auto}
 </style></head><body>
 <header><h1>Fire Safety BD — চাকরির সার্কুলার</h1>
-<p><a href="fire_safety_job_prep_dashboard.php">← Dashboard</a></p></header>
+<p><a href="fire_safety_job_prep_dashboard.php">← Dashboard</a> · <a href="job_submission_review.php">ইউজার সার্কুলার অনুমোদন</a></p></header>
 <main>
 <?php if ($error !== ''): ?><p class="error"><?= job_h($error) ?></p><?php endif; ?>
 <?php if (isset($_GET['saved'])): ?><p>সার্কুলার সংরক্ষিত হয়েছে।</p><?php endif; ?>

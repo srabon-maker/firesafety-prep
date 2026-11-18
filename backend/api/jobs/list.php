@@ -28,9 +28,13 @@ try {
                     '%Y-%m-%dT%H:%i:%s') AS published_at,
                 j.application_url AS apply_url,
                 j.category_id, c.name AS category,
-                j.is_pinned
+                j.is_pinned,
+                js.mobile_number AS contact_mobile,
+                js.whatsapp_number AS contact_whatsapp
          FROM job_circulars j
          LEFT JOIN categories c ON c.id = j.category_id
+         LEFT JOIN job_submissions js ON js.published_job_id = j.id
+           AND js.status = 'approved' AND js.public_contact = 1
          WHERE j.status = 'published'
          ORDER BY j.is_pinned DESC,
                   COALESCE(j.published_at, j.created_at) DESC, j.id DESC
