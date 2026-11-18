@@ -41,7 +41,7 @@ class MainActivity : FlutterActivity() {
         } else {
             packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
         }
-        val signer = certificates.firstOrNull() ?: error("No APK signing certificate found")
+        val signer = certificates?.firstOrNull() ?: error("No APK signing certificate found")
         val digest = MessageDigest.getInstance("SHA-1").digest(signer.toByteArray())
         return digest.joinToString(":") { byte -> "%02X".format(byte.toInt() and 0xFF) }
     }
