@@ -63,6 +63,7 @@ class AuthService {
   // --------------------------------------------------
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
+    var signInStage = 'initialization';
     _log('STEP 1: Google login started.');
 
     try {
@@ -71,11 +72,13 @@ class AuthService {
       // Do not sign out immediately before opening the account picker.
       // Explicit sign-out is handled by logout().
 
+      signInStage = 'google_account_authentication';
       _log('STEP 2: Waiting for Google account selection.');
 
       final GoogleSignInAccount account =
           await _googleSignIn.authenticate();
 
+      signInStage = 'google_id_token';
       _log('STEP 3: Google account selected.');
       _log('Google email: ${account.email}');
       _log('Google ID received: ${account.id.isNotEmpty}');
@@ -95,6 +98,7 @@ class AuthService {
 
       _log('STEP 5: Google ID Token received successfully.');
 
+      signInStage = 'server_login';
       _log('STEP 6: Sending login request to PHP API.');
 
       final response = await http.post(
@@ -156,18 +160,22 @@ class AuthService {
       _log('GOOGLE SIGN-IN EXCEPTION: ${e.code}');
       _log('Google error details: $e');
       _log('$stackTrace');
+      // The platform can report "canceled" even after a user taps an
+      // account. Include the non-secret SDK code and failing stage so that
+      // support can distinguish this from a server or token failure.
+      final diagnostic = 'Code: ${e.code.name}; Stage: $signInStage';
+      _log('GOOGLE AUTH DIAGNOSTIC: $diagnostic');
       if (e.code == GoogleSignInExceptionCode.canceled) {
-        // This code can also be returned when the account picker closes
-        // unexpectedly. Do not assert that OAuth SHA-1 is the cause.
         throw Exception(
-          'Google Sign-In সম্পন্ন হয়নি। আবার চেষ্টা করুন। '
-          'অ্যাকাউন্ট নির্বাচন না করেই বারবার বন্ধ হলে '
-          'APK Signing SHA-1 এবং Google OAuth সেটিংস যাচাই করুন।',
+          'Google Account নির্বাচন করার পর Sign-In বন্ধ হয়ে গেলে '
+          'Android Google Sign-In / Credential Manager-এর সমস্যা হতে পারে। '
+          'Google Play services আপডেট করে আবার চেষ্টা করুন। '
+          'সমস্যা থাকলে নিচের Diagnostic Code জানান।\n$diagnostic',
         );
       }
       throw Exception(
-        'Google Sign-In ব্যর্থ (${e.code}). '
-        'Android OAuth package name, Release APK SHA-1 এবং Web Client ID যাচাই করুন।',
+        'Google Sign-In ব্যর্থ হয়েছে। '
+        'সমস্যা থাকলে নিচের Diagnostic Code জানান।\n$diagnostic',
       );
     } on TimeoutException {
       throw Exception('Login server-এর Response আসতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
