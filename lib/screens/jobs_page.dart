@@ -438,11 +438,16 @@ class JobCircularDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = JobNoticeParser.parse(job.description);
-    final location = JobNoticeParser.firstValue(sections, 'jobLocation') ??
-        (job.location.isEmpty ? 'উল্লেখ নেই' : job.location);
-    final employmentType =
-        JobNoticeParser.firstValue(sections, 'employmentStatus') ??
-            job.employmentType;
+    final parsedLocation = JobNoticeParser.firstValue(sections, 'jobLocation');
+    // Respect a manually corrected DB location. Older parser versions saved
+    // "Work at office" in the location field, which is not a place.
+    final location = job.location.trim().isEmpty ||
+            job.location.trim().toLowerCase() == 'work at office'
+        ? (parsedLocation ?? (job.location.isEmpty ? 'উল্লেখ নেই' : job.location))
+        : job.location;
+    final employmentType = job.employmentType.trim().isNotEmpty
+        ? job.employmentType
+        : (JobNoticeParser.firstValue(sections, 'employmentStatus') ?? '');
     final workplace = JobNoticeParser.firstValue(sections, 'workplace');
     final salary = job.salary.trim();
     // Earlier admin parsers accidentally saved this heading as a salary.
@@ -456,12 +461,16 @@ class JobCircularDetailsPage extends StatelessWidget {
     final hasStructuredNotice =
         sections.any((section) => section.key != 'overview');
     final extraRequirements = job.requirements.trim();
+    final requirementLines = extraRequirements
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim().toLowerCase())
+        .where((line) => line.length > 10);
+    final alreadyInNotice = requirementLines.any(
+      (line) => job.description.toLowerCase().contains(line),
+    );
     final showExtraRequirements = extraRequirements.isNotEmpty &&
         (!hasStructuredNotice ||
-            (extraRequirements.length > 15 &&
-                !job.description.toLowerCase().contains(
-                      extraRequirements.toLowerCase(),
-                    )));
+            (extraRequirements.length > 15 && !alreadyInNotice));
 
     final scheme = Theme.of(context).colorScheme;
 
