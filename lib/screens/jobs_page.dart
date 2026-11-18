@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/job_circular.dart';
+import '../utils/job_notice_sections.dart';
 import '../services/job_circular_service.dart';
 
 const Color _maroon = Color(0xFF650D18);
@@ -435,123 +436,372 @@ class JobCircularDetailsPage extends StatelessWidget {
   final JobCircular job;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('নিয়োগ বিজ্ঞপ্তি'),
-          backgroundColor: _deepMaroon,
-          foregroundColor: Colors.white,
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(
-              job.organization.isEmpty
-                  ? 'প্রতিষ্ঠান উল্লেখ নেই' : job.organization,
-              style: const TextStyle(
-                fontSize: 14,
-                color: _maroon,
-                fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final sections = JobNoticeParser.parse(job.description);
+    final location = JobNoticeParser.firstValue(sections, 'jobLocation') ??
+        (job.location.isEmpty ? 'উল্লেখ নেই' : job.location);
+    final employmentType =
+        JobNoticeParser.firstValue(sections, 'employmentStatus') ??
+            job.employmentType;
+    final workplace = JobNoticeParser.firstValue(sections, 'workplace');
+    final salary = job.salary.trim();
+    // Earlier admin parsers accidentally saved this heading as a salary.
+    final validSalary = salary.toLowerCase() == '& other benefits' ? '' : salary;
+
+    final visibleSections = sections.where((section) =>
+        section.key != 'jobLocation' &&
+        section.key != 'employmentStatus' &&
+        section.key != 'workplace').toList();
+
+    final hasStructuredNotice =
+        sections.any((section) => section.key != 'overview');
+    final extraRequirements = job.requirements.trim();
+    final showExtraRequirements = extraRequirements.isNotEmpty &&
+        (!hasStructuredNotice ||
+            (extraRequirements.length > 15 &&
+                !job.description.toLowerCase().contains(
+                      extraRequirements.toLowerCase(),
+                    )));
+
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('নিয়োগ বিজ্ঞপ্তি'),
+        backgroundColor: _deepMaroon,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_deepMaroon, _maroon],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  job.organization.isEmpty
+                      ? 'প্রতিষ্ঠান উল্লেখ নেই'
+                      : job.organization,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  job.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    height: 1.3,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (job.isPinned) _headerChip('পিন করা', Icons.push_pin),
+                    _headerChip(
+                      job.deadline == null
+                          ? 'শেষ তারিখ উল্লেখ নেই'
+                          : job.isExpired
+                              ? 'আবেদনের সময় শেষ'
+                              : 'আবেদন চলছে',
+                      Icons.event_outlined,
+                    ),
+                    if (job.category.isNotEmpty)
+                      _headerChip(job.category, Icons.category_outlined),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            color: scheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _infoRow(Icons.location_on_outlined, 'কর্মস্থল', location),
+                  if (workplace != null && workplace.isNotEmpty)
+                    _infoRow(Icons.business_outlined, 'কর্মপরিবেশ', workplace),
+                  if (employmentType.isNotEmpty)
+                    _infoRow(
+                      Icons.schedule_outlined,
+                      'চাকরির ধরন',
+                      employmentType,
+                    ),
+                  if (job.vacancies.isNotEmpty)
+                    _infoRow(Icons.groups_outlined, 'পদসংখ্যা', job.vacancies),
+                  if (validSalary.isNotEmpty)
+                    _infoRow(Icons.payments_outlined, 'বেতন', validSalary),
+                  _infoRow(
+                    Icons.event_available_outlined,
+                    'আবেদনের শেষ তারিখ',
+                    _dateLabel(job.deadline),
+                  ),
+                  _infoRow(
+                    Icons.calendar_today_outlined,
+                    'প্রকাশের তারিখ',
+                    _dateLabel(job.publishedAt),
+                    isLast: true,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              job.title,
-              style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 18),
+          if (visibleSections.isNotEmpty)
+            for (final section in visibleSections)
+              _sectionCard(context, section.title, section.content,
+                  _sectionIcon(section.key))
+          else if (job.description.trim().isNotEmpty)
+            _sectionCard(
+              context,
+              'চাকরির বিবরণ',
+              job.description,
+              Icons.description_outlined,
             ),
-            const SizedBox(height: 16),
-            _fact(Icons.location_on_outlined, 'কর্মস্থল',
-                job.location.isEmpty ? 'উল্লেখ নেই' : job.location),
-            if (job.category.isNotEmpty)
-              _fact(Icons.category_outlined, 'ক্যাটাগরি', job.category),
-            if (job.vacancies.isNotEmpty)
-              _fact(Icons.groups_outlined, 'পদসংখ্যা', job.vacancies),
-            if (job.employmentType.isNotEmpty)
-              _fact(Icons.schedule_outlined, 'নিয়োগের ধরন',
-                  job.employmentType),
-            _fact(Icons.calendar_today_outlined, 'প্রকাশের তারিখ',
-                _dateLabel(job.publishedAt)),
-            _fact(Icons.event_available_outlined, 'আবেদনের শেষ তারিখ',
-                _dateLabel(job.deadline)),
-            if (job.salary.isNotEmpty)
-              _fact(Icons.payments_outlined, 'বেতন', job.salary),
-            if (job.description.isNotEmpty)
-              _section('চাকরির বিবরণ', job.description),
-            if (job.requirements.isNotEmpty)
-              _section('যোগ্যতা ও অভিজ্ঞতা', job.requirements),
-            if (job.description.isEmpty && job.requirements.isEmpty)
-              _section(
-                'বিস্তারিত তথ্য',
-                'আবেদনের আগে নিয়োগদাতার মূল বিজ্ঞপ্তি দেখুন।',
-              ),
+          if (showExtraRequirements)
+            _sectionCard(
+              context,
+              'অতিরিক্ত যোগ্যতা ও অভিজ্ঞতা',
+              extraRequirements,
+              Icons.school_outlined,
+            ),
+          if (job.description.trim().isEmpty && !showExtraRequirements)
+            _sectionCard(
+              context,
+              'বিস্তারিত তথ্য',
+              'আবেদনের আগে নিয়োগদাতার মূল বিজ্ঞপ্তি যাচাই করুন।',
+              Icons.info_outline,
+            ),
+          if (job.circularUrl != null) ...[
             const SizedBox(height: 12),
-            if (job.circularUrl != null)
-              OutlinedButton.icon(
-                onPressed: () => _openOfficialLink(context, job.circularUrl),
-                icon: const Icon(Icons.description_outlined),
-                label: const Text('মূল বিজ্ঞপ্তি দেখুন'),
-              ),
-            const SizedBox(height: 8),
-            Text(
-              'নিয়োগদাতার মূল বিজ্ঞপ্তি ও ওয়েবসাইট থেকে তথ্য যাচাই করুন।',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            OutlinedButton.icon(
+              onPressed: () => _openOfficialLink(context, job.circularUrl),
+              icon: const Icon(Icons.description_outlined),
+              label: const Text('মূল বিজ্ঞপ্তি দেখুন'),
             ),
           ],
-        ),
-        bottomNavigationBar: job.applyUrl == null
-            ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: FilledButton.icon(
-                    onPressed: job.isExpired
-                        ? null
-                        : () => _openOfficialLink(context, job.applyUrl),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _maroon,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    icon: const Icon(Icons.open_in_new),
-                    label: Text(job.isExpired
-                        ? 'আবেদনের সময় শেষ'
-                        : 'আবেদন করুন'),
+          if (job.applyUrl == null) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'এই বিজ্ঞপ্তির আবেদনের লিংক এখনো দেওয়া হয়নি।',
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const SizedBox(height: 16),
+          Text(
+            'আবেদনের আগে নিয়োগদাতার মূল বিজ্ঞপ্তি, যোগ্যতা ও শেষ তারিখ যাচাই করুন।',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: job.applyUrl == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: FilledButton.icon(
+                  onPressed: job.isExpired
+                      ? null
+                      : () => _openOfficialLink(context, job.applyUrl),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _maroon,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(
+                    job.isExpired ? 'আবেদনের সময় শেষ' : 'আবেদন করুন',
                   ),
                 ),
               ),
-      );
+            ),
+    );
+  }
 
-  Widget _fact(IconData icon, String label, String value) => Padding(
-        padding: const EdgeInsets.only(bottom: 11),
+  Widget _headerChip(String label, IconData icon) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: _maroon, size: 19),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '$label: $value',
-                style: const TextStyle(fontSize: 14, height: 1.4),
+            Icon(icon, size: 14, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
       );
 
-  Widget _section(String title, String text) => Padding(
-        padding: const EdgeInsets.only(top: 17, bottom: 8),
-        child: Column(
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool isLast = false,
+  }) =>
+      Padding(
+        padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Text(text, style: const TextStyle(fontSize: 14, height: 1.6)),
+            Icon(icon, size: 20, color: _maroon),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );
+
+  IconData _sectionIcon(String key) {
+    switch (key) {
+      case 'education':
+        return Icons.school_outlined;
+      case 'experience':
+        return Icons.history_edu_outlined;
+      case 'additionalRequirements':
+        return Icons.fact_check_outlined;
+      case 'responsibilities':
+        return Icons.assignment_outlined;
+      case 'skills':
+      case 'otherSkills':
+        return Icons.verified_outlined;
+      case 'benefits':
+        return Icons.card_giftcard_outlined;
+      case 'gender':
+        return Icons.person_outline;
+      default:
+        return Icons.description_outlined;
+    }
+  }
+
+  Widget _sectionCard(
+    BuildContext context,
+    String title,
+    String content,
+    IconData icon,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final lines = content
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 21, color: _maroon),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (lines.length > 1) ...[
+                      const Text('• ', style: TextStyle(color: _maroon)),
+                      const SizedBox(width: 5),
+                    ],
+                    Expanded(
+                      child: Text(
+                        line.replaceFirst(
+                          RegExp(r'^(?:[-•●▪]\s*|\d+[.)]\s*)'),
+                          '',
+                        ),
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.55,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
