@@ -79,8 +79,17 @@ class AuthService {
     try {
       await _initializeGoogleSignIn();
 
-      // Do not sign out immediately before opening the account picker.
-      // Explicit sign-out is handled by logout().
+      // Restore the account-picker preparation that worked before the
+      // permanent signing migration. The signing PR also removed this call,
+      // so both changes happened together; a stale Credential Manager
+      // session may otherwise be mistaken for a signing configuration error.
+      try {
+        await _googleSignIn.signOut();
+        _log('Previous Google Sign-In session cleared before account selection.');
+      } catch (_) {
+        // No cached Google session is a valid starting state.
+        _log('No previous Google Sign-In session to clear.');
+      }
 
       // Read the certificate from the APK actually installed on the device,
       // not from the Codemagic build log or the uploaded keystore.
