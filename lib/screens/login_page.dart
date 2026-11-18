@@ -128,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                const Text(
+                Text(
                   'Fire Safety BD',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -140,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 10),
 
-                const Text(
+                Text(
                   'Welcome to Fire Safety BD',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -152,7 +152,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 8),
 
-                const Text(
+                Text(
                   'Login to access all services',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -275,7 +275,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 25),
 
-                const Text(
+                Text(
                   'New users will need to complete registration '
                   'after Google Login.',
                   textAlign: TextAlign.center,
