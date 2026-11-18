@@ -69,6 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: maroon,
+              foregroundColor: Colors.white,
             ),
             onPressed: () =>
                 Navigator.pop(dialogContext, true),
@@ -157,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: maroon,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
@@ -213,7 +214,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
-              color: maroon,
+              color: Theme.of(context).colorScheme.primary,
             ),
           );
         }
@@ -228,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const Icon(
                     Icons.cloud_off_outlined,
                     size: 45,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -258,7 +259,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const Icon(
                     Icons.person_off_outlined,
                     size: 45,
-                    color: maroon,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -280,7 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
         final photo = user['profile_photo']?.toString();
 
         return RefreshIndicator(
-          color: maroon,
+          color: Theme.of(context).colorScheme.primary,
           onRefresh: _refreshProfile,
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -305,7 +306,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: photo == null || photo.isEmpty
                           ? const Icon(
                               Icons.person,
-                              color: maroon,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 45,
                             )
                           : null,
@@ -442,10 +443,10 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               number,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 21,
                 fontWeight: FontWeight.w900,
-                color: maroon,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 4),
