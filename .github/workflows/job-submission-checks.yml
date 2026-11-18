@@ -1,0 +1,47 @@
+name: Job circular submission checks
+
+on:
+  push:
+    branches:
+      - feature/user-job-submissions
+  pull_request:
+    paths:
+      - 'backend/api/jobs/**'
+      - 'backend/job_submission_review.php'
+      - 'backend/migrations/**'
+      - 'lib/screens/jobs_page.dart'
+      - 'lib/screens/submit_job_page.dart'
+      - 'lib/models/job_circular.dart'
+      - 'lib/utils/job_notice_sections.dart'
+      - 'lib/services/job_submission_service.dart'
+      - 'test/job_notice_sections_test.dart'
+      - 'test/job_submission_contacts_test.dart'
+      - '.github/workflows/job-submission-checks.yml'
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax checks
+        run: |
+          php -l backend/api/jobs/list.php
+          php -l backend/api/jobs/submission_common.php
+          php -l backend/api/jobs/submit.php
+          php -l backend/api/jobs/my_submissions.php
+          php -l backend/job_submission_review.php
+  flutter-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install packages
+        run: flutter pub get
+      - name: Analyze modified Flutter files
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/models/job_circular.dart lib/utils/job_notice_sections.dart lib/services/job_submission_service.dart lib/screens/submit_job_page.dart lib/screens/jobs_page.dart lib/screens/home_page.dart
+      - name: Job circular regression tests
+        run: flutter test test/job_notice_sections_test.dart test/job_submission_contacts_test.dart test/job_circular_test.dart
