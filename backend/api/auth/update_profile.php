@@ -37,7 +37,7 @@ $optional = static function (string $key, int $max) use ($data): ?string {
 $fullName = $required('full_name', 150);
 $mobile = $required('mobile_number', 20);
 $status = $required('current_status', 20);
-if (!preg_match('/^[0-9+\\-\\s()]{7,20}$/', $mobile) ||
+if (!preg_match('/^[0-9+\-\s()]{7,20}$/', $mobile) ||
     !in_array($status, $allowedStatuses, true)) {
     profileRespond(422, ['success' => false, 'message' => 'Invalid phone or employment status.']);
 }
