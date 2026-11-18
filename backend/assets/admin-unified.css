@@ -47,3 +47,95 @@ body{background:var(--fs-bg);color:var(--fs-ink);font-family:system-ui,-apple-sy
   .fs-admin-mobile-return{display:inline-block;margin-bottom:14px;border:1px solid var(--fs-line);padding:8px 12px;border-radius:10px;background:#fff;color:var(--fs-wine);text-decoration:none;font-weight:700}
   .fs-admin-content>main{overflow-x:auto}
 }
+
+/* Dashboard-aligned shell: all secondary admin pages share the dashboard's
+   280px sidebar, navigation spacing, palette and surface treatment. */
+:root{
+  --fs-wine:#510d18;--fs-wine-deep:#450b15;--fs-wine-light:#6a111f;
+  --fs-orange:#ffa400;--fs-bg:#fff8f5;--fs-ink:#30191b;
+  --fs-muted:#8b7777;--fs-line:#f1ddd6;
+}
+body{margin:0;background:var(--fs-bg);color:var(--fs-ink);font-family:Arial,"Noto Sans Bengali","SolaimanLipi",sans-serif}
+.layout,.shell,.fs-admin-shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh;align-items:stretch}
+.layout>.sidebar,.shell>.sidebar,.fs-admin-shell>.fs-admin-side{
+  width:auto;min-width:0;flex:none;min-height:100vh;padding:24px 16px;
+  background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7
+}
+.layout>.sidebar .brand,.shell>.sidebar .brand,.fs-admin-brand{
+  display:flex;align-items:center;gap:13px;padding:4px 9px 26px;
+  border-bottom:0;margin-bottom:0
+}
+.layout>.sidebar .brand img,.shell>.sidebar .brand img,.fs-admin-brand img{
+  width:65px;height:65px;flex-shrink:0;object-fit:contain;
+  border:2px solid white;border-radius:13px;background:#510d18;padding:0;margin:0
+}
+.layout>.sidebar .brand-name,.shell>.sidebar .brand-title,.fs-admin-brand strong{
+  font-size:20px;font-weight:800;line-height:1.25;color:#fff
+}
+.layout>.sidebar .brand-sub,.shell>.sidebar .brand small,.fs-admin-brand small{
+  font-size:14px;color:#e0bfc2
+}
+.layout>.sidebar .nav,.layout>.sidebar .nav-list,.shell>.sidebar .side-nav,.fs-admin-menu{
+  display:grid;gap:5px;margin:0
+}
+.layout>.sidebar .nav a,.layout>.sidebar .nav-list a,.shell>.sidebar .side-nav a,.fs-admin-menu a{
+  display:flex;align-items:center;gap:13px;padding:13px 15px;margin:0;
+  border:0;border-radius:14px;color:#f4dfe0;text-decoration:none;font-size:16px;
+  font-weight:400;line-height:1.4
+}
+.layout>.sidebar .nav a:hover,.layout>.sidebar .nav-list a:hover,.shell>.sidebar .side-nav a:hover,.fs-admin-menu a:hover{background:#ffffff12}
+.layout>.sidebar .nav a.active,.layout>.sidebar .nav-list a.active,.shell>.sidebar .side-nav a.active,.fs-admin-menu a[aria-current="page"]{
+  background:var(--fs-orange);color:#29170b;font-weight:800
+}
+.layout>.main,.shell>.main,.fs-admin-content{
+  min-width:0;padding:32px;background:var(--fs-bg)
+}
+.layout>.main .topbar,.shell>.main .topbar,.fs-admin-content>header{
+  background:transparent;color:var(--fs-ink);padding:0;margin-bottom:24px;border:0
+}
+.fs-admin-content .topbar{background:transparent;color:var(--fs-ink);border-radius:0}
+.fs-admin-content .topbar .brand,.fs-admin-content .topbar .nav-links a{color:var(--fs-wine)}
+.fs-admin-content .topbar .brand-subtitle{color:var(--fs-muted)}
+.layout>.main h1,.shell>.main h1,.fs-admin-content h1{color:#510d18}
+.layout>.main .card,.layout>.main .panel,.shell>.main .card,.shell>.main .panel,
+.fs-admin-content article,.fs-admin-content section{
+  border:1px solid var(--fs-line);border-radius:18px;
+  box-shadow:0 8px 28px #31091412
+}
+.layout>.main button,.shell>.main button,.fs-admin-content button,
+.layout>.main input,.shell>.main input,.fs-admin-content input,
+.layout>.main select,.shell>.main select,.fs-admin-content select,
+.layout>.main textarea,.shell>.main textarea,.fs-admin-content textarea{border-radius:11px}
+@media(min-width:641px) and (max-width:900px){
+  .layout,.shell,.fs-admin-shell{display:grid;grid-template-columns:245px minmax(0,1fr)}
+  .layout>.sidebar,.shell>.sidebar,.fs-admin-shell>.fs-admin-side{display:block;min-height:100vh}
+  .layout>.sidebar .nav,.layout>.sidebar .nav-list,.shell>.sidebar .side-nav,.fs-admin-menu{display:grid}
+  .layout>.main,.shell>.main,.fs-admin-content{padding:24px}
+}
+.fs-admin-menu-toggle{display:none}
+@media(max-width:640px){
+  .layout,.shell,.fs-admin-shell{display:block}
+  .layout>.sidebar,.shell>.sidebar,.fs-admin-shell>.fs-admin-side{
+    display:none;width:100%;min-height:0;padding:12px 14px
+  }
+  .layout>.sidebar.fs-admin-expanded,.shell>.sidebar.fs-admin-expanded,.fs-admin-shell>.fs-admin-side.fs-admin-expanded{display:block}
+  .layout>.sidebar .brand,.shell>.sidebar .brand,.fs-admin-brand{padding:4px 4px 12px}
+  .layout>.sidebar .brand img,.shell>.sidebar .brand img,.fs-admin-brand img{width:44px;height:44px}
+  .layout>.sidebar .nav,.layout>.sidebar .nav-list,.shell>.sidebar .side-nav,.fs-admin-menu{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:6px;padding:0 0 6px
+  }
+  .layout>.sidebar .nav a,.layout>.sidebar .nav-list a,.shell>.sidebar .side-nav a,.fs-admin-menu a{
+    white-space:normal;min-width:0;padding:10px;font-size:14px
+  }
+  .layout>.main,.shell>.main,.fs-admin-content{padding:18px 14px}
+  .layout>.sidebar .nav-title,.layout>.sidebar .sidebar-bottom,.fs-admin-mobile-return{display:none}
+  .fs-admin-menu-toggle{
+    display:inline-flex;align-items:center;gap:9px;margin-bottom:16px;
+    border:0;border-radius:10px;background:#510d18;color:#fff;
+    padding:10px 14px;font-size:16px;font-weight:700;cursor:pointer
+  }
+  .layout>.main .table-wrap,.layout>.main .table-responsive,.shell>.main .table-wrap,
+  .fs-admin-content .table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .layout>.main table,.shell>.main table,.fs-admin-content table{width:100%}
+}
+

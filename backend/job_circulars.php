@@ -208,6 +208,7 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
 @media(max-width:700px){.parsed-grid{grid-template-columns:1fr}}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="layout">

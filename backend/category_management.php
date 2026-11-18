@@ -857,6 +857,7 @@ td {
 
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script>
 </head>
 
 <body>

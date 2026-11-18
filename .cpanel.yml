@@ -10,6 +10,7 @@ deployment:
     - /bin/test -f "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
     - /bin/test -f backend/admin/fire_safety_job_prep_dashboard.php
     - /bin/test -f backend/assets/admin-unified.css
+    - /bin/test -f backend/assets/admin-shell.js
     - /bin/test -f backend/questions.php
     - /bin/test -f backend/notes.php
     - /bin/test -f backend/model_tests.php
@@ -23,6 +24,7 @@ deployment:
     - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php marketplace_admin.php users.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
     - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
     - /bin/cp -p backend/assets/admin-unified.css "$DEPLOYPATH/assets/admin-unified.css"
+    - /bin/cp -p backend/assets/admin-shell.js "$DEPLOYPATH/assets/admin-shell.js"
     - /bin/cp -p backend/questions.php "$DEPLOYPATH/questions.php"
     - /bin/cp -p backend/notes.php "$DEPLOYPATH/notes.php"
     - /bin/cp -p backend/model_tests.php "$DEPLOYPATH/model_tests.php"

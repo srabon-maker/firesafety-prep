@@ -64,7 +64,8 @@ h1{margin:0 0 5px;font-size:22px}h2{font-size:20px}.muted{color:#65585c}.error{c
 button{background:#650d18;color:white;border:0;border-radius:9px;padding:11px 15px;margin:8px 8px 0 0;cursor:pointer}
 button.reject{background:#666}button.hide{background:#a74a24}
 </style>
-<link rel="stylesheet" href="assets/admin-unified.css"></head><body>
+<link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script></head><body>
 <div class="fs-admin-shell">
 <aside class="fs-admin-side" aria-label="অ্যাডমিন নেভিগেশন">
 <a class="fs-admin-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
