@@ -1,0 +1,49 @@
+/* Fire Safety BD shared admin visual theme — presentation only.
+   Do not place forms, routes, or database behavior here. */
+:root{
+  --fs-wine:#500b19;--fs-wine-deep:#3e0711;--fs-wine-light:#761828;
+  --fs-orange:#ffad0d;--fs-bg:#faf5f2;--fs-ink:#302127;
+  --fs-muted:#84757b;--fs-line:#efdfda;
+}
+body{background:var(--fs-bg);color:var(--fs-ink);font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif}
+.layout .sidebar,.shell .sidebar{background:linear-gradient(180deg,var(--fs-wine-deep),#650d1d);color:#fff}
+.layout .sidebar .brand img,.shell .sidebar .brand img{object-fit:contain;border-radius:14px}
+.layout .sidebar .nav a.active,.layout .sidebar .nav-link.active,.shell .sidebar .side-nav a.active{background:var(--fs-orange);color:#37130b;border-radius:12px;font-weight:800}
+.layout .sidebar .nav a:hover,.layout .sidebar .nav-link:hover,.shell .sidebar .side-nav a:hover{border-radius:12px}
+.layout .main{background:var(--fs-bg);min-width:0}
+.layout .main h1,.layout .main h2,.container h1,.container h2{color:#4d1722}
+.layout .main .card,.layout .main .panel,.container .card,.container .panel{
+  border-radius:18px;border-color:var(--fs-line);box-shadow:0 5px 22px #4419230b
+}
+.layout .main input,.layout .main select,.layout .main textarea,.container input,.container select,.container textarea{
+  max-width:100%;border-radius:11px
+}
+.layout .main button,.container button{border-radius:11px}
+.layout .main :focus-visible,.container :focus-visible,.fs-admin-content :focus-visible{
+  outline:3px solid #eeb75d;outline-offset:2px
+}
+.fs-admin-shell{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:100vh}
+.fs-admin-side{padding:24px 15px;color:white;background:linear-gradient(180deg,var(--fs-wine-deep),#650d1d)}
+.fs-admin-brand{display:flex;align-items:center;gap:12px;padding:6px 5px 22px;border-bottom:1px solid #ffffff2c;color:white;text-decoration:none}
+.fs-admin-brand img{width:54px;height:54px;object-fit:contain;border-radius:14px;border:1px solid #ffffff65}
+.fs-admin-brand strong{display:block;font-size:17px;line-height:1.25}.fs-admin-brand small{display:block;color:#e9c7cb;font-size:12px}
+.fs-admin-menu{display:grid;gap:6px;margin-top:23px}
+.fs-admin-menu a{display:block;color:#f9e9e9;padding:12px 14px;border-radius:12px;text-decoration:none;font-weight:700}
+.fs-admin-menu a:hover{background:#ffffff1a}
+.fs-admin-menu a[aria-current="page"]{background:var(--fs-orange);color:#37130b}
+.fs-admin-content{min-width:0;padding:24px clamp(14px,3vw,38px)}
+.fs-admin-content>header{background:none;color:var(--fs-ink);padding:0 0 18px;border-bottom:1px solid var(--fs-line)}
+.fs-admin-content>header h1{font-size:clamp(23px,3vw,31px);color:#481621}
+.fs-admin-content>header a{color:#7e2738}
+.fs-admin-content>main{max-width:1320px;margin:22px 0;padding:0}
+.fs-admin-content>main article,.fs-admin-content>main section{border-radius:18px;border-color:var(--fs-line);box-shadow:0 5px 18px #4419230d}
+.fs-admin-content>main input,.fs-admin-content>main textarea,.fs-admin-content>main select{max-width:100%;border-radius:11px}
+.fs-admin-content>main button{border-radius:11px}
+.fs-admin-mobile-return{display:none}
+@media(max-width:900px){
+  .fs-admin-shell{display:block}
+  .fs-admin-side{display:none}
+  .fs-admin-content{padding:18px 14px}
+  .fs-admin-mobile-return{display:inline-block;margin-bottom:14px;border:1px solid var(--fs-line);padding:8px 12px;border-radius:10px;background:#fff;color:var(--fs-wine);text-decoration:none;font-weight:700}
+  .fs-admin-content>main{overflow-x:auto}
+}
