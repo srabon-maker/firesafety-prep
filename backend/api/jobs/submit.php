@@ -11,7 +11,7 @@ if ($body === false || strlen($body) > 75000) {
     submission_response(413, ['success' => false, 'message' => 'বিজ্ঞপ্তির লেখা অতিরিক্ত বড়।']);
 }
 $data = json_decode($body, true);
-if (!is_array($data) || array_is_list($data)) {
+if (!is_array($data)) {
     submission_response(400, ['success' => false, 'message' => 'সঠিক JSON পাঠান।']);
 }
 
