@@ -33,7 +33,7 @@ function authenticatedProfileUserId(PDO $pdo): int {
         ?? $_SERVER['HTTP_AUTHORIZATION']
         ?? '';
 
-    if (!preg_match('/^Bearer\\s+([a-f0-9]{64})$/i', trim($authorization), $match)) {
+    if (!preg_match('/^Bearer\s+([a-f0-9]{64})$/i', trim($authorization), $match)) {
         profileRespond(401, ['success' => false, 'message' => 'Session token required.']);
     }
 
