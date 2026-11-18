@@ -23,10 +23,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            // Codemagic injects these values from its encrypted signing identity.
+            // Never commit the keystore or passwords to GitHub.
+            val keystorePath = System.getenv("CM_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CM_KEY_ALIAS")
+                keyPassword = System.getenv("CM_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Signing with debug keys for now
-            signingConfig = signingConfigs.getByName("debug")
+            // Never fall back to the per-machine Android debug certificate.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
