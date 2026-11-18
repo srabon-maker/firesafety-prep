@@ -1,9 +1,11 @@
-
 import 'package:flutter/material.dart';
 
-const Color maroon = Color(0xFF650D18);
-const Color deepMaroon = Color(0xFF36060D);
-const Color pageBackground = Color(0xFFF8F5F5);
+import '../models/marketplace_item.dart';
+import '../services/marketplace_api_service.dart';
+
+const Color marketMaroon = Color(0xFF650D18);
+const Color marketDeepMaroon = Color(0xFF36060D);
+const Color marketBackground = Color(0xFFF8F5F5);
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -13,322 +15,404 @@ class MarketplacePage extends StatefulWidget {
 }
 
 class _MarketplacePageState extends State<MarketplacePage> {
-  int selectedTab = 0;
-  int selectedCategory = 0;
-
-  final List<Map<String, dynamic>> categories = [
-    {'name': 'সব পণ্য', 'icon': Icons.grid_view_rounded},
-    {'name': 'Fire Equipment', 'icon': Icons.fire_extinguisher},
-    {'name': 'PPE', 'icon': Icons.health_and_safety_outlined},
-    {'name': 'Fire Alarm', 'icon': Icons.notifications_active_outlined},
-    {'name': 'Safety Sign', 'icon': Icons.signpost_outlined},
-    {'name': 'Others', 'icon': Icons.category_outlined},
+  final Map<String, int> _cart = {};
+  final Map<String, MarketplaceItem> _cartItems = {};
+  final TextEditingController _search = TextEditingController();
+  final List<String> _categories = const [
+    'সব পণ্য', 'Fire Equipment', 'PPE', 'Fire Alarm', 'Safety Sign', 'Others',
   ];
+  int _tab = 0;
+  int _category = 0;
+  late Future<List<MarketplaceItem>> _catalog;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: pageBackground,
-      appBar: AppBar(
-        backgroundColor: deepMaroon,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Marketplace',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              'Fire Safety Products & Services',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('কার্ট সুবিধা পরবর্তী ধাপে যুক্ত হবে।'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.shopping_cart_outlined),
-            tooltip: 'কার্ট',
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBanner(),
-            const SizedBox(height: 22),
+  void initState() {
+    super.initState();
+    _reload();
+  }
 
-            const Text(
-              'ক্যাটাগরি',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: deepMaroon,
-              ),
-            ),
-            const SizedBox(height: 12),
+  void _reload() {
+    _catalog = MarketplaceApiService.instance.fetchCatalog(
+      isService: _tab == 1,
+    );
+  }
 
-            _buildCategories(),
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
-            const SizedBox(height: 24),
+  void _add(MarketplaceItem item) {
+    if (!item.canAddToCart) return;
+    final quantity = _cart[item.id] ?? 0;
+    if (item.stock != null && quantity >= item.stock!) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('স্টকের বেশি যোগ করা যাবে না।')),
+      );
+      return;
+    }
+    setState(() {
+      _cart[item.id] = quantity + 1;
+      _cartItems[item.id] = item;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('কার্টে যোগ হয়েছে।')),
+    );
+  }
 
-            _buildTabSelector(),
+  void _changeQuantity(String id, int delta) {
+    final next = (_cart[id] ?? 0) + delta;
+    final item = _cartItems[id];
+    if (item == null || (item.stock != null && next > item.stock!)) return;
+    setState(() {
+      if (next <= 0) {
+        _cart.remove(id);
+        _cartItems.remove(id);
+      } else {
+        _cart[id] = next;
+      }
+    });
+  }
 
-            const SizedBox(height: 20),
+  int get _cartCount => _cart.values.fold(0, (sum, qty) => sum + qty);
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  void _showCart() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('আমার কার্ট')),
+        body: StatefulBuilder(
+          builder: (context, updateDialog) {
+            final items = _cartItems.values.toList();
+            final total = items.fold<double>(
+              0, (sum, item) => sum + (item.price ?? 0) * (_cart[item.id] ?? 0),
+            );
+            if (items.isEmpty) {
+              return const Center(child: Text('আপনার কার্ট খালি।'));
+            }
+            return ListView(
+              padding: const EdgeInsets.all(16),
               children: [
-                Text(
-                  selectedTab == 0
-                      ? 'ফায়ার সেফটি পণ্য'
-                      : 'ফায়ার সেফটি সার্ভিস',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: deepMaroon,
+                ...items.map((item) => Card(
+                  child: ListTile(
+                    title: Text(item.name),
+                    subtitle: Text('${item.priceLabel} × ${_cart[item.id]}'),
+                    trailing: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'কমাতে',
+                          onPressed: () {
+                            _changeQuantity(item.id, -1);
+                            updateDialog(() {});
+                          },
+                          icon: const Icon(Icons.remove_circle_outline),
+                        ),
+                        Text('${_cart[item.id]}'),
+                        IconButton(
+                          tooltip: 'বাড়াতে',
+                          onPressed: () {
+                            _changeQuantity(item.id, 1);
+                            updateDialog(() {});
+                          },
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  selectedTab == 0 ? 'Products' : 'Services',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                )),
+                const SizedBox(height: 16),
+                Text('মোট: ৳${total.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                const Text(
+                  'Checkout এখনো চালু হয়নি। সার্ভারের Order API যাচাই করে পরবর্তী ধাপে যুক্ত করা হবে।',
                 ),
               ],
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildEmptyState(),
-
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [maroon, deepMaroon],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.local_fire_department,
-            color: Colors.white,
-            size: 34,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Fire Safety Marketplace',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 7),
-          Text(
-            'আপনার প্রয়োজনীয় ফায়ার সেফটি পণ্য ও সার্ভিস\nএক জায়গায় খুঁজে নিন।',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategories() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: categories.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.05,
-      ),
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        final selected = selectedCategory == index;
-
-        return InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () {
-            setState(() {
-              selectedCategory = index;
-            });
+            );
           },
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: selected ? maroon : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: selected ? maroon : Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  category['icon'] as IconData,
-                  size: 27,
-                  color: selected ? Colors.white : maroon,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  category['name'] as String,
+        ),
+      ),
+    ));
+  }
+
+  void _showDetails(MarketplaceItem item) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('বিস্তারিত')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _itemImage(item, height: 210),
+            const SizedBox(height: 18),
+            Text(item.name, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Text(item.category),
+            const SizedBox(height: 8),
+            Text(item.priceLabel,
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            Text(item.description.isEmpty
+                ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
+                : item.description),
+            const SizedBox(height: 24),
+            if (item.canAddToCart)
+              FilledButton.icon(
+                onPressed: () => _add(item),
+                icon: const Icon(Icons.add_shopping_cart),
+                label: const Text('কার্টে যোগ করুন'),
+              )
+            else
+              Text(item.isService
+                  ? 'সার্ভিস বুকিং এখনো চালু হয়নি।'
+                  : 'এই পণ্যটি বর্তমানে কার্টে যোগ করা যাচ্ছে না।'),
+          ],
+        ),
+      ),
+    ));
+  }
+
+  Widget _itemImage(MarketplaceItem item, {double height = 130}) {
+    final uri = Uri.tryParse(item.imageUrl ?? '');
+    final valid = uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.host.isNotEmpty;
+    if (!valid) {
+      return Container(
+        height: height,
+        color: const Color(0xFFF4E7E9),
+        child: Icon(item.isService ? Icons.engineering : Icons.fire_extinguisher,
+            color: marketMaroon, size: 44),
+      );
+    }
+    return Image.network(
+      item.imageUrl!,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        height: height,
+        color: const Color(0xFFF4E7E9),
+        child: const Icon(Icons.image_not_supported_outlined),
+      ),
+    );
+  }
+
+  Widget _catalogView() {
+    return FutureBuilder<List<MarketplaceItem>>(
+      future: _catalog,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(48),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Column(
+            children: [
+              const Icon(Icons.wifi_off, size: 44, color: marketMaroon),
+              const SizedBox(height: 12),
+              const Text('পণ্য বা সার্ভিস লোড করা যায়নি।'),
+              const SizedBox(height: 6),
+              Text('${snapshot.error}',
                   textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : deepMaroon,
-                  ),
-                ),
-              ],
+                  style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => setState(_reload),
+                icon: const Icon(Icons.refresh),
+                label: const Text('আবার চেষ্টা করুন'),
+              ),
+            ],
+          );
+        }
+        final query = _search.text.trim().toLowerCase();
+        final filtered = (snapshot.data ?? []).where((item) {
+          final categoryMatches = _category == 0 ||
+              item.category.toLowerCase() ==
+                  _categories[_category].toLowerCase();
+          final queryMatches = query.isEmpty ||
+              item.name.toLowerCase().contains(query) ||
+              item.description.toLowerCase().contains(query);
+          return categoryMatches && queryMatches;
+        }).toList();
+        if (filtered.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(40),
+            child: Center(
+              child: Text(query.isNotEmpty || _category != 0
+                  ? 'এই অনুসন্ধানে কিছু পাওয়া যায়নি।'
+                  : 'এখনো কোনো ${_tab == 0 ? 'পণ্য' : 'সার্ভিস'} প্রকাশ করা হয়নি।'),
             ),
+          );
+        }
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: .68,
           ),
+          itemBuilder: (context, index) {
+            final item = filtered[index];
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _showDetails(item),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _itemImage(item),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(9),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.name, maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 5),
+                            Text(item.priceLabel, maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            const Spacer(),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: item.canAddToCart
+                                    ? () => _add(item)
+                                    : () => _showDetails(item),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: marketMaroon,
+                                  padding: EdgeInsets.zero,
+                                ),
+                                child: Text(item.canAddToCart
+                                    ? 'কার্টে যোগ'
+                                    : 'বিস্তারিত'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildTabSelector() {
-    return Container(
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        children: [
-          _tabButton('পণ্য', 0, Icons.shopping_bag_outlined),
-          _tabButton('সার্ভিস', 1, Icons.miscellaneous_services),
-        ],
-      ),
-    );
-  }
-
-  Widget _tabButton(String title, int tab, IconData icon) {
-    final selected = selectedTab == tab;
-
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () {
-          setState(() {
-            selectedTab = tab;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? maroon : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? Colors.white : deepMaroon,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                title,
-                style: TextStyle(
-                  color: selected ? Colors.white : deepMaroon,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: marketBackground,
+    appBar: AppBar(
+      backgroundColor: marketDeepMaroon,
+      foregroundColor: Colors.white,
+      title: const Text('Marketplace'),
+      actions: [
+        Badge(
+          isLabelVisible: _cartCount > 0,
+          label: Text('$_cartCount'),
+          child: IconButton(
+            tooltip: 'কার্ট',
+            onPressed: _showCart,
+            icon: const Icon(Icons.shopping_cart_outlined),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: 35,
-        horizontal: 20,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
+        const SizedBox(width: 12),
+      ],
+    ),
+    body: RefreshIndicator(
+      onRefresh: () async {
+        setState(_reload);
+        try {
+          await _catalog;
+        } catch (_) {
+          // FutureBuilder displays the failure and retry action.
+        }
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Icon(
-            selectedTab == 0
-                ? Icons.inventory_2_outlined
-                : Icons.engineering_outlined,
-            size: 48,
-            color: maroon.withValues(alpha: 0.65),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            selectedTab == 0
-                ? 'এখনো কোনো পণ্য প্রকাশ করা হয়নি'
-                : 'এখনো কোনো সার্ভিস প্রকাশ করা হয়নি',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: deepMaroon,
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [marketMaroon, marketDeepMaroon],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.local_fire_department, color: Colors.white, size: 32),
+                SizedBox(height: 10),
+                Text('Fire Safety Marketplace',
+                    style: TextStyle(color: Colors.white,
+                        fontWeight: FontWeight.bold, fontSize: 20)),
+                SizedBox(height: 5),
+                Text('ফায়ার সেফটি পণ্য ও সার্ভিস এক জায়গায়',
+                    style: TextStyle(color: Colors.white70)),
+              ],
             ),
           ),
-          const SizedBox(height: 7),
-          const Text(
-            'অ্যাডমিন প্যানেল থেকে পণ্য ও সার্ভিস যুক্ত হলে এখানে দেখা যাবে।',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              height: 1.5,
+          const SizedBox(height: 18),
+          TextField(
+            controller: _search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'পণ্য বা সার্ভিস খুঁজুন',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
+          const SizedBox(height: 18),
+          SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(value: 0, label: Text('পণ্য'),
+                  icon: Icon(Icons.shopping_bag_outlined)),
+              ButtonSegment(value: 1, label: Text('সার্ভিস'),
+                  icon: Icon(Icons.engineering_outlined)),
+            ],
+            selected: {_tab},
+            onSelectionChanged: (selection) => setState(() {
+              _tab = selection.first;
+              _category = 0;
+              _reload();
+            }),
+          ),
+          const SizedBox(height: 18),
+          const Text('ক্যাটাগরি',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) => ChoiceChip(
+                label: Text(_categories[i]),
+                selected: _category == i,
+                onSelected: (_) => setState(() => _category = i),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _catalogView(),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
