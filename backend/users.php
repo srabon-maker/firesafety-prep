@@ -143,6 +143,7 @@ tbody tr:hover{background:#fffbf8}
 @media(max-width:560px){.stat-grid{grid-template-columns:1fr 1fr;gap:9px}.stat{padding:15px;border-radius:15px}.stat strong{font-size:25px}.stat:last-child{grid-column:1/-1}.heading{margin-bottom:17px}.subtitle{font-size:13px}.panel-head{padding:17px 14px}.panel-head h2{font-size:18px}.search{width:100%;max-width:none}.search input{min-width:0}.search button{padding:11px 15px}.details{grid-template-columns:1fr 1fr}.user-card{padding:14px}}
 </style>
 <link rel="stylesheet" href="assets/admin-unified.css">
+<script src="assets/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="shell">
