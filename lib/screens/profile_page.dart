@@ -204,7 +204,7 @@ class _ProfilePageState extends State<ProfilePage> {
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 9),
       child: ListTile(
-        leading: Icon(icon, color: maroon),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(
           title,
           style: TextStyle(
@@ -473,7 +473,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Card(
                   elevation: 0,
                   child: ListTile(
-                    leading: Icon(item.$1, color: maroon),
+                    leading: Icon(item.$1, color: Theme.of(context).colorScheme.primary),
                     title: Text(item.$2),
                     trailing:
                         const Icon(Icons.chevron_right),
