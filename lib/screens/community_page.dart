@@ -1,15 +1,15 @@
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../data/app_data.dart';
 import '../models/community_post.dart';
-import '../widgets/post_card.dart';
 import '../services/auth_guard.dart';
+import '../services/community_service.dart';
+import '../widgets/post_card.dart';
 
-const Color maroon = Color(0xFF650D18);
-const Color deepMaroon = Color(0xFF36060D);
-const Color red = Color(0xFFE32636);
-const Color cream = Color(0xFFFFF8F4);
+const _maroon = Color(0xFF650D18);
+const _deepMaroon = Color(0xFF36060D);
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -19,244 +19,492 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  String filter = 'সব পোস্ট';
+  late Future<List<CommunityPost>> _feed;
+  String _sort = 'latest';
+  bool _searchVisible = false;
+  final _search = TextEditingController();
 
-  Future<bool> _checkLogin() async {
-    return await AuthGuard.ensureAuthenticated(context);
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    _feed = CommunityService.instance.feed(sort: _sort);
+  }
+
+  Future<void> _refresh() async {
+    setState(_reload);
+    try { await _feed; } catch (_) {}
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text(
-        'কমিউনিটি',
-        style: TextStyle(fontWeight: FontWeight.w800),
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openComposer() async {
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const CreateCommunityPostPage()),
+    );
+    if (saved == true && mounted) await _refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = dark ? const Color(0xFFFFB5C0) : _maroon;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 76,
+        backgroundColor: _deepMaroon,
+        foregroundColor: Colors.white,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('কমিউনিটি',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+            SizedBox(height: 3),
+            Text('ফায়ার সেফটি নিয়ে শিখুন, জানুন ও শেয়ার করুন',
+                style: TextStyle(fontSize: 11, color: Color(0xFFF0CCD2))),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'পোস্ট খুঁজুন',
+            icon: Icon(_searchVisible ? Icons.close_rounded : Icons.search_rounded),
+            onPressed: () => setState(() {
+              _searchVisible = !_searchVisible;
+              if (!_searchVisible) _search.clear();
+            }),
+          ),
+          IconButton(
+            tooltip: 'নতুন পোস্ট',
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 27),
+            onPressed: _openComposer,
+          ),
+        ],
       ),
-      actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.search),
-        ),
-        IconButton(
-          onPressed: () => _createPost(context),
-          icon: const Icon(
-            Icons.add_circle_outline,
-            size: 28,
-          ),
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        Container(
-          color: Theme.of(context).cardColor,
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                backgroundColor: Color(0xFFFFE4DD),
-                child: Icon(Icons.person, color: maroon),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(15, 16, 15, 26),
+          children: [
+            Material(
+              color: scheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: scheme.outlineVariant),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: () => _createPost(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 13,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Text(
-                      'ফায়ার সেফটি বিষয়ে পোস্ট লিখুন...',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _openComposer,
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Color(0xFFFFE4DD),
+                            child: Icon(Icons.person_rounded, color: _maroon),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Text(
+                              'আপনার অভিজ্ঞতা বা প্রশ্ন শেয়ার করুন...',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.edit_square, size: 21, color: accent),
+                        ],
+                      ),
+                      const SizedBox(height: 13),
+                      Divider(height: 1, color: scheme.outlineVariant),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.add_photo_alternate_outlined,
+                              size: 20, color: accent),
+                          const SizedBox(width: 7),
+                          Text('ছবি যোগ করুন',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 13, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: Text('পোস্ট লিখুন',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: accent,
+                                )),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () => _createPost(context),
-                style: FilledButton.styleFrom(
-                  backgroundColor: red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('পোস্ট'),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(
-          height: 58,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 9,
             ),
-            children: [
-              for (final f in [
-                'সব পোস্ট',
-                'ফায়ার',
-                'সেইফটি',
-                'কমপ্লায়েন্স',
-                'টেকনিক্যাল',
-              ])
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ChoiceChip(
-                    label: Text(f),
-                    selected: filter == f,
-                    selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                    onSelected: (_) {
-                      setState(() => filter = f);
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: Builder(
-            builder: (context) {
-              final filteredPosts = AppData.posts
-                  .where(
-                    (p) =>
-                        filter == 'সব পোস্ট' ||
-                        p.category == filter,
-                  )
-                  .toList();
-
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-                itemCount: filteredPosts.length,
-                itemBuilder: (context, i) {
-                  final post = filteredPosts[i];
-
-                  return PostCard(
-                    post: post,
-                    onChanged: () => setState(() {}),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Future<void> _createPost(BuildContext context) async {
-    // পোস্ট তৈরির আগে Login যাচাই
-    final authenticated = await _checkLogin();
-
-    if (!mounted || !authenticated) return;
-
-    final textController = TextEditingController();
-    String category = 'ফায়ার';
-
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            18,
-            22,
-            18,
-            MediaQuery.of(ctx).viewInsets.bottom + 22,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'নতুন পোস্ট',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                initialValue: category,
-                decoration: const InputDecoration(
-                  labelText: 'বিষয়',
-                ),
-                items: [
-                  'ফায়ার',
-                  'সেইফটি',
-                  'কমপ্লায়েন্স',
-                  'টেকনিক্যাল',
-                ].map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e),
-                  ),
-                ).toList(),
-                onChanged: (v) {
-                  setModal(() {
-                    category = v ?? 'ফায়ার';
-                  });
-                },
-              ),
-
-              const SizedBox(height: 12),
-
+            const SizedBox(height: 18),
+            if (_searchVisible) ...[
               TextField(
-                controller: textController,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  hintText: 'আপনার প্রশ্ন বা অভিজ্ঞতা লিখুন...',
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    if (textController.text.trim().isNotEmpty) {
-                      AppData.posts.insert(
-                        0,
-                        CommunityPost(
-                          author: 'আপনি',
-                          time: 'এখনই',
-                          category: category,
-                          text: textController.text.trim(),
-                          comments: [],
-                        ),
-                      );
-
-                      Navigator.pop(ctx, true);
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: maroon,
-                    foregroundColor: Colors.white,
+                controller: _search,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'পোস্ট বা লেখকের নাম খুঁজুন',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  filled: true,
+                  fillColor: scheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Text('পোস্ট প্রকাশ করুন'),
                 ),
               ),
+              const SizedBox(height: 14),
             ],
-          ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('আলোচনা ও অভিজ্ঞতা',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onSurface,
+                      )),
+                ),
+                _sortButton('সর্বশেষ', 'latest'),
+                const SizedBox(width: 7),
+                _sortButton('জনপ্রিয়', 'popular'),
+              ],
+            ),
+            const SizedBox(height: 14),
+            FutureBuilder<List<CommunityPost>>(
+              future: _feed,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 70),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return _message(
+                    Icons.wifi_off_outlined,
+                    'কমিউনিটি লোড করা যায়নি',
+                    'সার্ভারে নতুন Community API আপলোড হয়েছে কি না দেখুন।',
+                    retry: _refresh,
+                  );
+                }
+                final query = _search.text.trim().toLowerCase();
+                final posts = (snapshot.data ?? []).where((post) =>
+                    query.isEmpty ||
+                    post.text.toLowerCase().contains(query) ||
+                    post.author.toLowerCase().contains(query)).toList();
+                if (posts.isEmpty) {
+                  return _message(
+                    Icons.forum_outlined,
+                    query.isNotEmpty ? 'কোনো মিল পাওয়া যায়নি' : 'এখনো পোস্ট নেই',
+                    query.isNotEmpty
+                        ? 'অন্য শব্দ দিয়ে খুঁজুন।'
+                        : 'প্রথম পোস্টটি করুন। অ্যাডমিন অনুমোদনের পর এখানে দেখা যাবে।',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final post in posts)
+                      PostCard(
+                        key: ValueKey(post.id),
+                        post: post,
+                        onChanged: _refresh,
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
+  }
 
-    textController.dispose();
+  Widget _sortButton(String label, String value) {
+    final selected = _sort == value;
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        if (selected) return;
+        setState(() {
+          _sort = value;
+          _reload();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? _maroon : scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? _maroon : scheme.outlineVariant,
+          ),
+        ),
+        child: Text(label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : scheme.onSurfaceVariant,
+            )),
+      ),
+    );
+  }
 
-    if (result == true && mounted) {
-      setState(() {});
+  Widget _message(IconData icon, String title, String subtitle,
+      {Future<void> Function()? retry}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 58, horizontal: 18),
+      child: Column(
+        children: [
+          Icon(icon, size: 42, color: scheme.primary),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+          if (retry != null) ...[
+            const SizedBox(height: 14),
+            TextButton.icon(
+              onPressed: retry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('আবার চেষ্টা করুন'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class CreateCommunityPostPage extends StatefulWidget {
+  const CreateCommunityPostPage({super.key});
+
+  @override
+  State<CreateCommunityPostPage> createState() => _CreateCommunityPostPageState();
+}
+
+class _CreateCommunityPostPageState extends State<CreateCommunityPostPage> {
+  final _text = TextEditingController();
+  Uint8List? _photo;
+  String? _photoName;
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ছবি সর্বোচ্চ ৫ MB হতে পারবে।')),
+        );
+        return;
+      }
+      setState(() {
+        _photo = bytes;
+        _photoName = file.name;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ছবি নির্বাচন করা যায়নি।')),
+      );
     }
+  }
+
+  Future<void> _publish() async {
+    if (_sending || (_text.text.trim().isEmpty && _photo == null)) return;
+    setState(() => _sending = true);
+    try {
+      await CommunityService.instance.createPost(
+        body: _text.text.trim(),
+        image: _photo,
+        imageName: _photoName,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(
+          'পোস্ট জমা হয়েছে। অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে।',
+        )),
+      );
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(
+          error.toString().replaceFirst('Exception: ', ''),
+        )),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('নতুন পোস্ট',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: _sending ||
+                    (_text.text.trim().isEmpty && _photo == null)
+                ? null
+                : _publish,
+            child: _sending
+                ? const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('জমা দিন',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(width: 7),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(18),
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Color(0xFFFFE4DD),
+                child: Icon(Icons.person_rounded, color: _maroon),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('আপনার নতুন পোস্ট',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                    SizedBox(height: 3),
+                    Text('অ্যাডমিন অনুমোদনের পর সবাই দেখতে পাবেন',
+                        style: TextStyle(fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          TextField(
+            controller: _text,
+            minLines: 5,
+            maxLines: 12,
+            maxLength: 3000,
+            textCapitalization: TextCapitalization.sentences,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'আপনার প্রশ্ন, অভিজ্ঞতা বা ফায়ার সেফটি টিপস লিখুন...',
+              alignLabelWithHint: true,
+              filled: true,
+              fillColor: scheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(17),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_photo != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(17),
+              child: Stack(
+                children: [
+                  Image.memory(_photo!, width: double.infinity,
+                      height: 245, fit: BoxFit.cover),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton.filled(
+                      tooltip: 'ছবি সরান',
+                      onPressed: () => setState(() {
+                        _photo = null;
+                        _photoName = null;
+                      }),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          OutlinedButton.icon(
+            onPressed: _sending ? null : _pickImage,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(_photo == null ? 'গ্যালারি থেকে ছবি যোগ করুন' : 'ছবি পরিবর্তন করুন'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: _sending ||
+                    (_text.text.trim().isEmpty && _photo == null)
+                ? null
+                : _publish,
+            icon: const Icon(Icons.send_rounded),
+            label: Text(_sending ? 'জমা হচ্ছে...' : 'পোস্ট জমা দিন'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _maroon,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'JPG, PNG বা WebP ছবি ব্যবহার করুন (সর্বোচ্চ ৫ MB)।',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -29,6 +29,9 @@ dependencies:
   # Open verified official job circular and application links externally
   url_launcher: ^6.3.2
 
+  # Community photo selection
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -115,7 +115,7 @@ table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;bor
 .scroll{overflow:auto}
 </style></head><body>
 <header><h1>Fire Safety BD — ইউজার সার্কুলার অনুমোদন</h1>
-<a href="job_circulars.php">← Job Circular Admin</a></header>
+<a href="job_circulars.php">← Job Circular Admin</a> &nbsp; | &nbsp; <a href="community_review.php">কমিউনিটি পোস্ট অনুমোদন</a></header>
 <main>
 <?php if ($error !== ''): ?><p class="error"><?= review_h($error) ?></p><?php endif; ?>
 <?php if ($success !== ''): ?><p class="success"><?= review_h($success) ?></p><?php endif; ?>

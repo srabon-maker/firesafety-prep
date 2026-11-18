@@ -1,0 +1,11 @@
+# Images only; prevent executable scripts in user-uploaded directory.
+Options -Indexes
+<FilesMatch "[.](php|phtml|phar|cgi|pl|py|sh|htaccess)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>
