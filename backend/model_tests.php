@@ -411,16 +411,17 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
  if($detailAttemptId>0){
    $ds=$pdo->prepare("SELECT a.*,t.title,u.full_name,u.email FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id LEFT JOIN users u ON u.id=a.user_id WHERE a.id=? LIMIT 1");
    $ds->execute([$detailAttemptId]);$detailAttempt=$ds->fetch(PDO::FETCH_ASSOC) ?: null;
-   if($detailAttempt){$dq=$pdo->prepare("SELECT question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,selected_answer,explanation,marks FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order");$dq->execute([$detailAttemptId]);$detailQuestions=$dq->fetchAll(PDO::FETCH_ASSOC);}
+   if($detailAttempt && in_array($detailAttempt['status'], ['submitted','expired'], true)){$dq=$pdo->prepare("SELECT question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,selected_answer,explanation,marks FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order");$dq->execute([$detailAttemptId]);$detailQuestions=$dq->fetchAll(PDO::FETCH_ASSOC);}
  }
  ?>
- <?php if($detailAttempt): ?>
+ <?php if($detailAttempt && in_array($detailAttempt['status'], ['submitted','expired'], true)): ?>
  <h3>Attempt #<?=(int)$detailAttempt['id']?> — <?=mt_h($detailAttempt['full_name'] ?: ('User #'.(int)$detailAttempt['user_id']))?> · <?=mt_h($detailAttempt['title'])?></h3>
  <?php foreach($detailQuestions as $dq): ?><article class="panel"><strong>প্রশ্ন <?=(int)$dq['question_order']?> · <?=mt_h($dq['question_text'])?></strong>
  <p>A. <?=mt_h($dq['option_a'])?><br>B. <?=mt_h($dq['option_b'])?><br>C. <?=mt_h($dq['option_c'])?><br>D. <?=mt_h($dq['option_d'])?></p>
  <p>শিক্ষার্থীর উত্তর: <strong><?=mt_h($dq['selected_answer'] ?? 'উত্তর নেই')?></strong> · সঠিক উত্তর: <strong><?=mt_h($dq['correct_answer'])?></strong> · নম্বর: <?=mt_h($dq['marks'])?></p>
  <?php if(!empty($dq['explanation'])): ?><p>ব্যাখ্যা: <?=mt_h($dq['explanation'])?></p><?php endif; ?>
  </article><?php endforeach; ?>
+ <?php elseif($detailAttempt && $detailAttempt['status']==='in_progress'): ?><p>এই পরীক্ষা এখনো চলমান। জমা হওয়ার পর প্রশ্নভিত্তিক উত্তর পর্যালোচনা করা যাবে।</p>
  <?php elseif($detailAttemptId>0): ?><p>এই Attempt পাওয়া যায়নি।</p><?php endif; ?>
  <?php endif; ?>
 </section>
