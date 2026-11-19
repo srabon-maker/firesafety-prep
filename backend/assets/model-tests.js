@@ -103,11 +103,11 @@ function initModelTestQuestionPicker() {
     if (event.target.matches('#questionList input[type="checkbox"][name="question_ids[]"]')) syncSelection();
     if (event.target.matches('input[name="selection_mode"]')) updateMode();
     if (event.target.matches('#questionCategoryFilter')) applyFilters();
-  });
+  }, true);
 
   document.addEventListener('input', event => {
     if (event.target.matches('#questionSearch')) applyFilters();
-  });
+  }, true);
 
   document.addEventListener('click', event => {
     const selectAll = event.target.closest('#selectVisibleQuestions');
@@ -142,10 +142,22 @@ function initModelTestQuestionPicker() {
     if (!checkbox) return;
     checkbox.checked = !checkbox.checked;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  }, true);
 
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closePreview();
+  }, true);
+
+  // Direct button handlers as a fallback for environments/scripts that stop bubbling.
+  document.getElementById('selectVisibleQuestions')?.addEventListener('click', event => {
+    event.preventDefault();
+    rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = true; });
+    syncSelection();
+  });
+  document.getElementById('clearVisibleQuestions')?.addEventListener('click', event => {
+    event.preventDefault();
+    rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = false; });
+    syncSelection();
   });
 
   syncSelection();
