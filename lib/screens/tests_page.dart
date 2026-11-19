@@ -739,6 +739,18 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
             sum + ((r['correct_count'] as num?)?.toInt() ?? 0));
         final accuracy = totalQuestions == 0 ? 0.0 :
             totalCorrect / totalQuestions * 100;
+        final recentScores = percentages.reversed.take(8).toList().reversed.toList();
+        final grouped = <String, List<double>>{};
+        for (final row in validScores) {
+          final title = row['title']?.toString() ?? 'মডেল টেস্ট';
+          final percent = ((row['score'] as num?)?.toDouble() ?? 0) /
+              (row['total_marks'] as num).toDouble() * 100;
+          grouped.putIfAbsent(title, () => []).add(percent);
+        }
+        final testAverages = grouped.entries.map((entry) {
+          final values = entry.value;
+          return MapEntry(entry.key, values.reduce((a, b) => a + b) / values.length);
+        }).toList();
         return ListView(padding:const EdgeInsets.all(16),children:[
           Card(
             color: const Color(0xFFFFF5F3),
@@ -794,6 +806,94 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
               ),
             ),
           ),
+          if (recentScores.length > 1)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('সাম্প্রতিক পরীক্ষার স্কোর ট্রেন্ড',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 116,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          for (var i = 0; i < recentScores.length; i++)
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 3),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text('${recentScores[i].toStringAsFixed(0)}%',
+                                      style: const TextStyle(fontSize: 9)),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      height: (recentScores[i].clamp(0, 100) / 100 * 78).clamp(3, 78),
+                                      decoration: BoxDecoration(
+                                        color: _maroon.withValues(alpha: 0.78),
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text('${i + 1}', style: const TextStyle(fontSize: 9)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Text('ক্রম অনুযায়ী শেষ ৮টি প্রকাশিত ফলাফল; ১ = সবচেয়ে পুরোনো।',
+                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          if (testAverages.isNotEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('পরীক্ষাভিত্তিক গড় স্কোর',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 10),
+                    for (final item in testAverages)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.key, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              Expanded(child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: (item.value / 100).clamp(0.0, 1.0),
+                                  minHeight: 8,
+                                  color: _maroon,
+                                  backgroundColor: Colors.grey.shade200,
+                                ),
+                              )),
+                              const SizedBox(width: 10),
+                              Text('${item.value.toStringAsFixed(1)}%',
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ]),
+                          ],
+                        ),
+                      ),
+                    const Text('শুধু প্রকাশিত ফলাফলের ভিত্তিতে; Admin-এর আলাদা Subject তথ্য এখানে নেই।',
+                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           for(final r in rows)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(r['title']?.toString()??'মডেল টেস্ট',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
