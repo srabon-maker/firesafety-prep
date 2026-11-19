@@ -11,6 +11,7 @@ deployment:
     - /bin/test -f backend/admin/fire_safety_job_prep_dashboard.php
     - /bin/test -f backend/assets/admin-unified.css
     - /bin/test -f backend/assets/admin-shell.js
+    - /bin/test -f backend/assets/model-tests.js
     - /bin/test -f backend/questions.php
     - /bin/test -f backend/notes.php
     - /bin/test -f backend/model_tests.php
@@ -25,6 +26,8 @@ deployment:
     - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
     - /bin/cp -p backend/assets/admin-unified.css "$DEPLOYPATH/assets/admin-unified.css"
     - /bin/cp -p backend/assets/admin-shell.js "$DEPLOYPATH/assets/admin-shell.js"
+    - 'if /bin/test -f "$DEPLOYPATH/assets/model-tests.js"; then /bin/cp -p "$DEPLOYPATH/assets/model-tests.js" "$RELEASEBACKUP/assets/model-tests.js"; fi'
+    - /bin/cp -p backend/assets/model-tests.js "$DEPLOYPATH/assets/model-tests.js"
     - /bin/cp -p backend/questions.php "$DEPLOYPATH/questions.php"
     - /bin/cp -p backend/notes.php "$DEPLOYPATH/notes.php"
     - /bin/cp -p backend/model_tests.php "$DEPLOYPATH/model_tests.php"
