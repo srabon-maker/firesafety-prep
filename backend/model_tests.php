@@ -25,9 +25,14 @@ function mt_redirect(string $url): never {
     exit;
 }
 function mt_table_exists(PDO $pdo, string $table): bool {
-    $s = $pdo->prepare('SHOW TABLES LIKE ?');
+    // MariaDB does not reliably accept bound placeholders in SHOW TABLES.
+    // Query information_schema instead, which supports prepared parameters.
+    $s = $pdo->prepare(
+        'SELECT COUNT(*) FROM information_schema.tables
+         WHERE table_schema = DATABASE() AND table_name = ?'
+    );
     $s->execute([$table]);
-    return (bool)$s->fetchColumn();
+    return (int)$s->fetchColumn() > 0;
 }
 function mt_question_archive_column_exists(PDO $pdo): bool {
     $s = $pdo->query("SHOW COLUMNS FROM questions LIKE 'is_archived'");
