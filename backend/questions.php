@@ -285,18 +285,28 @@ function q_similarity(string $a, string $b): float {
     $a = qnorm($a); $b = qnorm($b);
     if ($a === '' || $b === '') return 0.0;
     if ($a === $b) return 1.0;
-    $tokensA = array_values(array_unique(preg_split('/[^\p{L}\p{N}]+/u', $a, -1, PREG_SPLIT_NO_EMPTY) ?: []));
-    $tokensB = array_values(array_unique(preg_split('/[^\p{L}\p{N}]+/u', $b, -1, PREG_SPLIT_NO_EMPTY) ?: []));
+
+    // Remove punctuation/symbol differences so Bengali and English variants compare consistently.
+    $cleanA = trim(preg_replace('/[^\p{L}\p{N}]+/u', ' ', $a) ?? $a);
+    $cleanB = trim(preg_replace('/[^\p{L}\p{N}]+/u', ' ', $b) ?? $b);
+    $tokensA = array_values(array_unique(preg_split('/\s+/u', $cleanA, -1, PREG_SPLIT_NO_EMPTY) ?: []));
+    $tokensB = array_values(array_unique(preg_split('/\s+/u', $cleanB, -1, PREG_SPLIT_NO_EMPTY) ?: []));
     if (!$tokensA || !$tokensB) return 0.0;
+
     $intersection = count(array_intersect($tokensA, $tokensB));
-    return $intersection / max(1, count(array_unique(array_merge($tokensA, $tokensB))));
+    $union = count(array_unique(array_merge($tokensA, $tokensB)));
+    $jaccard = $intersection / max(1, $union);
+    // Token coverage catches a question that has the same core wording plus a few extra words.
+    $coverage = $intersection / max(1, min(count($tokensA), count($tokensB)));
+    // Blend both scores; cap at 1.0. This is a warning heuristic, not an auto-block.
+    return min(1.0, max($jaccard, $coverage * 0.85));
 }
 function q_similar_from_rows(array $rows, string $question, ?int $excludeId = null, int $limit = 3): array {
     $matches = [];
     foreach ($rows as $row) {
         if ($excludeId && (int)$row['id'] === $excludeId) continue;
         $score = q_similarity($question, (string)$row['question']);
-        if ($score >= 0.72) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
+        if ($score >= 0.55) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
     }
     usort($matches, static fn($a,$b) => $b['score'] <=> $a['score']);
     return array_slice($matches, 0, $limit);
