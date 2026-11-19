@@ -246,6 +246,19 @@ if (isset($_GET['saved'])) $notice = 'মডেল টেস্ট সফলভ�
 if (isset($_GET['deleted'])) $notice = 'মডেল টেস্ট মুছে ফেলা হয়েছে।';
 if (isset($_GET['release_updated'])) $notice = 'ফলাফল প্রকাশের সেটিং আপডেট হয়েছে।';
 
+$viewQuestionsTestId = (int)($_GET['view_questions'] ?? 0);
+$viewQuestionsTest = null;
+$viewQuestions = [];
+if ($viewQuestionsTestId > 0) {
+    $vs = $pdo->prepare("SELECT id,title FROM model_tests WHERE id=? LIMIT 1");
+    $vs->execute([$viewQuestionsTestId]);
+    $viewQuestionsTest = $vs->fetch(PDO::FETCH_ASSOC) ?: null;
+    if ($viewQuestionsTest) {
+        $vq = $pdo->prepare("SELECT mtq.question_order,mtq.marks,q.id,q.category,q.question,q.option_a,q.option_b,q.option_c,q.option_d,q.correct_answer FROM model_test_questions mtq JOIN questions q ON q.id=mtq.question_id WHERE mtq.test_id=? ORDER BY mtq.question_order");
+        $vq->execute([$viewQuestionsTestId]);
+        $viewQuestions = $vq->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 $editId = (int)($_GET['edit'] ?? 0);
 if ($editId > 0) {
     $st = $pdo->prepare('SELECT * FROM model_tests WHERE id=?');
