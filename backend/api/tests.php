@@ -56,9 +56,21 @@ try {
     $action=(string)($_GET['action']??'list');
 
     if($method==='GET' && $action==='list'){
-        $q=$pdo->query("SELECT mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,COUNT(mq.id) AS question_count, mt.results_released FROM model_tests mt LEFT JOIN model_test_questions mq ON mq.test_id=mt.id WHERE mt.status='published' AND (mt.starts_at IS NULL OR mt.starts_at<=NOW()) AND (mt.ends_at IS NULL OR mt.ends_at>NOW()) GROUP BY mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,mt.results_released ORDER BY mt.starts_at IS NULL,mt.starts_at ASC,mt.id DESC LIMIT 100");
+        $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
+        $hasNegative=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);
+        $randomSelect=$hasRandom?',mt.randomize_questions':'';
+        $negativeSelect=$hasNegative?',mt.negative_marks_per_question':'';
+        $randomGroup=$hasRandom?',mt.randomize_questions':'';
+        $negativeGroup=$hasNegative?',mt.negative_marks_per_question':'';
+        $q=$pdo->query("SELECT mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,COUNT(mq.id) AS question_count,mt.results_released".$randomSelect.$negativeSelect." FROM model_tests mt LEFT JOIN model_test_questions mq ON mq.test_id=mt.id WHERE mt.status='published' AND (mt.starts_at IS NULL OR mt.starts_at<=NOW()) AND (mt.ends_at IS NULL OR mt.ends_at>NOW()) GROUP BY mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,mt.results_released".$randomGroup.$negativeGroup." ORDER BY mt.starts_at IS NULL,mt.starts_at ASC,mt.id DESC LIMIT 100");
         $rows=$q->fetchAll(PDO::FETCH_ASSOC);
-        foreach($rows as &$r){$r['id']=(int)$r['id'];$r['duration_minutes']=(int)$r['duration_minutes'];$r['question_count']=(int)$r['question_count'];$r['total_marks']=(float)$r['total_marks'];$r['pass_marks']=$r['pass_marks']===null?null:(float)$r['pass_marks'];}
+        foreach($rows as &$r){
+            $r['id']=(int)$r['id'];$r['duration_minutes']=(int)$r['duration_minutes'];$r['question_count']=(int)$r['question_count'];$r['total_marks']=(float)$r['total_marks'];
+            $r['pass_marks']=$r['pass_marks']===null?null:(float)$r['pass_marks'];
+            $r['max_attempts']=(int)$r['max_attempts'];
+            $r['randomize_questions']=isset($r['randomize_questions'])?(bool)$r['randomize_questions']:false;
+            $r['negative_marks_per_question']=isset($r['negative_marks_per_question'])?(float)$r['negative_marks_per_question']:0.0;
+        }
         unset($r); exam_reply(200,['success'=>true,'data'=>$rows]);
     }
 
