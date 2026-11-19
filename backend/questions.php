@@ -29,11 +29,12 @@ function qnorm(string $value): string {
 }
 function qfield(?array $row, string $key): string { return h((string)($row[$key] ?? '')); }
 
-function question_page_url(int $page, string $search, string $category, string $difficulty, string $language, string $status): string {
+function question_page_url(int $page, string $search, string $category, string $difficulty, string $language, string $status, string $view = 'active'): string {
     $query = ['page' => $page];
     foreach (['q'=>$search, 'category'=>$category, 'difficulty'=>$difficulty, 'language'=>$language, 'status'=>$status] as $key=>$value) {
         if ($value !== '') $query[$key] = $value;
     }
+    if ($view === 'archived') $query['view'] = 'archived';
     return '?' . http_build_query($query);
 }
 
@@ -325,8 +326,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             $st = $pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before = $st->fetch(PDO::FETCH_ASSOC);
             if ($before && $featureSchemaReady) q_save_revision($pdo, (int)$id, 'deleted', $before, null);
+            $imageStmt=$pdo->prepare('SELECT image_path FROM questions WHERE id=?'); $imageStmt->execute([$id]); $oldImage=$imageStmt->fetchColumn();
             $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
             $stmt->execute([$id]);
+            if ($stmt->rowCount() && $featureSchemaReady && $oldImage) q_delete_local_image((string)$oldImage);
             $message = $stmt->rowCount() ? 'প্রশ্নটি মুছে ফেলা হয়েছে। Revision History-তে আগের তথ্য সংরক্ষিত আছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
             $messageType = $stmt->rowCount() ? 'success' : 'warning';
         }
@@ -534,7 +537,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $row['difficulty'],$row['language'],
                         trim((string)($row['reference'] ?? '')),$row['status']
                     ]);
-                    $existing[$key] = (int)$pdo->lastInsertId();
+                    $importedId=(int)$pdo->lastInsertId();
+                    $existing[$key] = $importedId;
+                    if ($featureSchemaReady) {
+                        $snapshot=$row; $snapshot['id']=$importedId; $snapshot['image_path']=null; $snapshot['is_archived']=0;
+                        q_save_revision($pdo,$importedId,'imported',null,$snapshot);
+                    }
                     $inserted++;
                 }
                 $pdo->commit();
@@ -735,7 +743,7 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 
 <section class="panel">
 <div class="panel-head"><div><h2 class="panel-title">প্রশ্ন ব্যাংক <?= $view==='archived'?'· Archive':' ' ?></h2><div class="panel-note">মোট <?= number_format($filteredCount) ?>টি ফলাফল · প্রতি পেজে <?= $perPage ?>টি</div></div></div>
-<?php if($featureSchemaReady && $view==='active'): ?><form id="bulk-questions-form" method="post" action="questions.php"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="bulk_action"><div class="bulk-toolbar"><strong>নির্বাচিত প্রশ্নে:</strong><select name="bulk_operation" required><option value="">Action নির্বাচন</option><option value="publish">Publish</option><option value="draft">Draft</option><option value="archive">Archive</option><option value="delete">Delete</option></select><button class="btn orange small" type="submit" onclick="return confirm('নির্বাচিত প্রশ্নগুলোর উপর Bulk Action চালাবেন?')">Apply</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=true)">সব নির্বাচন</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=false)">নির্বাচন বাতিল</button></div></form><?php endif; ?>
+<?php if($featureSchemaReady): ?><form id="bulk-questions-form" method="post" action="questions.php"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="bulk_action"><div class="bulk-toolbar"><strong>নির্বাচিত প্রশ্নে:</strong><select name="bulk_operation" required><option value="">Action নির্বাচন</option><?php if($view==='active'): ?><option value="publish">Publish</option><option value="draft">Draft</option><option value="archive">Archive</option><?php else: ?><option value="restore">Restore</option><?php endif; ?><option value="delete">Delete</option></select><button class="btn orange small" type="submit" onclick="return confirm('নির্বাচিত প্রশ্নগুলোর উপর Bulk Action চালাবেন?')">Apply</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=true)">সব নির্বাচন</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=false)">নির্বাচন বাতিল</button></div></form><?php endif; ?>
 <form class="filter-bar" method="get" action="questions.php">
 <input type="search" name="q" value="<?= qh($search) ?>" placeholder="প্রশ্ন/অপশন দিয়ে খুঁজুন">
 <select name="category"><option value="">সব ক্যাটাগরি</option><?php foreach($categories as $r): ?><option value="<?= qh((string)$r['category']) ?>" <?= $selectedCategory===(string)$r['category']?'selected':'' ?>><?= qh((string)$r['category']) ?></option><?php endforeach; ?></select>
@@ -746,12 +754,12 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 </form>
 <?php if(!$questions): ?><div class="empty"><strong>কোনো প্রশ্ন পাওয়া যায়নি।</strong><div>সার্চ বা ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন।</div></div>
 <?php else: foreach($questions as $q): ?>
-<article class="question-item"><div class="question-head"><div><?php if($featureSchemaReady && $view==='active'): ?><label class="select-inline"><input class="question-select" type="checkbox" name="selected_ids[]" value="<?= (int)$q['id'] ?>" form="bulk-questions-form"> নির্বাচন</label><?php endif; ?><div class="question-id">প্রশ্ন #<?= (int)$q['id'] ?></div><span class="category-pill"><?= qh((string)$q['category']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['difficulty'])) ?></span><span class="meta-pill"><?= qh((string)$q['language']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['status'])) ?></span><span class="meta-pill">ব্যবহার: <?= (int)$q['usage_count'] ?>টি টেস্ট</span></div><div class="question-actions"><a class="btn small" href="questions.php?edit=<?= (int)$q['id'] ?>#question-form">সম্পাদনা</a><button class="btn light small" type="button" onclick="document.getElementById('preview-<?= (int)$q['id'] ?>').hidden=!document.getElementById('preview-<?= (int)$q['id'] ?>').hidden">Preview</button><a class="btn light small" href="questions.php?history=<?= (int)$q['id'] ?>">History</a>
+<article class="question-item"><div class="question-head"><div><?php if($featureSchemaReady): ?><label class="select-inline"><input class="question-select" type="checkbox" name="selected_ids[]" value="<?= (int)$q['id'] ?>" form="bulk-questions-form"> নির্বাচন</label><?php endif; ?><div class="question-id">প্রশ্ন #<?= (int)$q['id'] ?></div><span class="category-pill"><?= qh((string)$q['category']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['difficulty'])) ?></span><span class="meta-pill"><?= qh((string)$q['language']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['status'])) ?></span><span class="meta-pill">ব্যবহার: <?= (int)$q['usage_count'] ?>টি টেস্ট</span></div><div class="question-actions"><a class="btn small" href="questions.php?edit=<?= (int)$q['id'] ?>#question-form">সম্পাদনা</a><button class="btn light small" type="button" onclick="document.getElementById('preview-<?= (int)$q['id'] ?>').hidden=!document.getElementById('preview-<?= (int)$q['id'] ?>').hidden">Preview</button><a class="btn light small" href="questions.php?history=<?= (int)$q['id'] ?>">History</a>
 <?php if($featureSchemaReady): ?><form class="inline-form" method="post" action="questions.php"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="id" value="<?= (int)$q['id'] ?>"><input type="hidden" name="action" value="<?= $view==='archived'?'restore':'archive' ?>"><button class="btn small" type="submit"><?= $view==='archived'?'Restore':'Archive' ?></button></form><?php endif; ?>
 <form class="inline-form" method="post" action="questions.php" onsubmit="return confirm('আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$q['id'] ?>"><button class="btn danger small" type="submit">মুছুন</button></form></div></div><div class="question-title"><?= qh((string)$q['question']) ?></div><div class="answer-line">সঠিক উত্তর: Option <?= qh((string)$q['correct_answer']) ?></div>
 <div class="question-preview" id="preview-<?= (int)$q['id'] ?>" hidden><?php if(!empty($q['image_path'])): ?><img src="<?= qh((string)$q['image_path']) ?>" alt="Question image" style="max-width:260px;max-height:180px;object-fit:contain"><?php endif; ?><div class="preview-options"><div>A. <?= qh((string)$q['option_a']) ?></div><div>B. <?= qh((string)$q['option_b']) ?></div><div>C. <?= qh((string)$q['option_c']) ?></div><div>D. <?= qh((string)$q['option_d']) ?></div></div><strong>সঠিক উত্তর: <?= qh((string)$q['correct_answer']) ?></strong><?php if(!empty($q['explanation'])): ?><p><b>ব্যাখ্যা:</b> <?= nl2br(qh((string)$q['explanation'])) ?></p><?php endif; ?></div></article>
 <?php endforeach; ?>
-<?php if($totalPages>1): ?><nav class="pagination" aria-label="Question pages"><a class="page-link <?= $page<=1?'disabled':'' ?>" href="<?= qh(question_page_url(max(1,$page-1),$search,$selectedCategory,$difficulty,$language,$status)) ?>">‹ আগের</a><?php $start=max(1,$page-2);$end=min($totalPages,$page+2);for($p=$start;$p<=$end;$p++): ?><a class="page-link <?= $p===$page?'current':'' ?>" href="<?= qh(question_page_url($p,$search,$selectedCategory,$difficulty,$language,$status)) ?>"><?= $p ?></a><?php endfor; ?><a class="page-link <?= $page>=$totalPages?'disabled':'' ?>" href="<?= qh(question_page_url(min($totalPages,$page+1),$search,$selectedCategory,$difficulty,$language,$status)) ?>">পরের ›</a></nav><?php endif; endif; ?>
+<?php if($totalPages>1): ?><nav class="pagination" aria-label="Question pages"><a class="page-link <?= $page<=1?'disabled':'' ?>" href="<?= qh(question_page_url(max(1,$page-1),$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>">‹ আগের</a><?php $start=max(1,$page-2);$end=min($totalPages,$page+2);for($p=$start;$p<=$end;$p++): ?><a class="page-link <?= $p===$page?'current':'' ?>" href="<?= qh(question_page_url($p,$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>"><?= $p ?></a><?php endfor; ?><a class="page-link <?= $page>=$totalPages?'disabled':'' ?>" href="<?= qh(question_page_url(min($totalPages,$page+1),$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>">পরের ›</a></nav><?php endif; endif; ?>
 </section>
 </main></div>
 <script>
