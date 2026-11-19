@@ -221,7 +221,14 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
             Text('স্কোর: ${r['score']??'—'} / ${r['total_marks']??'—'}'),
             Text('সঠিক: ${r['correct_count']??0}  •  ভুল: ${r['incorrect_count']??0}  •  উত্তর নেই: ${r['unanswered_count']??0}'),
             Text('জমা: ${r['submitted_at']??'—'}'),
-            Text(r['passed']==null?'পাস নম্বর নির্ধারিত নয়':((r['passed']==true||r['passed']==1)?'Pass':'Fail'),style:TextStyle(fontWeight:FontWeight.bold,color:(r['passed']==true||r['passed']==1)?Colors.green:Colors.red))
+            Text(r['passed']==null?'পাস নম্বর নির্ধারিত নয়':((r['passed']==true||r['passed']==1)?'Pass':'Fail'),style:TextStyle(fontWeight:FontWeight.bold,color:(r['passed']==true||r['passed']==1)?Colors.green:Colors.red)),
+            Align(alignment:Alignment.centerRight,child:TextButton(onPressed:() async {
+              try{
+                final detail=await ModelTestService.instance.getResult((r['attempt_id'] as num).toInt());
+                if(!mounted)return;
+                Navigator.push(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:detail)));
+              }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
+            },child:const Text('বিস্তারিত ফলাফল দেখুন')))
           ])))
         ]);
       }))
