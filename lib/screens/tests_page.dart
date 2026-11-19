@@ -102,7 +102,40 @@ class _ExamRunnerState extends State<_ExamRunner>{
   }
   Future<void> _finish({bool auto=false}) async {
     if(_submitting)return;
-    if(!auto){final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('পরীক্ষা জমা দেবেন?'),content:const Text('জমা দেওয়ার পর উত্তর পরিবর্তন করা যাবে না।'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('ফিরে যান')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('জমা দিন'))]));if(ok!=true)return;}
+    if(!auto){
+      final unanswered = _questions.length - _answers.length;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('পরীক্ষা জমা দেওয়ার আগে'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('উত্তর দিয়েছেন: ${_answers.length}টি'),
+              Text('উত্তর বাকি: $unansweredটি'),
+              const SizedBox(height: 10),
+              Text(
+                unanswered > 0
+                    ? 'কিছু প্রশ্নের উত্তর দেওয়া হয়নি। তারপরও কি জমা দিতে চান?'
+                    : 'সব প্রশ্নের উত্তর দেওয়া হয়েছে। জমা দেওয়ার পর আর পরিবর্তন করা যাবে না।',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ফিরে যান'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('জমা দিন'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
     setState(()=>_submitting=true);_timer?.cancel();
     try{
       await _saveQueue.catchError((_) {});
@@ -138,7 +171,59 @@ class _ExamRunnerState extends State<_ExamRunner>{
           const SizedBox(height:18),
           for(final letter in ['A','B','C','D'])Card(child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),
-          const SizedBox(height:16),Wrap(spacing:6,runSpacing:6,children:List.generate(_questions.length,(i)=>OutlinedButton(onPressed:()=>setState(()=>_index=i),style:OutlinedButton.styleFrom(backgroundColor:i==_index?_maroon:null,foregroundColor:i==_index?Colors.white:null,minimumSize:const Size(42,38),padding:const EdgeInsets.symmetric(horizontal:10)),child:Text('${i+1}'))))
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text('প্রশ্ন তালিকা', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Spacer(),
+              Text('উত্তর বাকি: ${_questions.length - _answers.length}টি',
+                style: TextStyle(
+                  color: _questions.length == _answers.length ? Colors.green : Colors.deepOrange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(_questions.length, (i) {
+              final questionId = (_questions[i]['id'] as num).toInt();
+              final answered = _answers.containsKey(questionId);
+              final current = i == _index;
+              return Tooltip(
+                message: 'প্রশ্ন ${i + 1}: ${answered ? 'উত্তর দেওয়া হয়েছে' : 'উত্তর দেওয়া হয়নি'}',
+                child: OutlinedButton(
+                  onPressed: _submitting ? null : () => setState(() => _index = i),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: current
+                        ? _maroon
+                        : answered ? Colors.green.shade50 : Colors.white,
+                    foregroundColor: current
+                        ? Colors.white
+                        : answered ? Colors.green.shade800 : Colors.black87,
+                    side: BorderSide(
+                      color: current ? _maroon : answered ? Colors.green : Colors.grey.shade400,
+                    ),
+                    minimumSize: const Size(42, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  child: Text('${i + 1}'),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          const Wrap(
+            spacing: 14,
+            runSpacing: 6,
+            children: [
+              _QuestionLegend(color: Colors.green, label: 'উত্তর দেওয়া'),
+              _QuestionLegend(color: Colors.grey, label: 'উত্তর বাকি'),
+              _QuestionLegend(color: _maroon, label: 'বর্তমান'),
+            ],
+          )
         ])),
         SafeArea(
           top: false,
@@ -190,6 +275,26 @@ class _ExamRunnerState extends State<_ExamRunner>{
       ])
     ));
   }
+}
+
+class _QuestionLegend extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _QuestionLegend({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(fontSize: 11)),
+    ],
+  );
 }
 
 class _ExamResult extends StatelessWidget{
