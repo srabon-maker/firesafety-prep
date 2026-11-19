@@ -41,6 +41,8 @@ $tests = [];
 $questions = [];
 $editing = null;
 $selectedQuestionIds = [];
+$editingMarksPerQuestion = 1.0;
+$editingSelectionMode = 'manual';
 
 try {
     $categories = $pdo->query("
@@ -83,8 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title = trim((string)($_POST['title'] ?? ''));
             $description = trim((string)($_POST['description'] ?? ''));
             $categoryId = (int)($_POST['category_id'] ?? 0);
-            $duration = max(1, (int)($_POST['duration_minutes'] ?? 30));
-            $questionCount = max(1, (int)($_POST['question_count'] ?? 20));
+            $duration = (int)($_POST['duration_minutes'] ?? 30);
+            $questionCount = (int)($_POST['question_count'] ?? 20);
+            if ($duration < 1 || $duration > 1440) throw new RuntimeException('পরীক্ষার সময় ১ থেকে ১৪৪০ মিনিটের মধ্যে হতে হবে।');
+            if ($questionCount < 1 || $questionCount > 500) throw new RuntimeException('Random প্রশ্নের সংখ্যা ১ থেকে ৫০০-এর মধ্যে হতে হবে।')
             $passInput = trim((string)($_POST['pass_marks'] ?? ''));
             $status = (string)($_POST['status'] ?? 'draft');
             $random = (int)($_POST['randomize_questions'] ?? 0) === 1;
@@ -104,10 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$categoryName) throw new RuntimeException('নির্বাচিত ক্যাটাগরি সক্রিয় নয়।');
             }
 
-            $startsAt = $startsRaw !== '' ? date('Y-m-d H:i:s', strtotime($startsRaw)) : null;
-            $endsAt = $endsRaw !== '' ? date('Y-m-d H:i:s', strtotime($endsRaw)) : null;
-            if ($startsRaw !== '' && !$startsAt) throw new RuntimeException('শুরুর তারিখ সঠিক নয়।');
-            if ($endsRaw !== '' && !$endsAt) throw new RuntimeException('শেষের তারিখ সঠিক নয়।');
+            $parseLocalDate = static function (string $value, string $label): ?string {
+                if ($value === '') return null;
+                $date = DateTime::createFromFormat('!Y-m-d\\TH:i', $value);
+                $dateErrors = DateTime::getLastErrors();
+                if (!$date || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $date->format('Y-m-d\\TH:i') !== $value) {
+                    throw new RuntimeException($label . ' সঠিক নয়।');
+                }
+                return $date->format('Y-m-d H:i:s');
+            };
+            $startsAt = $parseLocalDate($startsRaw, 'শুরুর তারিখ ও সময়');
+            $endsAt = $parseLocalDate($endsRaw, 'শেষের তারিখ ও সময়');
             if ($startsAt && $endsAt && strtotime($endsAt) < strtotime($startsAt)) throw new RuntimeException('শেষের সময় শুরুর সময়ের আগে হতে পারবে না।');
 
             $chosen = [];
@@ -155,13 +166,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $markEach = (float)($_POST['marks_per_question'] ?? 1);
-            if ($markEach <= 0) throw new RuntimeException('প্রতি প্রশ্নের নম্বর শূন্যের বেশি হতে হবে।');
+            if (!is_finite($markEach) || $markEach <= 0 || $markEach > 1000) throw new RuntimeException('প্রতি প্রশ্নের নম্বর ০-এর বেশি এবং ১০০০-এর মধ্যে হতে হবে।');
             $totalMarks = count($chosen) * $markEach;
             $passMarks = $passInput === '' ? null : (float)$passInput;
             if ($passMarks !== null && ($passMarks < 0 || $passMarks > $totalMarks)) throw new RuntimeException('পাস নম্বর মোট নম্বরের বেশি হতে পারবে না।');
 
             $pdo->beginTransaction();
             if ($id > 0) {
+                $lock = $pdo->prepare('SELECT id FROM model_tests WHERE id = ? FOR UPDATE');
+                $lock->execute([$id]);
+                if (!$lock->fetchColumn()) throw new RuntimeException('সম্পাদনার পরীক্ষাটি আর পাওয়া যাচ্ছে না। তালিকা রিফ্রেশ করে আবার চেষ্টা করুন।');
                 $st = $pdo->prepare("UPDATE model_tests SET category_id=?, title=?, description=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, starts_at=?, ends_at=?, updated_at=NOW()" . ($hasRandomColumn ? ", randomize_questions=?" : "") . " WHERE id=?");
                 $args = [$categoryId ?: null, $title, $description ?: null, $duration, $totalMarks, $passMarks, $status, $startsAt, $endsAt];
                 if ($hasRandomColumn) $args[] = $random ? 1 : 0;
@@ -198,13 +212,22 @@ if ($editId > 0) {
     $st->execute([$editId]);
     $editing = $st->fetch(PDO::FETCH_ASSOC) ?: null;
     if ($editing) {
-        $st = $pdo->prepare('SELECT question_id FROM model_test_questions WHERE test_id=? ORDER BY question_order');
+        $st = $pdo->prepare('SELECT question_id, marks FROM model_test_questions WHERE test_id=? ORDER BY question_order');
         $st->execute([$editId]);
-        $selectedQuestionIds = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+        $existingQuestionRows = $st->fetchAll(PDO::FETCH_ASSOC);
+        $selectedQuestionIds = array_map(static fn($row) => (int)$row['question_id'], $existingQuestionRows);
+        if ($existingQuestionRows) {
+            $existingMarks = array_values(array_unique(array_map(static fn($row) => (string)$row['marks'], $existingQuestionRows)));
+            if (count($existingMarks) === 1 && is_numeric($existingMarks[0]) && (float)$existingMarks[0] > 0) $editingMarksPerQuestion = (float)$existingMarks[0];
+        }
+        $editingSelectionMode = 'manual';
     }
 }
 
 try {
+    $statsRow = $pdo->query("SELECT COUNT(*) AS total, COALESCE(SUM(status='published'),0) AS published, COALESCE(SUM(status='draft'),0) AS draft FROM model_tests")->fetch(PDO::FETCH_ASSOC) ?: [];
+    $questionCountSql = $hasQuestionArchiveColumn ? "SELECT COUNT(*) FROM questions WHERE is_archived = 0" : "SELECT COUNT(*) FROM questions";
+    $statsQuestionCount = (int)$pdo->query($questionCountSql)->fetchColumn();
     $tests = $pdo->query("SELECT mt.*, c.name AS category_name, (SELECT COUNT(*) FROM model_test_questions q WHERE q.test_id=mt.id) AS question_count FROM model_tests mt LEFT JOIN categories c ON c.id=mt.category_id ORDER BY mt.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
     $questionArchiveWhere = "";
     if ($hasQuestionArchiveColumn) {
@@ -218,10 +241,10 @@ try {
 }
 
 $stats = [
-    'total' => count($tests),
-    'published' => count(array_filter($tests, fn($t) => ($t['status'] ?? '') === 'published')),
-    'draft' => count(array_filter($tests, fn($t) => ($t['status'] ?? '') === 'draft')),
-    'questions' => count($questions),
+    'total' => (int)($statsRow['total'] ?? 0),
+    'published' => (int)($statsRow['published'] ?? 0),
+    'draft' => (int)($statsRow['draft'] ?? 0),
+    'questions' => $statsQuestionCount ?? 0,
 ];
 $form = $editing ?: [];
 $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((string)$v)) : ''; };
@@ -283,11 +306,12 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field"><label>ক্যাটাগরি</label><select name="category_id"><option value="0">সব ক্যাটাগরি (মিশ্র প্রশ্ন)</option><?php foreach ($categories as $cat): ?><option value="<?=(int)$cat['id']?>" <?=((int)($form['category_id'] ?? 0)===(int)$cat['id'])?'selected':''?>><?=mt_h($cat['name'])?></option><?php endforeach; ?></select><div class="hint">ক্যাটাগরি পেজে সক্রিয় Test ক্যাটাগরি পরিবর্তন করলে এখানে স্বয়ংক্রিয়ভাবে আপডেট হবে।</div></div>
    <div class="field full"><label>পরীক্ষার বিবরণ</label><textarea name="description"><?=mt_h($form['description'] ?? '')?></textarea></div>
    <div class="field"><label>সময় (মিনিট) *</label><input type="number" name="duration_minutes" min="1" value="<?=mt_h($form['duration_minutes'] ?? 30)?>" required></div>
-   <div class="field"><label>প্রশ্ন সংখ্যা (Random নির্বাচন হলে)</label><input type="number" name="question_count" min="1" max="500" value="20"></div>
-   <div class="field"><label>প্রতি প্রশ্নের নম্বর</label><input type="number" name="marks_per_question" min="0.25" step="0.25" value="1" required></div>
+   <div class="field"><label>প্রশ্ন সংখ্যা (Random নির্বাচন হলে)</label><input type="number" name="question_count" min="1" max="500" value="<?= $editing ? max(1, count($selectedQuestionIds)) : 20 ?>" <?= $editing ? 'readonly' : '' ?>></div>
+   <div class="field"><label>প্রতি প্রশ্নের নম্বর</label><input type="number" name="marks_per_question" min="0.25" max="1000" step="0.25" value="<?=mt_h($editingMarksPerQuestion)?>" required></div>
    <div class="field"><label>পাস নম্বর (ঐচ্ছিক)</label><input type="number" name="pass_marks" min="0" step="0.25" value="<?=mt_h($form['pass_marks'] ?? '')?>"></div>
-   <div class="field"><label>প্রশ্ন নির্বাচন পদ্ধতি</label><div class="radio-row"><label><input type="radio" name="selection_mode" value="random" checked> Random প্রশ্ন</label><label><input type="radio" name="selection_mode" value="manual"> নিজে নির্বাচন</label></div></div>
-   <div class="field"><label>প্রশ্নের ক্রম</label><select name="randomize_questions"><option value="1">এলোমেলো (Random)</option><option value="0">নির্ধারিত ক্রম</option></select></div>
+   <div class="field"><label>প্রশ্ন নির্বাচন পদ্ধতি</label><div class="radio-row"><label><input type="radio" name="selection_mode" value="random" <?=$editingSelectionMode==='random'?'checked':''?> <?= $editing ? 'disabled' : '' ?>> Random প্রশ্ন</label><label><input type="radio" name="selection_mode" value="manual" <?=$editingSelectionMode==='manual'?'checked':''?>> নিজে নির্বাচন</label>
+   <?php if ($editing): ?><input type="hidden" name="selection_mode" value="manual"><div class="hint">আগের নির্বাচিত প্রশ্নগুলো অক্ষত রাখতে সম্পাদনার সময় Manual Mode ব্যবহার হচ্ছে।</div><?php endif; ?></div></div>
+   <div class="field"><label>প্রশ্নের ক্রম</label><select name="randomize_questions"><option value="1" <?=((int)($form['randomize_questions'] ?? 0)===1)?'selected':''?>>এলোমেলো (Random)</option><option value="0" <?=((int)($form['randomize_questions'] ?? 0)===0)?'selected':''?>>নির্ধারিত ক্রম</option></select></div>
    <div class="field"><label>পরীক্ষার স্ট্যাটাস</label><select name="status"><option value="draft" <?=($form['status'] ?? 'draft')==='draft'?'selected':''?>>খসড়া</option><option value="published" <?=($form['status'] ?? '')==='published'?'selected':''?>>প্রকাশিত</option><option value="archived" <?=($form['status'] ?? '')==='archived'?'selected':''?>>আর্কাইভ</option></select></div>
    <div class="field"><label>শুরুর তারিখ ও সময়</label><input type="datetime-local" name="starts_at" value="<?=mt_h($fmtDate($form['starts_at'] ?? null))?>"></div>
    <div class="field"><label>শেষের তারিখ ও সময়</label><input type="datetime-local" name="ends_at" value="<?=mt_h($fmtDate($form['ends_at'] ?? null))?>"></div>
@@ -316,10 +340,14 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
 <script>
-const modeRadios=document.querySelectorAll('input[name="selection_mode"]');
+const modeRadios=document.querySelectorAll('input[name="selection_mode"]:not(:disabled)');
 const manual=document.getElementById('manualQuestions');
-function updateMode(){const v=document.querySelector('input[name="selection_mode"]:checked')?.value;manual.style.display=v==='manual'?'block':'none';}
-modeRadios.forEach(x=>x.addEventListener('change',updateMode));updateMode();
+function updateMode(){
+  const selected=document.querySelector('input[name="selection_mode"]:checked');
+  if(manual) manual.style.display=selected?.value==='manual'?'block':'none';
+}
+modeRadios.forEach(x=>x.addEventListener('change',updateMode));
+updateMode();
 document.getElementById('questionSearch')?.addEventListener('input',function(){const q=this.value.toLocaleLowerCase();document.querySelectorAll('.question-box').forEach(el=>{el.style.display=el.dataset.search.includes(q)?'flex':'none';});});
 </script>
 </body></html>
