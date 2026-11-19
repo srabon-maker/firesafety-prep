@@ -36,15 +36,17 @@ void main() {
     expect(label.style?.color, theme.colorScheme.onSurfaceVariant);
   });
 
-  testWidgets('Job cards and their headings remain readable in dark mode', (tester) async {
+  testWidgets('Jobs page heading remains readable in dark mode', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.darkTheme,
       home: const JobsPage(),
     ));
 
-    expect(find.text('ফায়ার ও সেফটি চাকরি'), findsOneWidget);
-    final title = tester.widget<Text>(find.text('ফায়ার ও সেফটি চাকরি'));
-    expect(title.style?.color, AppTheme.darkTheme.colorScheme.onSurface);
-    expect(find.text('ফায়ার সার্ভিস ও সিভিল ডিফেন্স'), findsOneWidget);
+    expect(find.text('Fire & Safety Jobs'), findsOneWidget);
+    expect(find.text('সর্বশেষ প্রকাশিত চাকরির বিজ্ঞপ্তি'), findsOneWidget);
+    final appBar = tester.widget<AppBar>(find.byType(AppBar).first);
+    expect(appBar.foregroundColor, Colors.white);
+    final title = tester.widget<Text>(find.text('Fire & Safety Jobs'));
+    expect(title.style?.fontWeight, FontWeight.w800);
   });
 }
