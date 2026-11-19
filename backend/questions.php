@@ -327,10 +327,16 @@ function q_similarity(string $a, string $b): float {
 }
 function q_similar_from_rows(array $rows, string $question, ?int $excludeId = null, int $limit = 3): array {
     $matches = [];
+    // Shared normalization means Manual Save, Bulk Paste Preview and DOCX Preview
+    // all compare the question stem, even if a full MCQ block was pasted.
+    $questionStem = q_question_stem($question);
+    if ($questionStem !== '') $question = $questionStem;
     foreach ($rows as $row) {
         if ($excludeId && (int)$row['id'] === $excludeId) continue;
-        $score = q_similarity($question, (string)$row['question']);
-        if ($score >= 0.55) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
+        $rowQuestion = q_question_stem((string)$row['question']);
+        if ($rowQuestion === '') $rowQuestion = (string)$row['question'];
+        $score = q_similarity($question, $rowQuestion);
+        if ($score >= 0.55) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>$rowQuestion,'score'=>$score];
     }
     usort($matches, static fn($a,$b) => $b['score'] <=> $a['score']);
     return array_slice($matches, 0, $limit);
