@@ -367,7 +367,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
     <select id="questionCategoryFilter" aria-label="ক্যাটাগরি ফিল্টার"><option value="">সব ক্যাটাগরি</option><?php $questionCategories = array_values(array_unique(array_filter(array_map(static fn($q) => (string)$q['category'], $questions)))); sort($questionCategories, SORT_NATURAL | SORT_FLAG_CASE); foreach ($questionCategories as $qc): ?><option value="<?=mt_h(mb_strtolower($qc))?>"><?=mt_h($qc)?></option><?php endforeach; ?></select>
     <span class="selection-summary" id="selectedQuestionCount" aria-live="polite">নির্বাচিত: 0</span>
    </div>
-   <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">দেখানো সব নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
+   <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">সব প্রশ্ন নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
    <div id="questionList">
    <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>" data-question="<?=mt_h($q['question'])?>" data-option-a="<?=mt_h($q['option_a'])?>" data-option-b="<?=mt_h($q['option_b'])?>" data-option-c="<?=mt_h($q['option_c'])?>" data-option-d="<?=mt_h($q['option_d'])?>">
     <input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
@@ -381,9 +381,22 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 </section>
 
 <section id="all-tests" class="panel section">
- <h2>সকল মডেল টেস্ট</h2><div class="table-wrap"><table><thead><tr><th>পরীক্ষার নাম</th><th>ক্যাটাগরি</th><th>প্রশ্ন</th><th>সময়</th><th>নম্বর</th><th>Attempt Limit</th><th>ফলাফল</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead><tbody>
+ <h2>সকল মডেল টেস্ট</h2>
+ <?php if ($viewQuestionsTest): ?>
+ <div class="panel" style="margin:14px 0;padding:16px">
+  <h3>নির্বাচিত প্রশ্ন: <?=mt_h($viewQuestionsTest['title'])?></h3>
+  <p class="hint">মোট <?=count($viewQuestions)?>টি প্রশ্ন সংরক্ষিত আছে। Random নির্বাচন Save করার সময় যে প্রশ্নগুলো নেওয়া হয়েছিল, সেগুলোই এখানে দেখানো হচ্ছে।</p>
+  <?php foreach ($viewQuestions as $vq): ?><article class="question-box" style="display:block">
+   <strong>প্রশ্ন <?= (int)$vq['question_order'] ?> · #<?= (int)$vq['id'] ?> · <?=mt_h($vq['category'])?></strong>
+   <p><?=mt_h($vq['question'])?></p>
+   <p>A. <?=mt_h($vq['option_a'])?><br>B. <?=mt_h($vq['option_b'])?><br>C. <?=mt_h($vq['option_c'])?><br>D. <?=mt_h($vq['option_d'])?></p>
+   <p><strong>সঠিক উত্তর: <?=mt_h($vq['correct_answer'])?></strong> · নম্বর: <?=mt_h($vq['marks'])?></p>
+  </article><?php endforeach; ?>
+  <a class="btn secondary" href="model_tests.php#all-tests">বন্ধ করুন</a>
+ </div>
+ <?php elseif ($viewQuestionsTestId > 0): ?><p class="hint">এই পরীক্ষার তথ্য পাওয়া যায়নি।</p><?php endif; ?><div class="table-wrap"><table><thead><tr><th>পরীক্ষার নাম</th><th>ক্যাটাগরি</th><th>প্রশ্ন</th><th>সময়</th><th>নম্বর</th><th>Attempt Limit</th><th>ফলাফল</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead><tbody>
  <?php if (!$tests): ?><tr><td colspan="9">এখনো কোনো মডেল টেস্ট তৈরি করা হয়নি।</td></tr><?php endif; ?>
- <?php foreach ($tests as $t): ?><tr><td><strong><?=mt_h($t['title'])?></strong><br><small>#<?=(int)$t['id']?></small></td><td><?=mt_h($t['category_name'] ?? 'সব ক্যাটাগরি')?></td><td><?=(int)$t['question_count']?></td><td><?=(int)$t['duration_minutes']?> মিনিট</td><td><?=mt_h($t['total_marks'])?></td><td><?=((int)($t['max_attempts'] ?? 0)===0)?'সীমাহীন':(int)$t['max_attempts']?></td><td><?=((int)($t['results_released'] ?? 1)===1)?'প্রকাশিত':'গোপন'?><form method="post" style="display:inline;margin-left:6px"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="set_results_release"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><input type="hidden" name="results_released" value="<?=((int)($t['results_released'] ?? 1)===1)?0:1?>"><button class="btn secondary" type="submit"><?=((int)($t['results_released'] ?? 1)===1)?'গোপন করুন':'প্রকাশ করুন'?></button></form></td><td><span class="pill <?=($t['status']??'')==='published'?'live':''?>"><?=mt_h($t['status'])?></span></td><td><a class="btn secondary" href="?edit=<?=(int)$t['id']?>#create">সম্পাদনা</a><form method="post" style="display:inline" onsubmit="return confirm('এই মডেল টেস্টটি মুছে ফেলবেন?')"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="delete_test"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><button class="btn danger" type="submit">মুছুন</button></form></td></tr><?php endforeach; ?>
+ <?php foreach ($tests as $t): ?><tr><td><strong><?=mt_h($t['title'])?></strong><br><small>#<?=(int)$t['id']?></small></td><td><?=mt_h($t['category_name'] ?? 'সব ক্যাটাগরি')?></td><td><?=(int)$t['question_count']?></td><td><?=(int)$t['duration_minutes']?> মিনিট</td><td><?=mt_h($t['total_marks'])?></td><td><?=((int)($t['max_attempts'] ?? 0)===0)?'সীমাহীন':(int)$t['max_attempts']?></td><td><?=((int)($t['results_released'] ?? 1)===1)?'প্রকাশিত':'গোপন'?><form method="post" style="display:inline;margin-left:6px"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="set_results_release"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><input type="hidden" name="results_released" value="<?=((int)($t['results_released'] ?? 1)===1)?0:1?>"><button class="btn secondary" type="submit"><?=((int)($t['results_released'] ?? 1)===1)?'গোপন করুন':'প্রকাশ করুন'?></button></form></td><td><span class="pill <?=($t['status']??'')==='published'?'live':''?>"><?=mt_h($t['status'])?></span></td><td><a class="btn secondary" href="?view_questions=<?=(int)$t['id']?>#all-tests">প্রশ্ন দেখুন</a> <a class="btn secondary" href="?edit=<?=(int)$t['id']?>#create">সম্পাদনা</a><form method="post" style="display:inline" onsubmit="return confirm('এই মডেল টেস্টটি মুছে ফেলবেন?')"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="delete_test"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><button class="btn danger" type="submit">মুছুন</button></form></td></tr><?php endforeach; ?>
  </tbody></table></div>
 </section>
 
@@ -505,11 +518,11 @@ questionList?.addEventListener('click',event=>{
 searchInput?.addEventListener('input',applyQuestionFilters);
 categoryFilter?.addEventListener('change',applyQuestionFilters);
 document.getElementById('selectVisibleQuestions')?.addEventListener('click',()=>{
-  questionRows().filter(row=>!row.hidden).forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=true;});
+  questionRows().forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=true;});
   updateSelectionSummary();
 });
 document.getElementById('clearVisibleQuestions')?.addEventListener('click',()=>{
-  questionRows().filter(row=>!row.hidden).forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=false;});
+  questionRows().forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=false;});
   updateSelectionSummary();
 });
 const previewModal=document.getElementById('questionPreviewModal');
