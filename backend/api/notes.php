@@ -20,7 +20,7 @@ function notes_api_public_url(?string $url): ?string {
 function notes_api_content_urls(?string $html): ?string {
     if ($html === null || $html === '') return $html;
     return preg_replace_callback(
-        "~((?:src|href)\\\\s*=\\\\s*)([\"'])(/?uploads/notes/(?:files|images)/[a-f0-9]{32}\\\\.(?:pdf|doc|docx|jpg|jpeg|png|webp|gif))\\\\2~i",
+        "~((?:src|href)\\s*=\\s*)([\"'])(/?uploads/notes/(?:files|images)/[a-f0-9]{32}\\.(?:pdf|doc|docx|jpg|jpeg|png|webp|gif))\\2~i",
         static function (array $match): string {
             return $match[1] . $match[2] . 'https://fire.manobikishwarganj.com/' . ltrim($match[3], '/') . $match[2];
         },
