@@ -70,17 +70,17 @@ try {
     if($testId<1) exam_reply(422,['success'=>false,'message'=>'সঠিক পরীক্ষা নির্বাচন করুন।']);
 
     if($action==='start'){
-        $test=exam_test($pdo,$testId);
         $existing=$pdo->prepare("SELECT id FROM model_test_attempts WHERE test_id=? AND user_id=? AND status='in_progress' ORDER BY id DESC LIMIT 1");
         $existing->execute([$testId,$userId]);$attemptId=(int)($existing->fetchColumn()?:0);
+        $test=exam_test($pdo,$testId);
         if(!$attemptId){
             $pdo->beginTransaction();
             $now=new DateTimeImmutable('now');
             $duration=(int)$test['duration_minutes'];
             $expires=$now->modify('+'.$duration.' minutes');
             if(!empty($test['ends_at'])){$hardEnd=new DateTimeImmutable((string)$test['ends_at']);if($hardEnd<$expires)$expires=$hardEnd;}
-            $ins=$pdo->prepare("INSERT INTO model_test_attempts (test_id,user_id,status,started_at,expires_at,question_count,total_marks) VALUES (?,?,'in_progress',?,?,0,0)");
-            $ins->execute([$testId,$userId,$now->format('Y-m-d H:i:s'),$expires->format('Y-m-d H:i:s')]);
+            $ins=$pdo->prepare("INSERT INTO model_test_attempts undefined");
+            $ins->execute([$testId,$userId,$now->format('Y-m-d H:i:s'),$expires->format('Y-m-d H:i:s'),$test['pass_marks'],$test['negative_marks_per_question']]);
             $attemptId=(int)$pdo->lastInsertId();
             $order=((int)($test['randomize_questions']??0)===1)?'RAND()':'mtq.question_order ASC';
             $q=$pdo->prepare("SELECT q.id,q.question,q.option_a,q.option_b,q.option_c,q.option_d,q.correct_answer,q.explanation,mtq.marks FROM model_test_questions mtq JOIN questions q ON q.id=mtq.question_id WHERE mtq.test_id=? ORDER BY ".$order);
@@ -112,11 +112,11 @@ try {
         $q=$pdo->prepare('SELECT * FROM model_test_attempts WHERE id=? AND user_id=? FOR UPDATE');$q->execute([$attemptId,$userId]);$attempt=$q->fetch(PDO::FETCH_ASSOC);
         if(!$attempt){$pdo->rollBack();exam_reply(404,['success'=>false,'message'=>'পরীক্ষার Attempt পাওয়া যায়নি।']);}
         if($attempt['status']==='in_progress'){
-            $test=exam_test_for_attempt($pdo,(int)$attempt['test_id']);
+            $test=['negative_marks_per_question'=>$attempt['negative_marks_per_question'],'pass_marks'=>$attempt['pass_marks']];
             $rows=$pdo->prepare('SELECT correct_answer,selected_answer,marks FROM model_test_attempt_questions WHERE attempt_id=?');$rows->execute([$attemptId]);$questions=$rows->fetchAll(PDO::FETCH_ASSOC);
             $correct=0;$incorrect=0;$unanswered=0;$earned=0.0;$negative=(float)$test['negative_marks_per_question'];
             foreach($questions as $row){if(empty($row['selected_answer'])){$unanswered++;continue;}if(strtoupper($row['selected_answer'])===strtoupper($row['correct_answer'])){$correct++;$earned+=(float)$row['marks'];}else{$incorrect++;$earned-=$negative;}}
-            $earned=max(0.0,$earned);$pass=$attempt['total_marks']>0?($earned >= (float)($test['pass_marks']??0)):false;
+            $earned=max(0.0,$earned);$pass=$attempt['total_marks']>0 && $test['pass_marks']!==null?($earned >= (float)$test['pass_marks']):false;
             $status=(strtotime($attempt['expires_at'])<=time())?'expired':'submitted';
             $upd=$pdo->prepare('UPDATE model_test_attempts SET status=?,submitted_at=NOW(),score=?,correct_count=?,incorrect_count=?,unanswered_count=?,passed=? WHERE id=?');
             $upd->execute([$status,$earned,$correct,$incorrect,$unanswered,$pass?1:0,$attemptId]);
@@ -147,9 +147,9 @@ function exam_test_for_attempt(PDO $pdo,int $testId): array {
     $q=$pdo->prepare('SELECT negative_marks_per_question,pass_marks FROM model_tests WHERE id=?');$q->execute([$testId]);return $q->fetch(PDO::FETCH_ASSOC)?:['negative_marks_per_question'=>0,'pass_marks'=>0];
 }
 function exam_result_payload(PDO $pdo,int $attemptId,int $userId): array {
-    $q=$pdo->prepare("SELECT a.*,t.title,t.pass_marks FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? AND a.status IN ('submitted','expired') LIMIT 1");
+    $q=$pdo->prepare("SELECT a.*,t.title FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? AND a.status IN ('submitted','expired') LIMIT 1");
     $q->execute([$attemptId,$userId]);$a=$q->fetch(PDO::FETCH_ASSOC);
     if(!$a)exam_reply(409,['success'=>false,'message'=>'ফলাফল এখনো প্রস্তুত নয়।']);
     $rows=$pdo->prepare('SELECT id,question_id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
-    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'status'=>$a['status'],'score'=>(float)$a['score'],'total_marks'=>(float)$a['total_marks'],'passed'=>(bool)$a['passed'],'correct_count'=>(int)$a['correct_count'],'incorrect_count'=>(int)$a['incorrect_count'],'unanswered_count'=>(int)$a['unanswered_count'],'questions'=>array_map(static fn($r)=>exam_public_question($r,true),$rows->fetchAll(PDO::FETCH_ASSOC))];
+    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'status'=>$a['status'],'score'=>(float)$a['score'],'total_marks'=>(float)$a['total_marks'],'passed'=>$a['passed']===null?null:(bool)$a['passed'],'pass_marks'=>$a['pass_marks']===null?null:(float)$a['pass_marks'],'correct_count'=>(int)$a['correct_count'],'incorrect_count'=>(int)$a['incorrect_count'],'unanswered_count'=>(int)$a['unanswered_count'],'questions'=>array_map(static fn($r)=>exam_public_question($r,true),$rows->fetchAll(PDO::FETCH_ASSOC))];
 }
