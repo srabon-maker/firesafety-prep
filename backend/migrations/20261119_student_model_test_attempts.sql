@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS model_test_attempts (
   submitted_at DATETIME NULL,
   question_count INT NOT NULL DEFAULT 0,
   total_marks DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  pass_marks DECIMAL(10,2) NULL,
+  negative_marks_per_question DECIMAL(8,2) NOT NULL DEFAULT 0.00,
   score DECIMAL(10,2) NULL,
   correct_count INT NOT NULL DEFAULT 0,
   incorrect_count INT NOT NULL DEFAULT 0,
