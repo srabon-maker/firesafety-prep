@@ -38,7 +38,7 @@ function notesSanitizeHtml(string $html): string
 {
     $html = strip_tags($html, '<p><br><strong><b><em><i><u><s><h1><h2><h3><h4><ol><ul><li><blockquote><pre><code><a><img><table><thead><tbody><tr><th><td>');
     $html = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
-    $html = preg_replace('/(href|src)\s*=\s*(["\'])(?!https?:\/\/|\/uploads\/notes\/)[^"\']*\2/i', '$1="#"', $html);
+    $html = preg_replace('/(href|src)\s*=\s*(["\'])(?!https?:\/\/|\/?uploads\/notes\/)[^"\']*\2/i', '$1="#"', $html);
     $html = preg_replace('/\s+style\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $html);
     return $html;
 }
@@ -292,6 +292,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         throw new RuntimeException('Unknown action.');
 
     } catch (Throwable $e) {
+        if (($_POST['action'] ?? '') === 'upload_inline_image') {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
         $error = $e->getMessage();
     }
 }
@@ -446,7 +452,7 @@ $formPublishedAt = notesDateInput($editingNote['published_at'] ?? null);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Notes Management - Fire Safety BD</title>
-<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+
 
 <style>
 * {
@@ -623,16 +629,6 @@ textarea {
     min-height: 220px;
 }
 
-.notes-editor {
-    min-height: 280px;
-    background: #fff;
-    border-radius: 6px;
-}
-.notes-editor .ql-editor {
-    min-height: 280px;
-    font-size: 15px;
-    line-height: 1.7;
-}
 .editor-help {
     display: block;
     margin-top: 7px;
@@ -976,8 +972,7 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 
                 <div class="form-group full">
                     <label>Note Content</label>
-                    <div id="notes-editor" class="notes-editor"><?= notesSanitizeHtml((string)$formContent) ?></div>
-                    <textarea name="content" id="notes-content" hidden><?= nh($formContent) ?></textarea>
+                    <textarea name="content" id="notes-content" class="content-area"><?= nh($formContent) ?></textarea>
                     <small class="editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
                 </div>
 
@@ -1203,7 +1198,48 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const contentField = document.getElementById('notes-content');
+    const form = contentField ? contentField.closest('form') : null;
+    if (!contentField || !form || typeof tinymce === 'undefined') return;
+
+    tinymce.init({
+        selector: '#notes-content',
+        height: 420,
+        menubar: 'edit view insert format table',
+        plugins: 'lists link image table code wordcount',
+        toolbar: 'undo redo | blocks | bold italic underline | forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | removeformat | code',
+        branding: false,
+        promotion: false,
+        convert_urls: false,
+        images_upload_handler: function (blobInfo) {
+            return new Promise(function (resolve, reject) {
+                const data = new FormData();
+                data.append('action', 'upload_inline_image');
+                data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
+                data.append('inline_image', blobInfo.blob(), blobInfo.filename());
+                fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' })
+                    .then(function (response) {
+                        return response.json().then(function (result) {
+                            if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
+                            resolve(result.url);
+                        });
+                    })
+                    .catch(function (error) { reject(error.message || 'Image upload failed.'); });
+            });
+        },
+        setup: function (editor) {
+            editor.on('change input undo redo', function () { editor.save(); });
+        }
+    });
+
+    form.addEventListener('submit', function () {
+        tinymce.triggerSave();
+    });
+});
+</script>
 <script>
 (function () {
     const editorElement = document.getElementById('notes-editor');
