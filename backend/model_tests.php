@@ -404,8 +404,26 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
  <div class="cards"><div class="stat"><span>মোট Attempt</span><strong><?=(int)($attemptStats['total'] ?? 0)?></strong></div><div class="stat"><span>চলমান</span><strong><?=(int)($attemptStats['active'] ?? 0)?></strong></div><div class="stat"><span>জমা হয়েছে</span><strong><?=(int)($attemptStats['submitted'] ?? 0)?></strong></div><div class="stat"><span>গড় নম্বর</span><strong><?=number_format((float)($attemptStats['average_score'] ?? 0),2)?></strong></div></div>
  <div class="table-wrap"><table><thead><tr><th>শিক্ষার্থী</th><th>পরীক্ষা</th><th>সময়</th><th>অবস্থা</th><th>স্কোর</th><th>সঠিক/ভুল/ফাঁকা</th><th>Pass</th><th>ফলাফল</th></tr></thead><tbody>
  <?php if (!$attemptRows): ?><tr><td colspan="8">এখনো কোনো শিক্ষার্থী পরীক্ষা দেয়নি।</td></tr><?php endif; ?>
- <?php foreach ($attemptRows as $ar): ?><tr><td><?=mt_h($ar['full_name'] ?: ('User #'.(int)$ar['user_id']))?><br><small><?=mt_h($ar['email'] ?? '')?></small></td><td><?=mt_h($ar['title'])?><br><small>Attempt #<?=(int)$ar['id']?></small></td><td><small>শুরু: <?=mt_h($ar['started_at'])?><br>জমা: <?=mt_h($ar['submitted_at'] ?? 'চলমান')?></small></td><td><?=mt_h($ar['status'])?></td><td><?= $ar['score']===null?'—':mt_h($ar['score']).' / '.mt_h($ar['total_marks']) ?></td><td><?=(int)$ar['correct_count']?> / <?=(int)$ar['incorrect_count']?> / <?=(int)$ar['unanswered_count']?></td><td><?= $ar['passed']===null?'—':((int)$ar['passed']===1?'Pass':'Fail') ?></td><td><?=((int)$ar['results_released']===1)?'প্রকাশিত':'গোপন'?></td></tr><?php endforeach; ?>
+ <?php foreach ($attemptRows as $ar): ?><tr><td><a class="btn secondary" href="?attempt=<?=(int)$ar['id']?>#results">বিস্তারিত</a><br><?=mt_h($ar['full_name'] ?: ('User #'.(int)$ar['user_id']))?><br><small><?=mt_h($ar['email'] ?? '')?></small></td><td><?=mt_h($ar['title'])?><br><small>Attempt #<?=(int)$ar['id']?></small></td><td><small>শুরু: <?=mt_h($ar['started_at'])?><br>জমা: <?=mt_h($ar['submitted_at'] ?? 'চলমান')?></small></td><td><?=mt_h($ar['status'])?></td><td><?= $ar['score']===null?'—':mt_h($ar['score']).' / '.mt_h($ar['total_marks']) ?></td><td><?=(int)$ar['correct_count']?> / <?=(int)$ar['incorrect_count']?> / <?=(int)$ar['unanswered_count']?></td><td><?= $ar['passed']===null?'—':((int)$ar['passed']===1?'Pass':'Fail') ?></td><td><?=((int)$ar['results_released']===1)?'প্রকাশিত':'গোপন'?></td></tr><?php endforeach; ?>
  </tbody></table></div>
+ <?php
+ $detailAttemptId=(int)($_GET['attempt'] ?? 0);
+ $detailQuestions=[];
+ $detailAttempt=null;
+ if($detailAttemptId>0){
+   $ds=$pdo->prepare("SELECT a.*,t.title,u.full_name,u.email FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id LEFT JOIN users u ON u.id=a.user_id WHERE a.id=? LIMIT 1");
+   $ds->execute([$detailAttemptId]);$detailAttempt=$ds->fetch(PDO::FETCH_ASSOC) ?: null;
+   if($detailAttempt){$dq=$pdo->prepare("SELECT question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,selected_answer,explanation,marks FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order");$dq->execute([$detailAttemptId]);$detailQuestions=$dq->fetchAll(PDO::FETCH_ASSOC);}
+ }
+ ?>
+ <?php if($detailAttempt): ?>
+ <h3>Attempt #<?=(int)$detailAttempt['id']?> — <?=mt_h($detailAttempt['full_name'] ?: ('User #'.(int)$detailAttempt['user_id']))?> · <?=mt_h($detailAttempt['title'])?></h3>
+ <?php foreach($detailQuestions as $dq): ?><article class="panel"><strong>প্রশ্ন <?=(int)$dq['question_order']?> · <?=mt_h($dq['question_text'])?></strong>
+ <p>A. <?=mt_h($dq['option_a'])?><br>B. <?=mt_h($dq['option_b'])?><br>C. <?=mt_h($dq['option_c'])?><br>D. <?=mt_h($dq['option_d'])?></p>
+ <p>শিক্ষার্থীর উত্তর: <strong><?=mt_h($dq['selected_answer'] ?? 'উত্তর নেই')?></strong> · সঠিক উত্তর: <strong><?=mt_h($dq['correct_answer'])?></strong> · নম্বর: <?=mt_h($dq['marks'])?></p>
+ <?php if(!empty($dq['explanation'])): ?><p>ব্যাখ্যা: <?=mt_h($dq['explanation'])?></p><?php endif; ?>
+ </article><?php endforeach; ?>
+ <?php elseif($detailAttemptId>0): ?><p>এই Attempt পাওয়া যায়নি।</p><?php endif; ?>
  <?php endif; ?>
 </section>
 <section id="performance" class="panel section"><h2>পারফরম্যান্স বিশ্লেষণ</h2><p>শিক্ষার্থীভিত্তিক স্কোর, সঠিক/ভুল উত্তর, সময় এবং ক্যাটাগরিভিত্তিক পারফরম্যান্সের তথ্য attempt/result ডেটা সংরক্ষণের পর দেখানো যাবে।</p></section>
