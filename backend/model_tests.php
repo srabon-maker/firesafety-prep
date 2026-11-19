@@ -131,9 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!in_array($selectionMode, ['manual', 'random'], true)) throw new RuntimeException('প্রশ্ন নির্বাচনের ধরন সঠিক নয়।');
             if (!is_finite($negativeMarks) || $negativeMarks < 0 || $negativeMarks > 1000) throw new RuntimeException('প্রতি ভুল উত্তরের নেগেটিভ মার্ক ০ থেকে ১০০০-এর মধ্যে হতে হবে।');
             if (mb_strlen($examInstructions) > 5000) throw new RuntimeException('পরীক্ষার নির্দেশনা সর্বোচ্চ ৫০০০ অক্ষরের মধ্যে হতে হবে।');
-            if ($status === 'published' && $endsAt !== null && strtotime($endsAt) <= time()) throw new RuntimeException('ইতোমধ্যে শেষ হয়ে যাওয়া পরীক্ষা প্রকাশ করা যাবে না।');
-            if ($status === 'published' && $startsAt !== null && $endsAt !== null && strtotime($endsAt) <= strtotime($startsAt)) throw new RuntimeException('প্রকাশিত পরীক্ষার শেষের সময় শুরুর সময়ের পরে হতে হবে।');
-
             $categoryName = null;
             if ($categoryId > 0) {
                 $cs = $pdo->prepare("SELECT name FROM categories WHERE id = ? AND category_type = 'test' AND is_active = 1");
