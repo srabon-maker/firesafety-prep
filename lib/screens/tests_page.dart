@@ -73,6 +73,7 @@ class _ExamRunnerState extends State<_ExamRunner>{
   Timer? _timer;
   bool _submitting=false;
   String? _saveError;
+  Future<void> _saveQueue=Future<void>.value();
   final Map<int,String> _answers={};
   @override
   void initState(){
@@ -94,14 +95,22 @@ class _ExamRunnerState extends State<_ExamRunner>{
   Future<void> _choose(String answer) async {
     final q=_questions[_index];final id=(q['id'] as num).toInt();
     setState(()=>_answers[id]=answer);
-    try{await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:id,answer:answer);if(mounted)setState(()=>_saveError=null);}
-    catch(e){if(mounted)setState(()=>_saveError='উত্তর সার্ভারে সংরক্ষণ হয়নি। ইন্টারনেট যাচাই করে আবার উত্তর নির্বাচন করুন।');}
+    final pending=_saveQueue.catchError((_){}).then((_)=>ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:id,answer:answer));
+    _saveQueue=pending;
+    try{await pending;if(mounted)setState(()=>_saveError=null);}
+    catch(e){if(mounted)setState(()=>_saveError='উত্তর সার্ভারে সংরক্ষণ হয়নি। Submit করার আগে আবার সংরক্ষণ চেষ্টা করা হবে।');}
   }
   Future<void> _finish({bool auto=false}) async {
     if(_submitting)return;
     if(!auto){final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('পরীক্ষা জমা দেবেন?'),content:const Text('জমা দেওয়ার পর উত্তর পরিবর্তন করা যাবে না।'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('ফিরে যান')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('জমা দিন'))]));if(ok!=true)return;}
     setState(()=>_submitting=true);_timer?.cancel();
     try{
+      await _saveQueue.catchError((_) {});
+      // Re-save the latest selected answers in order before submission. This
+      // prevents a slow earlier autosave request overwriting a newer choice.
+      for(final entry in _answers.entries){
+        await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:entry.key,answer:entry.value);
+      }
       final response=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
       if(!mounted)return;
       if(response['result_released']==true && response['result'] is Map){
