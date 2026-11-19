@@ -814,7 +814,7 @@ $isPastePreview = (($preview['filename'] ?? '') === 'কপি-পেস্ট �
 <?php endforeach; ?>
 </tbody></table></div>
 <div class="form-actions">
-<?php if($validPreview>0): ?><form method="post" action="questions.php#<?= $isPastePreview ? 'paste-import' : 'docx-import' ?>" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="<?= $isPastePreview ? 'paste_import' : 'docx_import' ?>"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
+<?php if($validPreview>0): ?><form method="post" action="questions.php#<?= $isPastePreview ? 'paste-import' : 'docx-import' ?>" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_import"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
 <form method="post" action="questions.php#<?= $isPastePreview ? 'paste-import' : 'docx-import' ?>"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="clear_preview"><button class="btn light" type="submit">Preview বাতিল</button></form>
 </div>
 <?php endif; ?>
