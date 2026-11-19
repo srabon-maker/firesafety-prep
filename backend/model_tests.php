@@ -29,6 +29,10 @@ function mt_table_exists(PDO $pdo, string $table): bool {
     $s->execute([$table]);
     return (bool)$s->fetchColumn();
 }
+function mt_question_archive_column_exists(PDO $pdo): bool {
+    $s = $pdo->query("SHOW COLUMNS FROM questions LIKE 'is_archived'");
+    return (bool)$s->fetch(PDO::FETCH_ASSOC);
+}
 
 $errors = [];
 $notice = '';
@@ -48,6 +52,8 @@ try {
 } catch (Throwable $e) {
     $errors[] = 'ক্যাটাগরি লোড করা যায়নি। categories টেবিলের কাঠামো যাচাই করুন।';
 }
+
+$hasQuestionArchiveColumn = mt_question_archive_column_exists($pdo);
 
 $hasRandomColumn = false;
 try {
@@ -108,10 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($selectionMode === 'random') {
                 $sql = "SELECT id FROM questions";
                 $params = [];
+                $conditions = [];
+                if ($hasQuestionArchiveColumn) $conditions[] = "is_archived = 0";
                 if ($categoryName !== null) {
-                    $sql .= " WHERE category = ?";
+                    $conditions[] = "category = ?";
                     $params[] = $categoryName;
                 }
+                if ($conditions) $sql .= " WHERE " . implode(" AND ", $conditions);
                 $sql .= " ORDER BY RAND() LIMIT " . (int)$questionCount;
                 $qs = $pdo->prepare($sql);
                 $qs->execute($params);
@@ -126,7 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $chosen = array_values(array_unique(array_filter(array_map('intval', $posted), fn($v) => $v > 0)));
                 if ($categoryName !== null && $chosen) {
                     $marks = implode(',', array_fill(0, count($chosen), '?'));
-                    $check = $pdo->prepare("SELECT id FROM questions WHERE category = ? AND id IN ($marks)");
+                    $activeCondition = $hasQuestionArchiveColumn ? " AND is_archived = 0" : "";
+                    $check = $pdo->prepare("SELECT id FROM questions WHERE category = ?$activeCondition AND id IN ($marks)");
                     $check->execute(array_merge([$categoryName], $chosen));
                     $chosen = $check->fetchAll(PDO::FETCH_COLUMN);
                 }
@@ -185,7 +195,8 @@ if ($editId > 0) {
 
 try {
     $tests = $pdo->query("SELECT mt.*, c.name AS category_name, (SELECT COUNT(*) FROM model_test_questions q WHERE q.test_id=mt.id) AS question_count FROM model_tests mt LEFT JOIN categories c ON c.id=mt.category_id ORDER BY mt.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer FROM questions ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
+    $questionArchiveWhere = $hasQuestionArchiveColumn ? " WHERE is_archived = 0" : "";
+    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer FROM questions" . $questionArchiveWhere . " ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $errors[] = 'মডেল টেস্ট বা প্রশ্ন লোড করা যায়নি। SQL Migration এবং টেবিলের নাম যাচাই করুন।';
 }
