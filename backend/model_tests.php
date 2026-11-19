@@ -29,6 +29,10 @@ function mt_table_exists(PDO $pdo, string $table): bool {
     $s->execute([$table]);
     return (bool)$s->fetchColumn();
 }
+function mt_question_archive_column_exists(PDO $pdo): bool {
+    $s = $pdo->query("SHOW COLUMNS FROM questions LIKE 'is_archived'");
+    return (bool)$s->fetch(PDO::FETCH_ASSOC);
+}
 
 $errors = [];
 $notice = '';
@@ -48,6 +52,8 @@ try {
 } catch (Throwable $e) {
     $errors[] = 'ক্যাটাগরি লোড করা যায়নি। categories টেবিলের কাঠামো যাচাই করুন।';
 }
+
+$hasQuestionArchiveColumn = mt_question_archive_column_exists($pdo);
 
 $hasRandomColumn = false;
 try {
@@ -108,10 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($selectionMode === 'random') {
                 $sql = "SELECT id FROM questions";
                 $params = [];
+                $conditions = [];
+                if ($hasQuestionArchiveColumn) $conditions[] = "is_archived = 0";
                 if ($categoryName !== null) {
-                    $sql .= " WHERE category = ?";
+                    $conditions[] = "category = ?";
                     $params[] = $categoryName;
                 }
+                if ($conditions) $sql .= " WHERE " . implode(" AND ", $conditions);
                 $sql .= " ORDER BY RAND() LIMIT " . (int)$questionCount;
                 $qs = $pdo->prepare($sql);
                 $qs->execute($params);
@@ -124,10 +133,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $posted = $_POST['question_ids'] ?? [];
                 if (!is_array($posted)) $posted = [];
                 $chosen = array_values(array_unique(array_filter(array_map('intval', $posted), fn($v) => $v > 0)));
-                if ($categoryName !== null && $chosen) {
+                if ($chosen) {
                     $marks = implode(',', array_fill(0, count($chosen), '?'));
-                    $check = $pdo->prepare("SELECT id FROM questions WHERE category = ? AND id IN ($marks)");
-                    $check->execute(array_merge([$categoryName], $chosen));
+                    $conditions = [];
+                    $checkParams = [];
+                    if ($categoryName !== null) { $conditions[] = "category = ?"; $checkParams[] = $categoryName; }
+                    if ($hasQuestionArchiveColumn) {
+                        if ($id > 0) {
+                            $conditions[] = "(is_archived = 0 OR id IN (SELECT question_id FROM model_test_questions WHERE test_id = ?))";
+                            $checkParams[] = $id;
+                        } else {
+                            $conditions[] = "is_archived = 0";
+                        }
+                    }
+                    $conditions[] = "id IN ($marks)";
+                    $check = $pdo->prepare("SELECT id FROM questions WHERE " . implode(" AND ", $conditions));
+                    $check->execute(array_merge($checkParams, $chosen));
                     $chosen = $check->fetchAll(PDO::FETCH_COLUMN);
                 }
                 if (!$chosen) throw new RuntimeException('অন্তত একটি প্রশ্ন নির্বাচন করুন।');
@@ -185,7 +206,13 @@ if ($editId > 0) {
 
 try {
     $tests = $pdo->query("SELECT mt.*, c.name AS category_name, (SELECT COUNT(*) FROM model_test_questions q WHERE q.test_id=mt.id) AS question_count FROM model_tests mt LEFT JOIN categories c ON c.id=mt.category_id ORDER BY mt.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer FROM questions ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
+    $questionArchiveWhere = "";
+    if ($hasQuestionArchiveColumn) {
+        $questionArchiveWhere = $editId > 0
+            ? " WHERE is_archived = 0 OR id IN (SELECT question_id FROM model_test_questions WHERE test_id = " . (int)$editId . ")"
+            : " WHERE is_archived = 0";
+    }
+    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer" . ($hasQuestionArchiveColumn ? ",is_archived" : "") . " FROM questions" . $questionArchiveWhere . " ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $errors[] = 'মডেল টেস্ট বা প্রশ্ন লোড করা যায়নি। SQL Migration এবং টেবিলের নাম যাচাই করুন।';
 }
@@ -265,7 +292,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field"><label>শেষের তারিখ ও সময়</label><input type="datetime-local" name="ends_at" value="<?=mt_h($fmtDate($form['ends_at'] ?? null))?>"></div>
   </div>
   <div id="manualQuestions" style="display:none;margin-top:18px"><h3>প্রশ্ন নির্বাচন</h3><div class="toolbar"><input id="questionSearch" placeholder="প্রশ্ন বা ক্যাটাগরি দিয়ে খুঁজুন..."><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন দেখানো হচ্ছে।</span></div>
-  <?php foreach ($questions as $q): ?><label class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?>><span><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small></span></label><?php endforeach; ?>
+  <?php foreach ($questions as $q): ?><label class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?>><span><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small><?php if(!empty($q['is_archived'])): ?><small style="color:#a15b13;font-weight:700">Archived · এই পরীক্ষায় আগে থেকেই যুক্ত</small><?php endif; ?></span></label><?php endforeach; ?>
   </div>
   <div class="toolbar"><button class="btn" type="submit">সংরক্ষণ করুন</button><?php if ($editing): ?><a class="btn secondary" href="model_tests.php">সম্পাদনা বাতিল</a><?php endif; ?></div>
  </form>

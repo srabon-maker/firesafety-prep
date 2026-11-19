@@ -29,11 +29,12 @@ function qnorm(string $value): string {
 }
 function qfield(?array $row, string $key): string { return h((string)($row[$key] ?? '')); }
 
-function question_page_url(int $page, string $search, string $category, string $difficulty, string $language, string $status): string {
+function question_page_url(int $page, string $search, string $category, string $difficulty, string $language, string $status, string $view = 'active'): string {
     $query = ['page' => $page];
     foreach (['q'=>$search, 'category'=>$category, 'difficulty'=>$difficulty, 'language'=>$language, 'status'=>$status] as $key=>$value) {
         if ($value !== '') $query[$key] = $value;
     }
+    if ($view === 'archived') $query['view'] = 'archived';
     return '?' . http_build_query($query);
 }
 
@@ -220,6 +221,83 @@ function validate_import_question(array $q): array {
     if (qlen((string)($q['category'] ?? '')) > 100) $errors[] = 'ক্যাটাগরি ১০০ অক্ষরের বেশি';
     return $errors;
 }
+
+
+/* Optional feature schema introduced by migration 20261119_question_bank_features.sql. */
+function q_table_exists(PDO $pdo, string $table): bool {
+    $st = $pdo->prepare('SHOW TABLES LIKE ?');
+    $st->execute([$table]);
+    return (bool)$st->fetchColumn();
+}
+function q_column_exists(PDO $pdo, string $column): bool {
+    if (!in_array($column, ['image_path','is_archived'], true)) return false;
+    $st = $pdo->prepare('SHOW COLUMNS FROM questions LIKE ?');
+    $st->execute([$column]);
+    return (bool)$st->fetch(PDO::FETCH_ASSOC);
+}
+function q_json_snapshot(array $row): string {
+    $allowed = ['id','category','question','option_a','option_b','option_c','option_d','correct_answer','explanation','difficulty','language','reference','status','image_path','is_archived'];
+    $data = [];
+    foreach ($allowed as $key) if (array_key_exists($key, $row)) $data[$key] = $row[$key];
+    return json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+}
+function q_save_revision(PDO $pdo, int $questionId, string $event, ?array $before, ?array $after): void {
+    $actor = (string)($_SESSION['admin_username'] ?? $_SESSION['admin_name'] ?? 'admin');
+    $st = $pdo->prepare('INSERT INTO question_revisions (question_id,event_type,before_data,after_data,changed_by,created_at) VALUES (?,?,?,?,?,NOW())');
+    $actorName = function_exists('mb_substr') ? mb_substr($actor, 0, 120, 'UTF-8') : substr($actor, 0, 120);
+    $st->execute([$questionId, $event, $before ? q_json_snapshot($before) : null, $after ? q_json_snapshot($after) : null, $actorName]);
+}
+function q_upload_image(?array $file): ?string {
+    if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
+    if (!isset($file['error']) || is_array($file['error']) || $file['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('ছবি আপলোড করা যায়নি। আবার চেষ্টা করুন।');
+    $tmp = $file['tmp_name'] ?? '';
+    $size = (int)($file['size'] ?? 0);
+    if (!is_string($tmp) || !is_uploaded_file($tmp) || $size < 1 || $size > 5 * 1024 * 1024) throw new RuntimeException('ছবির সর্বোচ্চ সাইজ ৫ MB।');
+    if (!function_exists('finfo_open') || !function_exists('getimagesize')) throw new RuntimeException('সার্ভারে image validation extension চালু নেই।');
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+    $types = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
+    if (!is_string($mime) || !isset($types[$mime])) throw new RuntimeException('শুধু JPG, PNG অথবা WEBP ছবি দেওয়া যাবে।');
+    $info = @getimagesize($tmp);
+    if (!$info || (int)$info[0] > 6000 || (int)$info[1] > 6000 || ((int)$info[0] * (int)$info[1]) > 20000000) throw new RuntimeException('ছবির dimensions অনুমোদিত সীমার বাইরে।');
+    $dir = __DIR__ . '/uploads/questions';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) throw new RuntimeException('Question image folder তৈরি করা যায়নি।');
+    $guard = $dir . '/.htaccess';
+    if (!is_file($guard)) @file_put_contents($guard, "Options -Indexes\n<FilesMatch \"\\.(php|phtml|php[0-9]*)$\">\nRequire all denied\n</FilesMatch>\n");
+    $name = bin2hex(random_bytes(16)) . '.' . $types[$mime];
+    if (!move_uploaded_file($tmp, $dir . '/' . $name)) throw new RuntimeException('ছবি সংরক্ষণ করা যায়নি।');
+    @chmod($dir . '/' . $name, 0644);
+    return 'uploads/questions/' . $name;
+}
+function q_delete_local_image(?string $path): void {
+    if (!$path || !str_starts_with($path, 'uploads/questions/')) return;
+    $full = __DIR__ . '/' . $path;
+    if (is_file($full)) @unlink($full);
+}
+function q_similarity(string $a, string $b): float {
+    $a = qnorm($a); $b = qnorm($b);
+    if ($a === '' || $b === '') return 0.0;
+    if ($a === $b) return 1.0;
+    $tokensA = array_values(array_unique(preg_split('/[^\p{L}\p{N}]+/u', $a, -1, PREG_SPLIT_NO_EMPTY) ?: []));
+    $tokensB = array_values(array_unique(preg_split('/[^\p{L}\p{N}]+/u', $b, -1, PREG_SPLIT_NO_EMPTY) ?: []));
+    if (!$tokensA || !$tokensB) return 0.0;
+    $intersection = count(array_intersect($tokensA, $tokensB));
+    return $intersection / max(1, count(array_unique(array_merge($tokensA, $tokensB))));
+}
+function q_similar_from_rows(array $rows, string $question, ?int $excludeId = null, int $limit = 3): array {
+    $matches = [];
+    foreach ($rows as $row) {
+        if ($excludeId && (int)$row['id'] === $excludeId) continue;
+        $score = q_similarity($question, (string)$row['question']);
+        if ($score >= 0.72) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
+    }
+    usort($matches, static fn($a,$b) => $b['score'] <=> $a['score']);
+    return array_slice($matches, 0, $limit);
+}
+function q_near_duplicates(PDO $pdo, string $question, ?int $excludeId = null, int $limit = 5): array {
+    $rows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
+    return q_similar_from_rows($rows, $question, $excludeId, $limit);
+}
+
 function existing_question_map(PDO $pdo): array {
     $map = [];
     foreach ($pdo->query('SELECT id, question FROM questions')->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -229,19 +307,92 @@ function existing_question_map(PDO $pdo): array {
     return $map;
 }
 
+$hasArchiveColumn = q_column_exists($pdo, 'is_archived');
+$hasImageColumn = q_column_exists($pdo, 'image_path');
+$hasRevisionTable = q_table_exists($pdo, 'question_revisions');
+$featureSchemaReady = $hasArchiveColumn && $hasImageColumn && $hasRevisionTable;
+
 /* All POST actions share the existing admin CSRF protection. */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = (string)($_POST['action'] ?? '');
 
-    if ($action === 'delete') {
+    if (in_array($action, ['archive','restore','bulk_action'], true) && !$featureSchemaReady) {
+        $message = 'Archive, Bulk Action ও Revision ফিচার চালুর আগে GitHub-এর migrations/20261119_question_bank_features.sql phpMyAdmin-এ একবার চালান।';
+        $messageType = 'error';
+    } elseif ($action === 'delete') {
         $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
         if (!$id || $id < 1) { $message = 'সঠিক প্রশ্ন আইডি পাওয়া যায়নি।'; $messageType = 'error'; }
         else {
-            $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
-            $stmt->execute([$id]);
-            $message = $stmt->rowCount() ? 'প্রশ্নটি মুছে ফেলা হয়েছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
-            $messageType = $stmt->rowCount() ? 'success' : 'warning';
+            $st = $pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before = $st->fetch(PDO::FETCH_ASSOC);
+            $oldImage = $featureSchemaReady ? ($before['image_path'] ?? null) : null;
+            $pdo->beginTransaction();
+            try {
+                if ($before && $featureSchemaReady) q_save_revision($pdo, (int)$id, 'deleted', $before, null);
+                $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
+                $stmt->execute([$id]);
+                $deleted = $stmt->rowCount();
+                $pdo->commit();
+                if ($deleted && $oldImage) q_delete_local_image((string)$oldImage);
+                $message = $deleted ? 'প্রশ্নটি মুছে ফেলা হয়েছে। Revision History-তে আগের তথ্য সংরক্ষিত আছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
+                $messageType = $deleted ? 'success' : 'warning';
+            } catch (Throwable $deleteError) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('Question delete: '.$deleteError->getMessage());
+                $message = 'প্রশ্নটি মুছে ফেলা যায়নি।'; $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'archive' || $action === 'restore') {
+        $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$id || $id < 1) { $message = 'সঠিক প্রশ্ন আইডি পাওয়া যায়নি।'; $messageType = 'error'; }
+        else {
+            $st=$pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before=$st->fetch(PDO::FETCH_ASSOC);
+            if (!$before) { $message='প্রশ্নটি পাওয়া যায়নি।'; $messageType='warning'; }
+            else {
+                $value = $action === 'archive' ? 1 : 0;
+                $pdo->beginTransaction();
+                try {
+                    $pdo->prepare('UPDATE questions SET is_archived=? WHERE id=?')->execute([$value,$id]);
+                    $after=$before; $after['is_archived']=$value;
+                    q_save_revision($pdo,(int)$id,$action==='archive'?'archived':'restored',$before,$after);
+                    $pdo->commit();
+                    $message = $action === 'archive' ? 'প্রশ্নটি Archive করা হয়েছে।' : 'প্রশ্নটি Restore করা হয়েছে।';
+                } catch(Throwable $e) {
+                    if($pdo->inTransaction())$pdo->rollBack();
+                    $message='Archive/Restore সম্পন্ন হয়নি।'; $messageType='error'; error_log('Question archive/restore: '.$e->getMessage());
+                }
+            }
+        }
+    } elseif ($action === 'bulk_action') {
+        $ids = $_POST['selected_ids'] ?? [];
+        if (!is_array($ids)) $ids = [];
+        $ids = array_values(array_unique(array_filter(array_map('intval',$ids),static fn($v)=>$v>0)));
+        $operation = (string)($_POST['bulk_operation'] ?? '');
+        if (!$ids || count($ids)>200) { $message='একবারে ১ থেকে ২০০টি প্রশ্ন নির্বাচন করুন।'; $messageType='error'; }
+        elseif (!in_array($operation,['publish','draft','archive','restore','delete'],true)) { $message='Bulk action সঠিক নয়।'; $messageType='error'; }
+        else {
+            $marks=implode(',',array_fill(0,count($ids),'?'));
+            $st=$pdo->prepare("SELECT * FROM questions WHERE id IN ($marks)"); $st->execute($ids); $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+            $imagesToDelete = [];
+            $pdo->beginTransaction();
+            try {
+                foreach($rows as $row) {
+                    $id=(int)$row['id'];
+                    if($operation==='delete') {
+                        q_save_revision($pdo,$id,'deleted',$row,null);
+                        $pdo->prepare('DELETE FROM questions WHERE id=?')->execute([$id]);
+                        if (!empty($row['image_path'])) $imagesToDelete[] = (string)$row['image_path'];
+                    } else {
+                        $after=$row;
+                        if($operation==='publish'||$operation==='draft') {$after['status']=$operation;$pdo->prepare('UPDATE questions SET status=? WHERE id=?')->execute([$operation,$id]);}
+                        else {$v=$operation==='archive'?1:0;$after['is_archived']=$v;$pdo->prepare('UPDATE questions SET is_archived=? WHERE id=?')->execute([$v,$id]);}
+                        q_save_revision($pdo,$id,'bulk_'.$operation,$row,$after);
+                    }
+                }
+                $pdo->commit();
+                foreach($imagesToDelete as $imagePathToDelete) q_delete_local_image($imagePathToDelete);
+                $message=count($rows).'টি প্রশ্নে Bulk Action সম্পন্ন হয়েছে।';
+            } catch(Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); $message='Bulk Action সম্পন্ন হয়নি। কোনো পরিবর্তন সংরক্ষণ করা হয়নি।'; $messageType='error'; error_log('Question bulk action: '.$e->getMessage()); }
         }
     } elseif ($action === 'save') {
         $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
@@ -269,15 +420,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dupe->execute($id ? [$q['question'],$id] : [$q['question']]);
             $duplicateId = $dupe->fetchColumn();
             if ($duplicateId) { $message = 'একই প্রশ্ন আগে থেকেই আছে (ID: ' . (int)$duplicateId . ')।'; $messageType = 'warning'; }
-            else {
-                if ($id) {
+            elseif (!$featureSchemaReady) {
+                if (!empty($_FILES['question_image']['name'])) { $message='Image Upload চালুর আগে migration SQL চালান।'; $messageType='error'; }
+                elseif ($id) {
                     $stmt = $pdo->prepare('UPDATE questions SET category=?,question=?,option_a=?,option_b=?,option_c=?,option_d=?,correct_answer=?,explanation=?,difficulty=?,language=?,reference=?,status=? WHERE id=?');
                     $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status'],$id]);
-                    $message = 'প্রশ্নটি আপডেট করা হয়েছে।';
+                    $message='প্রশ্নটি আপডেট করা হয়েছে।';
                 } else {
                     $stmt = $pdo->prepare('INSERT INTO questions (category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty,language,reference,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
                     $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status']]);
-                    $message = 'নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
+                    $message='নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
+                }
+            } else {
+                $before = null;
+                if ($id) { $st=$pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before=$st->fetch(PDO::FETCH_ASSOC) ?: null; }
+                $newImage = null;
+                try {
+                    $newImage = q_upload_image($_FILES['question_image'] ?? null);
+                    $imagePath = $newImage ?: (string)($before['image_path'] ?? '');
+                    $pdo->beginTransaction();
+                    try {
+                    if ($id) {
+                        $stmt = $pdo->prepare('UPDATE questions SET category=?,question=?,option_a=?,option_b=?,option_c=?,option_d=?,correct_answer=?,explanation=?,difficulty=?,language=?,reference=?,status=?,image_path=? WHERE id=?');
+                        $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status'],$imagePath ?: null,$id]);
+                        $after=$q; $after['id']=$id; $after['image_path']=$imagePath ?: null; $after['is_archived']=(int)($before['is_archived']??0);
+                        q_save_revision($pdo,$id,'updated',$before,$after);
+                        $message = 'প্রশ্নটি আপডেট করা হয়েছে।';
+                    } else {
+                        $stmt = $pdo->prepare('INSERT INTO questions (category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty,language,reference,status,image_path,is_archived) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)');
+                        $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status'],$imagePath ?: null]);
+                        $newId=(int)$pdo->lastInsertId(); $after=$q; $after['id']=$newId; $after['image_path']=$imagePath ?: null; $after['is_archived']=0;
+                        q_save_revision($pdo,$newId,'created',null,$after);
+                        $message = 'নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
+                    }
+                    $pdo->commit();
+                    } catch (Throwable $saveError) {
+                        if ($pdo->inTransaction()) $pdo->rollBack();
+                        throw $saveError;
+                    }
+                    if($newImage && $id && !empty($before['image_path'])) q_delete_local_image((string)$before['image_path']);
+                } catch(Throwable $e) {
+                    if($newImage) q_delete_local_image($newImage);
+                    throw $e;
+                }
+                try {
+                    $near=q_near_duplicates($pdo,$q['question'],$id ?: ($newId ?? null));
+                    if($near){$message.=' কাছাকাছি মিল পাওয়া গেছে: #'.(int)$near[0]['id'].' ('.round($near[0]['score']*100).'%).';$messageType='warning';}
+                } catch(Throwable $duplicateCheckError) {
+                    error_log('Question near-duplicate check: '.$duplicateCheckError->getMessage());
                 }
             }
         }
@@ -293,6 +483,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parsed = parse_docx_questions($content, $defaultCategory);
             if (!$parsed) throw new RuntimeException('ফাইল থেকে কোনো প্রশ্ন শনাক্ত করা যায়নি। DOCX-এর লেবেল/ফরম্যাট পরীক্ষা করুন।');
             $existing = existing_question_map($pdo);
+            $existingRows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
             $seen = [];
             $valid = 0;
             foreach ($parsed as $i => &$row) {
@@ -301,6 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($key !== '' && isset($existing[$key])) $row['_duplicate'] = 'ডেটাবেজে ID ' . $existing[$key] . ' নম্বরে আছে';
                 elseif ($key !== '' && isset($seen[$key])) $row['_duplicate'] = 'এই ফাইলের প্রশ্ন #' . $seen[$key] . '-এর সঙ্গে ডুপ্লিকেট';
                 else $row['_duplicate'] = '';
+                $row['_similar'] = q_similar_from_rows($existingRows, (string)$row['question'], null, 1);
                 if (!$row['_errors'] && $row['_duplicate'] === '') $valid++;
                 $seen[$key] = $i + 1;
             }
@@ -325,6 +517,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parsed = parse_docx_questions(['paragraphs'=>$lines,'tables'=>[]], $defaultCategory);
             if (!$parsed) throw new RuntimeException('কোনো প্রশ্ন শনাক্ত হয়নি। নমুনা ফরম্যাট অনুসরণ করুন।');
             $existing = existing_question_map($pdo);
+            $existingRows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
             $seen = []; $valid = 0;
             foreach ($parsed as $i => &$row) {
                 $row['_errors'] = validate_import_question($row);
@@ -332,6 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($key !== '' && isset($existing[$key])) $row['_duplicate'] = 'ডেটাবেজে ID ' . $existing[$key] . ' নম্বরে আছে';
                 elseif ($key !== '' && isset($seen[$key])) $row['_duplicate'] = 'এই পেস্টের প্রশ্ন #' . $seen[$key] . '-এর সঙ্গে ডুপ্লিকেট';
                 else $row['_duplicate'] = '';
+                $row['_similar'] = q_similar_from_rows($existingRows, (string)$row['question'], null, 1);
                 if (!$row['_errors'] && $row['_duplicate'] === '') $valid++;
                 if ($key !== '') $seen[$key] = $i + 1;
             }
@@ -367,7 +561,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $row['difficulty'],$row['language'],
                         trim((string)($row['reference'] ?? '')),$row['status']
                     ]);
-                    $existing[$key] = (int)$pdo->lastInsertId();
+                    $importedId=(int)$pdo->lastInsertId();
+                    $existing[$key] = $importedId;
+                    if ($featureSchemaReady) {
+                        $snapshot=$row; $snapshot['id']=$importedId; $snapshot['image_path']=null; $snapshot['is_archived']=0;
+                        q_save_revision($pdo,$importedId,'imported',null,$snapshot);
+                    }
                     $inserted++;
                 }
                 $pdo->commit();
@@ -406,6 +605,14 @@ if (isset($_GET['edit'])) {
 }
 
 /* Filters and question list. */
+$view = (string)($_GET['view'] ?? 'active');
+if (!in_array($view,['active','archived'],true)) $view='active';
+$historyId = filter_var($_GET['history'] ?? null, FILTER_VALIDATE_INT);
+$historyRows = [];
+if ($historyId && $featureSchemaReady) {
+    $hs=$pdo->prepare('SELECT * FROM question_revisions WHERE question_id=? ORDER BY id DESC LIMIT 100');
+    $hs->execute([$historyId]); $historyRows=$hs->fetchAll(PDO::FETCH_ASSOC);
+}
 $search = trim((string)($_GET['q'] ?? ''));
 $selectedCategory = trim((string)($_GET['category'] ?? ''));
 $difficulty = trim((string)($_GET['difficulty'] ?? ''));
@@ -424,6 +631,7 @@ if ($selectedCategory !== '') { $where[] = 'category=?'; $params[] = $selectedCa
 if (in_array($difficulty, ['easy','medium','hard'], true)) { $where[] = 'difficulty=?'; $params[] = $difficulty; }
 if (in_array($language, ['Bangla','English','Both'], true)) { $where[] = 'language=?'; $params[] = $language; }
 if (in_array($status, ['draft','published'], true)) { $where[] = 'status=?'; $params[] = $status; }
+if ($featureSchemaReady) $where[] = 'is_archived=' . ($view === 'archived' ? '1' : '0');
 $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
 
 $countStmt = $pdo->prepare('SELECT COUNT(*) FROM questions' . $whereSql);
@@ -432,11 +640,13 @@ $filteredCount = (int)$countStmt->fetchColumn();
 $totalPages = max(1, (int)ceil($filteredCount / $perPage));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $perPage;
-$listStmt = $pdo->prepare('SELECT id,category,question,correct_answer,difficulty,language,status FROM questions' . $whereSql . ' ORDER BY id DESC LIMIT ' . $perPage . ' OFFSET ' . $offset);
+$listSql = 'SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty,language,status' . ($featureSchemaReady ? ',image_path,is_archived' : '') . ',(SELECT COUNT(DISTINCT test_id) FROM model_test_questions WHERE question_id=questions.id) AS usage_count FROM questions' . $whereSql . ' ORDER BY id DESC LIMIT ' . $perPage . ' OFFSET ' . $offset;
+$listStmt = $pdo->prepare($listSql);
 $listStmt->execute($params);
 $questions = $listStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$totalQuestions = (int)$pdo->query('SELECT COUNT(*) FROM questions')->fetchColumn();
+$totalQuestions = (int)$pdo->query('SELECT COUNT(*) FROM questions' . ($featureSchemaReady ? ' WHERE is_archived=0' : ''))->fetchColumn();
+$archivedCount = $featureSchemaReady ? (int)$pdo->query('SELECT COUNT(*) FROM questions WHERE is_archived=1')->fetchColumn() : 0;
 $totalCategories = (int)$pdo->query("SELECT COUNT(DISTINCT category) FROM questions WHERE category IS NOT NULL AND TRIM(category)<>''")->fetchColumn();
 $publishedCount = (int)$pdo->query("SELECT COUNT(*) FROM questions WHERE status='published'")->fetchColumn();
 $draftCount = (int)$pdo->query("SELECT COUNT(*) FROM questions WHERE status='draft'")->fetchColumn();
@@ -452,14 +662,15 @@ $token = csrf_token();
 <style>
 
 :root{--maroon:#510d18;--deep:#450b15;--soft:#6a111f;--orange:#ffa400;--bg:#fff8f5;--white:#fff;--ink:#30191b;--muted:#8b7777;--line:#f1ddd6;--green:#176b3b;--red:#b42318;--shadow:0 8px 24px rgba(69,11,21,.05)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Bengali","SolaimanLipi",sans-serif;line-height:1.55}a{color:inherit}.layout{min-height:100vh;display:flex}.sidebar{width:280px;flex:0 0 280px;background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7;padding:24px 16px;display:flex;flex-direction:column;min-height:100vh}.brand{display:flex;align-items:center;gap:13px;padding:4px 9px 26px;border:0}.brand img{display:block;width:65px;height:65px;object-fit:contain;background:#510d18;border:2px solid #fff;border-radius:13px;padding:2px;margin:0;flex-shrink:0}.brand-name{font-size:20px;font-weight:800;color:#fff;line-height:1.25}.brand-sub{font-size:14px;color:#e0bfc2;margin-top:5px}.nav-title{font-size:11px;color:#bfaab1;text-transform:uppercase;letter-spacing:1px;padding:22px 12px 8px}.nav-list{display:grid;gap:5px}.nav-link{display:flex;align-items:center;gap:13px;padding:13px 15px;margin:0;text-decoration:none;border-radius:14px;color:#f4dfe0;font-size:14px}.nav-link:hover{background:#ffffff12}.nav-link.active{background:var(--orange);color:#29170b;font-weight:800}.sidebar-bottom{margin-top:auto;padding:18px 12px 0;color:#bfaab1;font-size:12px}
-.main{min-width:0;flex:1;padding:32px 32px 45px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.eyebrow{font-size:12px;color:var(--muted);margin-bottom:3px}.page-title{font-size:32px;font-weight:900;margin:0 0 8px;color:var(--deep)}.top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:8px;padding:10px 15px;background:var(--maroon);color:#fff;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}.btn:hover{background:var(--soft)}.btn.orange{background:var(--orange);color:#35100f}.btn.light{background:#f5edf0;color:var(--maroon)}.btn.danger{background:#fff0f0;color:var(--red);border:1px solid #f3d2d5}.btn.small{padding:7px 10px;font-size:12px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat-card,.panel{background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.stat-card{padding:20px 18px;display:flex;align-items:center;justify-content:space-between;min-height:126px}.stat-label{font-size:13px;color:var(--muted)}.stat-number{font-size:26px;font-weight:800;color:var(--maroon);margin-top:3px}.stat-icon{width:40px;height:40px;border-radius:12px;background:#fff1df;color:#a65a10;display:grid;place-items:center;font-size:20px}.panel{padding:22px;margin-bottom:20px;border-radius:20px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px}.panel-title{font-size:17px;margin:0;color:var(--deep)}.panel-note{font-size:12px;color:var(--muted)}.alert{padding:12px 15px;border-radius:9px;margin-bottom:18px;font-size:14px}.alert.success{background:#eaf7ef;color:#17633f}.alert.warning{background:#fff7e6;color:#8b5a08}.alert.error{background:#fff0f0;color:#a51d2a}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field-full{grid-column:1/-1}label{display:block;font-size:13px;font-weight:700;color:#44363b;margin-bottom:6px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #ded5d9;border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:14px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 0 0 3px #f39a3226}textarea{min-height:76px;resize:vertical}.question-textarea{min-height:95px}.form-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.help-text{font-size:12px;color:var(--muted);margin:6px 0 0}.filter-bar{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr auto auto;gap:8px;margin-bottom:16px}.question-item{padding:16px 0;border-bottom:1px solid var(--line)}.question-item:last-child{border-bottom:0;padding-bottom:0}.question-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.question-id{font-size:12px;color:var(--muted);font-weight:700}.category-pill,.meta-pill{display:inline-block;background:#fff1df;color:#8a4c0d;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:700;margin:3px 3px 0 0}.meta-pill{background:#f4edf0;color:#65404c}.question-title{font-size:14px;font-weight:700;margin:8px 0;color:#302329;white-space:pre-wrap;overflow-wrap:anywhere}.answer-line{font-size:12px;color:var(--green);font-weight:700}.question-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.inline-form{display:inline}.empty{padding:30px 12px;text-align:center;color:var(--muted)}.pagination{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:20px}.page-link{padding:7px 11px;border:1px solid var(--line);border-radius:7px;text-decoration:none;font-size:12px;background:#fff}.page-link.current{background:var(--maroon);color:#fff;border-color:var(--maroon)}.page-link.disabled{opacity:.4;pointer-events:none}.category-list{display:flex;flex-wrap:wrap;gap:8px}.category-chip{background:#f8f1f3;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;text-decoration:none}.category-chip strong{color:var(--maroon);margin-left:5px}.preview-table{width:100%;border-collapse:collapse;font-size:12px}.preview-table th,.preview-table td{border:1px solid var(--line);padding:9px;text-align:left;vertical-align:top}.preview-table th{background:#f8f1f3;color:var(--deep)}.good{color:#17633f;font-weight:700}.bad{color:#a51d2a;font-weight:700}.table-wrap{overflow-x:auto}.import-help{background:#fffaf3;border:1px solid #f4dfc2;padding:12px;border-radius:9px;font-size:12px;color:#684719;margin-bottom:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Bengali","SolaimanLipi",sans-serif;line-height:1.55}a{color:inherit}.layout{min-height:100vh;display:flex}.sidebar{width:280px;flex:0 0 280px;background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7;padding:24px 16px;display:flex;flex-direction:column;min-height:100vh}.brand{display:flex;align-items:center;gap:13px;padding:4px 9px 26px;border:0}.brand img{display:block;width:65px;height:65px;object-fit:contain;background:#510d18;border:2px solid #fff;border-radius:13px;padding:2px;margin:0;flex-shrink:0}.brand-name{font-size:20px;font-weight:800;color:#fff;line-height:1.25}.brand-sub{font-size:14px;color:#e0bfc2;margin-top:5px}.nav-title{font-size:11px;color:#bfaab1;text-transform:uppercase;letter-spacing:1px;padding:22px 12px 8px}.nav-list{display:grid;gap:5px}.nav-link{display:flex;align-items:center;gap:13px;padding:13px 15px;margin:0;text-decoration:none;border-radius:14px;color:#f4dfe0;font-size:14px}.nav-link:hover{background:#ffffff12}
+.mobile-toggle{display:none}.topline{display:flex;align-items:center;gap:12px}.bulk-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px;background:#fff8f5;border:1px solid var(--line);border-radius:12px;margin-bottom:14px}.bulk-toolbar select{max-width:190px}.select-inline{display:inline-flex;align-items:center;gap:5px;margin:0 0 7px;font-size:12px}.question-preview{margin-top:14px;padding:15px;background:#fff8f5;border:1px solid var(--line);border-radius:12px}.preview-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.revision-row{padding:12px;border:1px solid var(--line);border-radius:10px;margin:9px 0}.revision-row summary{cursor:pointer;font-weight:700}.revision-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.revision-grid pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff8f5;padding:12px;border-radius:8px;font-size:12px}.image-current{display:flex;align-items:center;gap:10px;margin-top:8px}.nav-link.active{background:var(--orange);color:#29170b;font-weight:800}.sidebar-bottom{margin-top:auto;padding:18px 12px 0;color:#bfaab1;font-size:12px}
+.main{min-width:0;flex:1;padding:32px 32px 45px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.eyebrow{font-size:12px;color:var(--muted);margin-bottom:3px}.page-title{font-size:32px;font-weight:900;margin:0 0 8px;color:var(--deep)}.top-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:8px;padding:10px 15px;background:var(--maroon);color:#fff;text-decoration:none;font-size:13px;font-weight:700;cursor:pointer}.btn:hover{background:var(--soft)}.btn.orange{background:var(--orange);color:#35100f}.btn.light{background:#f5edf0;color:var(--maroon)}.btn.danger{background:#fff0f0;color:var(--red);border:1px solid #f3d2d5}.btn.small{padding:7px 10px;font-size:12px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat-card,.panel{background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.stat-card{padding:20px 18px;display:flex;align-items:center;justify-content:space-between;min-height:126px}.stat-label{font-size:13px;color:var(--muted)}.stat-number{font-size:26px;font-weight:800;color:var(--maroon);margin-top:3px}.stat-icon{width:40px;height:40px;border-radius:12px;background:#fff1df;color:#a65a10;display:grid;place-items:center;font-size:20px}.panel{padding:22px;margin-bottom:20px;border-radius:20px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px}.panel-title{font-size:17px;margin:0;color:var(--deep)}.panel-note{font-size:12px;color:var(--muted)}.alert{padding:12px 15px;border-radius:9px;margin-bottom:18px;font-size:14px}.alert.success{background:#eaf7ef;color:#17633f}.alert.warning{background:#fff7e6;color:#8b5a08}.alert.error{background:#fff0f0;color:#a51d2a}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field-full{grid-column:1/-1}label{display:block;font-size:13px;font-weight:700;color:#44363b;margin-bottom:6px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #ded5d9;border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:14px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 0 0 3px #f39a3226}textarea{min-height:76px;resize:vertical}.question-textarea{min-height:95px}.form-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.help-text{font-size:12px;color:var(--muted);margin:6px 0 0}.filter-bar{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 1fr auto auto;gap:8px;margin-bottom:16px}.question-item{padding:16px 0;border-bottom:1px solid var(--line)}.question-item:last-child{border-bottom:0;padding-bottom:0}.question-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.question-id{font-size:12px;color:var(--muted);font-weight:700}.category-pill,.meta-pill{display:inline-block;background:#fff1df;color:#8a4c0d;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:700;margin:3px 3px 0 0}.meta-pill{background:#f4edf0;color:#65404c}.question-title{font-size:14px;font-weight:700;margin:8px 0;color:#302329;white-space:pre-wrap;overflow-wrap:anywhere}.answer-line{font-size:12px;color:var(--green);font-weight:700}.question-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.inline-form{display:inline}.empty{padding:30px 12px;text-align:center;color:var(--muted)}.pagination{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:20px}.page-link{padding:7px 11px;border:1px solid var(--line);border-radius:7px;text-decoration:none;font-size:12px;background:#fff}.page-link.current{background:var(--maroon);color:#fff;border-color:var(--maroon)}.page-link.disabled{opacity:.4;pointer-events:none}.category-list{display:flex;flex-wrap:wrap;gap:8px}.category-chip{background:#f8f1f3;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;text-decoration:none}.category-chip strong{color:var(--maroon);margin-left:5px}.preview-table{width:100%;border-collapse:collapse;font-size:12px}.preview-table th,.preview-table td{border:1px solid var(--line);padding:9px;text-align:left;vertical-align:top}.preview-table th{background:#f8f1f3;color:var(--deep)}.good{color:#17633f;font-weight:700}.bad{color:#a51d2a;font-weight:700}.warn{color:#94600b;font-weight:700}.table-wrap{overflow-x:auto}.import-help{background:#fffaf3;border:1px solid #f4dfc2;padding:12px;border-radius:9px;font-size:12px;color:#684719;margin-bottom:14px}
 
 .tool-panel{padding:0;overflow:hidden}.tool-panel[open]{border-color:#e6d5db}.tool-summary{list-style:none;display:flex;align-items:center;gap:13px;padding:16px 18px;cursor:pointer;min-height:76px}.tool-summary::-webkit-details-marker{display:none}.tool-summary:after{content:'＋';margin-left:8px;color:var(--maroon);font-size:20px;font-weight:700}.tool-panel[open]>.tool-summary:after{content:'−'}.tool-icon{width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:#fff1df;color:#8a4c0d;display:grid;place-items:center;font-size:22px;font-weight:800}.tool-summary-copy{display:flex;flex-direction:column;gap:2px;min-width:0}.tool-summary-copy strong{font-size:15px;color:var(--deep)}.tool-summary-copy small{font-size:12px;color:var(--muted);font-weight:400}.tool-state{margin-left:auto;color:#8a4c0d;background:#fff7ec;border:1px solid #f5e2c8;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;white-space:nowrap}.tool-body{padding:0 20px 20px;border-top:1px solid var(--line)}.tool-body>.panel-head{margin-top:18px}.tool-panel[open]>.tool-summary{background:#fffdfb}
 
 @media(max-width:1100px){.filter-bar{grid-template-columns:repeat(3,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.sidebar{width:230px;flex-basis:230px;padding:20px 12px}.main{padding:22px 18px}.nav-link{font-size:13px;padding:12px 12px}}
-@media(max-width:650px){.layout{display:block}.sidebar{display:none;width:100%;min-height:auto;padding:14px}.sidebar.open{display:block}.brand{padding-bottom:12px;gap:11px}.brand img{width:54px;height:54px}.brand-name{font-size:17px}.nav-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nav-link{font-size:13px;padding:10px}.main{padding:18px 14px 28px;min-width:0}.topbar{align-items:flex-start;flex-direction:column}.topline{display:flex;align-items:center;gap:12px}.mobile-toggle{display:inline-block;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--deep);padding:8px 11px;font-size:18px;cursor:pointer}.page-title{font-size:27px}.top-actions{width:100%;align-items:stretch;flex-direction:column}.top-actions .btn{width:100%}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat-card{padding:12px;min-height:100px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr}.question-head{display:block}.question-actions{margin-top:11px}}
+@media(max-width:650px){.revision-grid,.preview-options{grid-template-columns:1fr}.bulk-toolbar{align-items:stretch}.bulk-toolbar select{max-width:none;width:100%}.layout{display:block}.sidebar{display:none;width:100%;min-height:auto;padding:14px}.sidebar.open{display:block}.brand{padding-bottom:12px;gap:11px}.brand img{width:54px;height:54px}.brand-name{font-size:17px}.nav-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nav-link{font-size:13px;padding:10px}.main{padding:18px 14px 28px;min-width:0}.topbar{align-items:flex-start;flex-direction:column}.topline{display:flex;align-items:center;gap:12px}.mobile-toggle{display:inline-block;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--deep);padding:8px 11px;font-size:18px;cursor:pointer}.page-title{font-size:27px}.top-actions{width:100%;align-items:stretch;flex-direction:column}.top-actions .btn{width:100%}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat-card{padding:12px;min-height:100px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr}.question-head{display:block}.question-actions{margin-top:11px}}
 
 </style>
 </head>
@@ -493,11 +704,13 @@ $token = csrf_token();
 <div class="stat-card"><div><div class="stat-label">Published</div><div class="stat-number"><?= number_format($publishedCount) ?></div></div><div class="stat-icon">✓</div></div>
 <div class="stat-card"><div><div class="stat-label">Draft</div><div class="stat-number"><?= number_format($draftCount) ?></div></div><div class="stat-icon">✎</div></div>
 </section>
+<?php if(!$featureSchemaReady): ?><div class="alert warning">নতুন ফিচার চালু করতে একবার phpMyAdmin-এ <code>backend/migrations/20261119_question_bank_features.sql</code> চালান। পুরোনো প্রশ্ন ও ফিচার নিরাপদ থাকবে।</div><?php endif; ?>
+<?php if($featureSchemaReady): ?><section class="panel"><div class="panel-head"><h2 class="panel-title">Archive Management</h2><span class="panel-note">Archived প্রশ্ন: <?= number_format($archivedCount) ?></span><a class="btn light small" href="questions.php?view=<?= $view==='archived'?'active':'archived' ?>"><?= $view==='archived'?'Active প্রশ্ন দেখুন':'Archived প্রশ্ন দেখুন' ?></a></div></section><?php endif; ?>
 
 <details class="panel tool-panel" id="question-form" <?= $editQuestion ? 'open' : '' ?>>
 <summary class="tool-summary"><span class="tool-icon">＋</span><span class="tool-summary-copy"><strong><?= $editQuestion ? 'প্রশ্ন সম্পাদনা করুন' : 'ম্যানুয়ালি প্রশ্ন যোগ করুন' ?></strong><small><?= $editQuestion ? 'প্রশ্নের তথ্য পরিবর্তন করুন' : 'একটি করে প্রশ্ন ও চারটি অপশন যোগ করুন' ?></small></span><span class="tool-state"><?= $editQuestion ? 'খোলা' : 'ফর্ম খুলুন' ?></span></summary>
 <div class="tool-body"><?php if ($editQuestion): ?><div class="panel-head"><span class="panel-note">প্রশ্ন সম্পাদনা মোড</span><a class="btn light small" href="questions.php">সম্পাদনা বাতিল</a></div><?php endif; ?>
-<form method="post" action="questions.php<?= $editQuestion ? '?edit='.(int)$editQuestion['id'] : '' ?>">
+<form method="post" enctype="multipart/form-data" action="questions.php<?= $editQuestion ? '?edit='.(int)$editQuestion['id'] : '' ?>">
 <input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= qfield($editQuestion,'id') ?>">
 <div class="form-grid">
 <div><label>ক্যাটাগরি *</label><input name="category" required maxlength="100" list="category-options" value="<?= qfield($editQuestion,'category') ?>" placeholder="যেমন: Fire Safety, NFPA, BNBC"><datalist id="category-options"><?php foreach($categories as $r): ?><option value="<?= qh((string)$r['category']) ?>"><?php endforeach; ?></datalist></div>
@@ -509,6 +722,7 @@ $token = csrf_token();
 <div><label>Status</label><select name="status"><?php foreach(['published'=>'Published','draft'=>'Draft'] as $v=>$label): ?><option value="<?= $v ?>" <?= (($editQuestion['status']??'published')===$v)?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></div>
 <div><label>Reference / সূত্র</label><input name="reference" maxlength="255" value="<?= qfield($editQuestion,'reference') ?>" placeholder="যেমন: NFPA 13, Section ..."></div>
 <div class="field-full"><label>ব্যাখ্যা (ঐচ্ছিক)</label><textarea name="explanation" placeholder="সঠিক উত্তরটি কেন সঠিক, ব্যাখ্যা লিখুন..."><?= qfield($editQuestion,'explanation') ?></textarea></div>
+<div><label>প্রশ্নের ছবি (ঐচ্ছিক · JPG/PNG/WEBP · সর্বোচ্চ ৫ MB)</label><input type="file" name="question_image" accept="image/jpeg,image/png,image/webp"><?php if(!empty($editQuestion['image_path'])): ?><div class="image-current"><img src="<?= qh((string)$editQuestion['image_path']) ?>" alt="Question image" style="max-width:180px;max-height:120px;object-fit:contain"><small>বর্তমান ছবি · নতুন ছবি দিলে পরিবর্তিত হবে</small></div><?php endif; ?></div>
 </div>
 <div class="form-actions"><button class="btn orange" type="submit"><?= $editQuestion?'পরিবর্তন সংরক্ষণ করুন':'প্রশ্ন যুক্ত করুন' ?></button><?php if($editQuestion): ?><a class="btn light" href="questions.php">বাতিল</a><?php else: ?><button class="btn light" type="reset">ফর্ম পরিষ্কার করুন</button><?php endif; ?></div>
 </form>
@@ -538,7 +752,7 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 ?>
 <div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'DOCX')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
 <div class="table-wrap"><table class="preview-table"><thead><tr><th>#</th><th>প্রশ্ন ও অপশন</th><th>উত্তর</th><th>যাচাই</th></tr></thead><tbody>
-<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php else: ?><span class="good">Ready</span><?php endif; ?></td></tr><?php endforeach; ?>
+<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div>
 <div class="form-actions">
 <?php if($validPreview>0): ?><form method="post" action="questions.php#docx-import" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_import"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
@@ -549,8 +763,11 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 
 <?php if($categories): ?><section class="panel"><div class="panel-head"><h2 class="panel-title">ক্যাটাগরি অনুযায়ী প্রশ্ন</h2><span class="panel-note">প্রতিটি ক্যাটাগরিতে প্রশ্নের সংখ্যা</span></div><div class="category-list"><?php foreach($categories as $r): ?><a class="category-chip" href="<?= qh(question_page_url(1,'',(string)$r['category'],'','','')) ?>"><?= qh((string)$r['category']) ?> <strong><?= number_format((int)$r['question_count']) ?></strong></a><?php endforeach; ?></div></section><?php endif; ?>
 
+<?php if($historyId && $featureSchemaReady): ?><section class="panel"><div class="panel-head"><h2 class="panel-title">প্রশ্ন #<?= (int)$historyId ?> · Revision History</h2><a class="btn light small" href="questions.php">বন্ধ করুন</a></div><?php if(!$historyRows): ?><div class="empty">এই প্রশ্নের কোনো Revision History পাওয়া যায়নি।</div><?php else: foreach($historyRows as $rev): ?><details class="revision-row"><summary><?= qh((string)$rev['event_type']) ?> · <?= qh((string)$rev['changed_by']) ?> · <?= qh((string)$rev['created_at']) ?></summary><div class="revision-grid"><?php if($rev['before_data']): ?><div><b>আগের তথ্য</b><pre><?= qh((string)$rev['before_data']) ?></pre></div><?php endif; ?><?php if($rev['after_data']): ?><div><b>পরের তথ্য</b><pre><?= qh((string)$rev['after_data']) ?></pre></div><?php endif; ?></div></details><?php endforeach; endif; ?></section><?php endif; ?>
+
 <section class="panel">
-<div class="panel-head"><div><h2 class="panel-title">প্রশ্ন ব্যাংক</h2><div class="panel-note">মোট <?= number_format($filteredCount) ?>টি ফলাফল · প্রতি পেজে <?= $perPage ?>টি</div></div></div>
+<div class="panel-head"><div><h2 class="panel-title">প্রশ্ন ব্যাংক <?= $view==='archived'?'· Archive':' ' ?></h2><div class="panel-note">মোট <?= number_format($filteredCount) ?>টি ফলাফল · প্রতি পেজে <?= $perPage ?>টি</div></div></div>
+<?php if($featureSchemaReady): ?><form id="bulk-questions-form" method="post" action="questions.php"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="bulk_action"><div class="bulk-toolbar"><strong>নির্বাচিত প্রশ্নে:</strong><select name="bulk_operation" required><option value="">Action নির্বাচন</option><?php if($view==='active'): ?><option value="publish">Publish</option><option value="draft">Draft</option><option value="archive">Archive</option><?php else: ?><option value="restore">Restore</option><?php endif; ?><option value="delete">Delete</option></select><button class="btn orange small" type="submit" onclick="return confirm('নির্বাচিত প্রশ্নগুলোর উপর Bulk Action চালাবেন?')">Apply</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=true)">সব নির্বাচন</button><button class="btn light small" type="button" onclick="document.querySelectorAll('.question-select').forEach(x=>x.checked=false)">নির্বাচন বাতিল</button></div></form><?php endif; ?>
 <form class="filter-bar" method="get" action="questions.php">
 <input type="search" name="q" value="<?= qh($search) ?>" placeholder="প্রশ্ন/অপশন দিয়ে খুঁজুন">
 <select name="category"><option value="">সব ক্যাটাগরি</option><?php foreach($categories as $r): ?><option value="<?= qh((string)$r['category']) ?>" <?= $selectedCategory===(string)$r['category']?'selected':'' ?>><?= qh((string)$r['category']) ?></option><?php endforeach; ?></select>
@@ -561,9 +778,12 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 </form>
 <?php if(!$questions): ?><div class="empty"><strong>কোনো প্রশ্ন পাওয়া যায়নি।</strong><div>সার্চ বা ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন।</div></div>
 <?php else: foreach($questions as $q): ?>
-<article class="question-item"><div class="question-head"><div><div class="question-id">প্রশ্ন #<?= (int)$q['id'] ?></div><span class="category-pill"><?= qh((string)$q['category']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['difficulty'])) ?></span><span class="meta-pill"><?= qh((string)$q['language']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['status'])) ?></span></div><div class="question-actions"><a class="btn small" href="questions.php?edit=<?= (int)$q['id'] ?>#question-form">সম্পাদনা</a><form class="inline-form" method="post" action="questions.php" onsubmit="return confirm('আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$q['id'] ?>"><button class="btn danger small" type="submit">মুছুন</button></form></div></div><div class="question-title"><?= qh((string)$q['question']) ?></div><div class="answer-line">সঠিক উত্তর: Option <?= qh((string)$q['correct_answer']) ?></div></article>
+<article class="question-item"><div class="question-head"><div><?php if($featureSchemaReady): ?><label class="select-inline"><input class="question-select" type="checkbox" name="selected_ids[]" value="<?= (int)$q['id'] ?>" form="bulk-questions-form"> নির্বাচন</label><?php endif; ?><div class="question-id">প্রশ্ন #<?= (int)$q['id'] ?></div><span class="category-pill"><?= qh((string)$q['category']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['difficulty'])) ?></span><span class="meta-pill"><?= qh((string)$q['language']) ?></span><span class="meta-pill"><?= qh(ucfirst((string)$q['status'])) ?></span><span class="meta-pill">ব্যবহার: <?= (int)$q['usage_count'] ?>টি টেস্ট</span></div><div class="question-actions"><a class="btn small" href="questions.php?edit=<?= (int)$q['id'] ?>#question-form">সম্পাদনা</a><button class="btn light small" type="button" onclick="document.getElementById('preview-<?= (int)$q['id'] ?>').hidden=!document.getElementById('preview-<?= (int)$q['id'] ?>').hidden">Preview</button><a class="btn light small" href="questions.php?history=<?= (int)$q['id'] ?>">History</a>
+<?php if($featureSchemaReady): ?><form class="inline-form" method="post" action="questions.php"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="id" value="<?= (int)$q['id'] ?>"><input type="hidden" name="action" value="<?= $view==='archived'?'restore':'archive' ?>"><button class="btn small" type="submit"><?= $view==='archived'?'Restore':'Archive' ?></button></form><?php endif; ?>
+<form class="inline-form" method="post" action="questions.php" onsubmit="return confirm('আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$q['id'] ?>"><button class="btn danger small" type="submit">মুছুন</button></form></div></div><div class="question-title"><?= qh((string)$q['question']) ?></div><div class="answer-line">সঠিক উত্তর: Option <?= qh((string)$q['correct_answer']) ?></div>
+<div class="question-preview" id="preview-<?= (int)$q['id'] ?>" hidden><?php if(!empty($q['image_path'])): ?><img src="<?= qh((string)$q['image_path']) ?>" alt="Question image" style="max-width:260px;max-height:180px;object-fit:contain"><?php endif; ?><div class="preview-options"><div>A. <?= qh((string)$q['option_a']) ?></div><div>B. <?= qh((string)$q['option_b']) ?></div><div>C. <?= qh((string)$q['option_c']) ?></div><div>D. <?= qh((string)$q['option_d']) ?></div></div><strong>সঠিক উত্তর: <?= qh((string)$q['correct_answer']) ?></strong><?php if(!empty($q['explanation'])): ?><p><b>ব্যাখ্যা:</b> <?= nl2br(qh((string)$q['explanation'])) ?></p><?php endif; ?></div></article>
 <?php endforeach; ?>
-<?php if($totalPages>1): ?><nav class="pagination" aria-label="Question pages"><a class="page-link <?= $page<=1?'disabled':'' ?>" href="<?= qh(question_page_url(max(1,$page-1),$search,$selectedCategory,$difficulty,$language,$status)) ?>">‹ আগের</a><?php $start=max(1,$page-2);$end=min($totalPages,$page+2);for($p=$start;$p<=$end;$p++): ?><a class="page-link <?= $p===$page?'current':'' ?>" href="<?= qh(question_page_url($p,$search,$selectedCategory,$difficulty,$language,$status)) ?>"><?= $p ?></a><?php endfor; ?><a class="page-link <?= $page>=$totalPages?'disabled':'' ?>" href="<?= qh(question_page_url(min($totalPages,$page+1),$search,$selectedCategory,$difficulty,$language,$status)) ?>">পরের ›</a></nav><?php endif; endif; ?>
+<?php if($totalPages>1): ?><nav class="pagination" aria-label="Question pages"><a class="page-link <?= $page<=1?'disabled':'' ?>" href="<?= qh(question_page_url(max(1,$page-1),$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>">‹ আগের</a><?php $start=max(1,$page-2);$end=min($totalPages,$page+2);for($p=$start;$p<=$end;$p++): ?><a class="page-link <?= $p===$page?'current':'' ?>" href="<?= qh(question_page_url($p,$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>"><?= $p ?></a><?php endfor; ?><a class="page-link <?= $page>=$totalPages?'disabled':'' ?>" href="<?= qh(question_page_url(min($totalPages,$page+1),$search,$selectedCategory,$difficulty,$language,$status,$view)) ?>">পরের ›</a></nav><?php endif; endif; ?>
 </section>
 </main></div>
 <script>
