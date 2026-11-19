@@ -325,14 +325,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$id || $id < 1) { $message = 'সঠিক প্রশ্ন আইডি পাওয়া যায়নি।'; $messageType = 'error'; }
         else {
             $st = $pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before = $st->fetch(PDO::FETCH_ASSOC);
-            if ($before && $featureSchemaReady) q_save_revision($pdo, (int)$id, 'deleted', $before, null);
-            $oldImage = null;
-            if ($featureSchemaReady) { $imageStmt=$pdo->prepare('SELECT image_path FROM questions WHERE id=?'); $imageStmt->execute([$id]); $oldImage=$imageStmt->fetchColumn(); }
-            $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
-            $stmt->execute([$id]);
-            if ($stmt->rowCount() && $oldImage) q_delete_local_image((string)$oldImage);
-            $message = $stmt->rowCount() ? 'প্রশ্নটি মুছে ফেলা হয়েছে। Revision History-তে আগের তথ্য সংরক্ষিত আছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
-            $messageType = $stmt->rowCount() ? 'success' : 'warning';
+            $oldImage = $featureSchemaReady ? ($before['image_path'] ?? null) : null;
+            $pdo->beginTransaction();
+            try {
+                if ($before && $featureSchemaReady) q_save_revision($pdo, (int)$id, 'deleted', $before, null);
+                $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
+                $stmt->execute([$id]);
+                $deleted = $stmt->rowCount();
+                $pdo->commit();
+                if ($deleted && $oldImage) q_delete_local_image((string)$oldImage);
+                $message = $deleted ? 'প্রশ্নটি মুছে ফেলা হয়েছে। Revision History-তে আগের তথ্য সংরক্ষিত আছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
+                $messageType = $deleted ? 'success' : 'warning';
+            } catch (Throwable $deleteError) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('Question delete: '.$deleteError->getMessage());
+                $message = 'প্রশ্নটি মুছে ফেলা যায়নি।'; $messageType = 'error';
+            }
         }
     } elseif ($action === 'archive' || $action === 'restore') {
         $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
@@ -451,11 +459,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw $saveError;
                     }
                     if($newImage && $id && !empty($before['image_path'])) q_delete_local_image((string)$before['image_path']);
-                    $near=q_near_duplicates($pdo,$q['question'],$id ?: ($newId ?? null));
-                    if($near){$message.=' কাছাকাছি মিল পাওয়া গেছে: #'.(int)$near[0]['id'].' ('.round($near[0]['score']*100).'%).';$messageType='warning';}
                 } catch(Throwable $e) {
                     if($newImage) q_delete_local_image($newImage);
                     throw $e;
+                }
+                try {
+                    $near=q_near_duplicates($pdo,$q['question'],$id ?: ($newId ?? null));
+                    if($near){$message.=' কাছাকাছি মিল পাওয়া গেছে: #'.(int)$near[0]['id'].' ('.round($near[0]['score']*100).'%).';$messageType='warning';}
+                } catch(Throwable $duplicateCheckError) {
+                    error_log('Question near-duplicate check: '.$duplicateCheckError->getMessage());
                 }
             }
         }
