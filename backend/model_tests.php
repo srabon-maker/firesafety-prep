@@ -245,16 +245,16 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <body>
 <div class="layout">
 <aside class="sidebar">
- <div class="brand"><a href="admin/fire_safety_job_prep_dashboard.php" aria-label="ড্যাশবোর্ডে ফিরুন"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"></a><div><a href="admin/fire_safety_job_prep_dashboard.php"><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></a></div></div>
+ <div class="brand"><a href="fire_safety_job_prep_dashboard.php" aria-label="ড্যাশবোর্ডে ফিরুন"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"></a><div><a href="fire_safety_job_prep_dashboard.php"><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></a></div></div>
  <nav class="nav">
-  <a href="admin/fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
+  <a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
   <a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
   <a class="active" href="model_tests.php" aria-current="page"><span class="ico">☑</span>মডেল টেস্ট</a>
   <a href="notes.php"><span class="ico">◫</span>নোট</a>
   <a href="job_circulars.php"><span class="ico">▣</span>চাকরির সার্কুলার</a>
-  <a href="admin/fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
+  <a href="fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span>মার্কেটপ্লেস</a>
   <a href="category_management.php"><span class="ico">⊞</span>ক্যাটাগরি</a>
-  <a href="admin/fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
+  <a href="fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span>কমিউনিটি</a>
   <a href="logout.php" class="logout"><span class="ico">↪</span>লগ আউট</a>
  </nav>
 </aside>
