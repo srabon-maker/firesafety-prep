@@ -106,10 +106,13 @@ class _ExamRunnerState extends State<_ExamRunner>{
     setState(()=>_submitting=true);_timer?.cancel();
     try{
       await _saveQueue.catchError((_) {});
-      // Re-save the latest selected answers in order before submission. This
-      // prevents a slow earlier autosave request overwriting a newer choice.
-      for(final entry in _answers.entries){
-        await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:entry.key,answer:entry.value);
+      // While time remains, flush the latest selected answers in order.
+      // Once the server deadline has passed, answer writes are correctly
+      // rejected; submit the answers already saved before expiry instead.
+      if(_remaining>0){
+        for(final entry in _answers.entries){
+          await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:entry.key,answer:entry.value);
+        }
       }
       final response=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
       if(!mounted)return;
@@ -118,7 +121,7 @@ class _ExamRunnerState extends State<_ExamRunner>{
       }else{
         await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const _ResultPending()));
       }
-    }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));if(auto)_timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted)return;if(_remaining>0)setState(()=>_remaining--);});}}
+    }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));if(auto)_timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted||_submitting)return;if(_remaining<=1){_remaining=0;_finish(auto:true);}else{setState(()=>_remaining--);}});}}
   }
   @override
   Widget build(BuildContext context){
