@@ -282,19 +282,19 @@ function q_similarity(string $a, string $b): float {
     $intersection = count(array_intersect($tokensA, $tokensB));
     return $intersection / max(1, count(array_unique(array_merge($tokensA, $tokensB))));
 }
-function q_near_duplicates(PDO $pdo, string $question, ?int $excludeId = null, int $limit = 5): array {
-    $sql = 'SELECT id,category,question FROM questions WHERE 1=1';
-    $args = [];
-    if ($excludeId) { $sql .= ' AND id<>?'; $args[] = $excludeId; }
-    $sql .= ' ORDER BY id DESC LIMIT 3000';
-    $st = $pdo->prepare($sql); $st->execute($args);
+function q_similar_from_rows(array $rows, string $question, ?int $excludeId = null, int $limit = 3): array {
     $matches = [];
-    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    foreach ($rows as $row) {
+        if ($excludeId && (int)$row['id'] === $excludeId) continue;
         $score = q_similarity($question, (string)$row['question']);
         if ($score >= 0.72) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
     }
     usort($matches, static fn($a,$b) => $b['score'] <=> $a['score']);
     return array_slice($matches, 0, $limit);
+}
+function q_near_duplicates(PDO $pdo, string $question, ?int $excludeId = null, int $limit = 5): array {
+    $rows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
+    return q_similar_from_rows($rows, $question, $excludeId, $limit);
 }
 
 function existing_question_map(PDO $pdo): array {
@@ -456,6 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parsed = parse_docx_questions($content, $defaultCategory);
             if (!$parsed) throw new RuntimeException('ফাইল থেকে কোনো প্রশ্ন শনাক্ত করা যায়নি। DOCX-এর লেবেল/ফরম্যাট পরীক্ষা করুন।');
             $existing = existing_question_map($pdo);
+            $existingRows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
             $seen = [];
             $valid = 0;
             foreach ($parsed as $i => &$row) {
@@ -464,6 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($key !== '' && isset($existing[$key])) $row['_duplicate'] = 'ডেটাবেজে ID ' . $existing[$key] . ' নম্বরে আছে';
                 elseif ($key !== '' && isset($seen[$key])) $row['_duplicate'] = 'এই ফাইলের প্রশ্ন #' . $seen[$key] . '-এর সঙ্গে ডুপ্লিকেট';
                 else $row['_duplicate'] = '';
+                $row['_similar'] = q_similar_from_rows($existingRows, (string)$row['question'], null, 1);
                 if (!$row['_errors'] && $row['_duplicate'] === '') $valid++;
                 $seen[$key] = $i + 1;
             }
@@ -488,6 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parsed = parse_docx_questions(['paragraphs'=>$lines,'tables'=>[]], $defaultCategory);
             if (!$parsed) throw new RuntimeException('কোনো প্রশ্ন শনাক্ত হয়নি। নমুনা ফরম্যাট অনুসরণ করুন।');
             $existing = existing_question_map($pdo);
+            $existingRows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
             $seen = []; $valid = 0;
             foreach ($parsed as $i => &$row) {
                 $row['_errors'] = validate_import_question($row);
@@ -495,6 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($key !== '' && isset($existing[$key])) $row['_duplicate'] = 'ডেটাবেজে ID ' . $existing[$key] . ' নম্বরে আছে';
                 elseif ($key !== '' && isset($seen[$key])) $row['_duplicate'] = 'এই পেস্টের প্রশ্ন #' . $seen[$key] . '-এর সঙ্গে ডুপ্লিকেট';
                 else $row['_duplicate'] = '';
+                $row['_similar'] = q_similar_from_rows($existingRows, (string)$row['question'], null, 1);
                 if (!$row['_errors'] && $row['_duplicate'] === '') $valid++;
                 if ($key !== '') $seen[$key] = $i + 1;
             }
@@ -716,7 +720,7 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 ?>
 <div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'DOCX')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
 <div class="table-wrap"><table class="preview-table"><thead><tr><th>#</th><th>প্রশ্ন ও অপশন</th><th>উত্তর</th><th>যাচাই</th></tr></thead><tbody>
-<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php else: ?><span class="good">Ready</span><?php endif; ?></td></tr><?php endforeach; ?>
+<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div>
 <div class="form-actions">
 <?php if($validPreview>0): ?><form method="post" action="questions.php#docx-import" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_import"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
