@@ -640,35 +640,51 @@ textarea {
     color: #777;
     font-size: 12px;
 }
+.form-grid > .form-group {
+    min-width: 0;
+}
 .notes-editor {
-    display: flex;
-    flex-direction: column;
-    min-height: 320px;
+    display: block;
+    width: 100%;
+    height: 360px;
+    min-height: 0;
+    box-sizing: border-box;
     background: #fff;
     border: 1px solid #e7ded9;
     border-radius: 8px;
     overflow: hidden;
 }
 .notes-editor .ql-toolbar.ql-snow {
-    flex: 0 0 auto;
+    box-sizing: border-box;
     border: 0;
     border-bottom: 1px solid #eee4df;
 }
 .notes-editor .ql-container.ql-snow {
-    flex: 1 1 auto;
-    height: auto;
-    min-height: 280px;
+    box-sizing: border-box;
+    height: calc(100% - 42px);
+    min-height: 0;
     border: 0;
 }
 .notes-editor .ql-editor {
-    min-height: 280px;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
     font-size: 15px;
     line-height: 1.7;
 }
+.form-group.full > .editor-help {
+    position: static;
+    display: block;
+    clear: both;
+    height: auto;
+    min-height: 0;
+    margin: 9px 0 0;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
 @media (max-width: 600px) {
-    .notes-editor { min-height: 300px; }
-    .notes-editor .ql-container.ql-snow,
-    .notes-editor .ql-editor { min-height: 260px; }
+    .notes-editor { height: 340px; }
 }
 .preview-button {
     border: 1px solid #f1ddd6;
