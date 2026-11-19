@@ -366,6 +366,16 @@ class _ResultPending extends StatelessWidget{
   );
 }
 
+Widget _resultMetric(String label, String value) => Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(value, style: const TextStyle(
+      color: _maroon, fontSize: 20, fontWeight: FontWeight.bold,
+    )),
+    Text(label, style: const TextStyle(fontSize: 11)),
+  ],
+);
+
 class _MyTestResultsPage extends StatefulWidget{
   const _MyTestResultsPage();
   @override
@@ -385,7 +395,39 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
         if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('ফলাফল লোড করা যায়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
         final rows=snapshot.data??[];
         if(rows.isEmpty)return ListView(children:[const SizedBox(height:110),const Center(child:Icon(Icons.assignment_outlined,size:56,color:_maroon)),const Center(child:Text('এখনো কোনো প্রকাশিত ফলাফল নেই।'))]);
+        final totalAttempts = rows.length;
+        final passedAttempts = rows.where((r) => r['passed'] == true || r['passed'] == 1).length;
+        final validScores = rows.where((r) => ((r['total_marks'] as num?)?.toDouble() ?? 0) > 0).toList();
+        final average = validScores.isEmpty ? 0.0 : validScores
+            .map((r) => ((r['score'] as num?)?.toDouble() ?? 0) /
+                (r['total_marks'] as num).toDouble() * 100)
+            .reduce((a, b) => a + b) / validScores.length;
         return ListView(padding:const EdgeInsets.all(16),children:[
+          Card(
+            color: const Color(0xFFFFF5F3),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('আপনার প্রস্তুতির সারাংশ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _resultMetric('মোট পরীক্ষা', '$totalAttempts')),
+                      Expanded(child: _resultMetric('পাস', '$passedAttempts')),
+                      Expanded(child: _resultMetric('গড় স্কোর', '${average.toStringAsFixed(1)}%')),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('প্রকাশিত ফলাফলের ভিত্তিতে হিসাব করা হয়েছে।',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           for(final r in rows)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(r['title']?.toString()??'মডেল টেস্ট',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
             const SizedBox(height:8),
