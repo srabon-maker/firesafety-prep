@@ -635,6 +635,60 @@ textarea {
     color: #777;
     font-size: 12px;
 }
+.preview-button {
+    border: 1px solid #f1ddd6;
+    background: #fff8f5;
+    color: #791623;
+    border-radius: 10px;
+    padding: 8px 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.note-preview-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(35, 12, 16, .65);
+}
+.note-preview-backdrop.open { display: flex; }
+.note-preview-dialog {
+    width: min(900px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.note-preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid #f1ddd6;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+}
+.note-preview-header h2 { margin: 0; color: #510d18; }
+.note-preview-close {
+    border: 0;
+    border-radius: 10px;
+    background: #f1e5e7;
+    color: #510d18;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 800;
+}
+.note-preview-summary { color: #806d6d; margin-bottom: 18px; line-height: 1.6; }
+.note-preview-content { line-height: 1.75; overflow-wrap: anywhere; }
+.note-preview-content img { max-width: 100%; height: auto; border-radius: 8px; }
+.note-preview-content table { width: 100%; min-width: 0; border-collapse: collapse; }
+.note-preview-content th, .note-preview-content td { border: 1px solid #e7d7d2; padding: 8px; }
+@media(max-width:600px) { .note-preview-dialog { padding: 16px; } }
 
 input:focus,
 select:focus,
@@ -1159,6 +1213,13 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
                                 </td>
 
                                 <td>
+                                    <button
+                                        type="button"
+                                        class="preview-button"
+                                        data-title="<?= nh($note['title']) ?>"
+                                        data-summary="<?= nh($note['summary'] ?? '') ?>"
+                                        data-content="<?= nh(base64_encode(notesSanitizeHtml((string)($note['content'] ?? '')))) ?>"
+                                    >Preview</button>
                                     <a
                                         href="notes.php?edit=<?= (int)$note['id'] ?>"
                                         class="edit-link"
@@ -1196,6 +1257,17 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 <div class="notes-pagination"><span>মোট <?= (int)$totalFilteredNotes ?>টি নোট · পৃষ্ঠা <?= (int)$currentPage ?> / <?= (int)$totalPages ?></span><div class="notes-page-actions"><?php $pageQuery=$_GET; $pageQuery['page']=max(1,$currentPage-1); ?><?php if($currentPage>1): ?><a href="notes.php?<?= nh(http_build_query($pageQuery)) ?>">← আগের</a><?php else: ?><span class="disabled">← আগের</span><?php endif; ?><?php $pageQuery['page']=min($totalPages,$currentPage+1); ?><?php if($currentPage<$totalPages): ?><a href="notes.php?<?= nh(http_build_query($pageQuery)) ?>">পরের →</a><?php else: ?><span class="disabled">পরের →</span><?php endif; ?></div></div>
 </section>
 </main>
+</div>
+
+<div class="note-preview-backdrop" id="notePreviewModal" role="dialog" aria-modal="true" aria-labelledby="notePreviewTitle">
+    <div class="note-preview-dialog">
+        <div class="note-preview-header">
+            <h2 id="notePreviewTitle">Note Preview</h2>
+            <button type="button" class="note-preview-close" id="notePreviewClose">Close ✕</button>
+        </div>
+        <div class="note-preview-summary" id="notePreviewSummary"></div>
+        <div class="note-preview-content" id="notePreviewContent"></div>
+    </div>
 </div>
 
 <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
@@ -1240,75 +1312,47 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
 <script>
 (function () {
-    const editorElement = document.getElementById('notes-editor');
-    const contentField = document.getElementById('notes-content');
-    const form = editorElement ? editorElement.closest('form') : null;
-    if (!editorElement || !contentField || !form || typeof Quill === 'undefined') return;
+    const modal = document.getElementById('notePreviewModal');
+    const title = document.getElementById('notePreviewTitle');
+    const summary = document.getElementById('notePreviewSummary');
+    const content = document.getElementById('notePreviewContent');
+    const close = document.getElementById('notePreviewClose');
+    if (!modal || !title || !summary || !content || !close) return;
 
-    const quill = new Quill(editorElement, {
-        theme: 'snow',
-        placeholder: 'Write the complete note content here...',
-        modules: {
-            toolbar: {
-                container: [
-                    [{ header: [1, 2, 3, 4, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ color: [] }, { background: [] }],
-                    [{ list: 'ordered' }, { list: 'bullet' }],
-                    [{ align: [] }],
-                    ['blockquote', 'code-block'],
-                    ['link', 'image', 'table'],
-                    ['clean']
-                ],
-                handlers: {
-                    image: function () {
-                        const picker = document.createElement('input');
-                        picker.type = 'file';
-                        picker.accept = 'image/jpeg,image/png,image/webp,image/gif';
-                        picker.click();
-                        picker.onchange = async function () {
-                            if (!picker.files || !picker.files[0]) return;
-                            const data = new FormData();
-                            data.append('action', 'upload_inline_image');
-                            data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
-                            data.append('inline_image', picker.files[0]);
-                            try {
-                                const response = await fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' });
-                                const result = await response.json();
-                                if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
-                                const range = quill.getSelection(true);
-                                quill.insertEmbed(range.index, 'image', result.url, 'user');
-                                quill.setSelection(range.index + 1);
-                            } catch (error) {
-                                alert(error.message || 'Image upload failed.');
-                            }
-                        };
-                    },
-                    table: function () {
-                        const rows = parseInt(prompt('Number of table rows (1–10):', '3'), 10);
-                        const cols = parseInt(prompt('Number of table columns (1–8):', '3'), 10);
-                        if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || rows > 10 || cols < 1 || cols > 8) return;
-                        let html = '<table><tbody>';
-                        for (let r = 0; r < rows; r++) {
-                            html += '<tr>';
-                            for (let col = 0; col < cols; col++) html += '<td><p><br></p></td>';
-                            html += '</tr>';
-                        }
-                        html += '</tbody></table><p><br></p>';
-                        const range = quill.getSelection(true);
-                        quill.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
-                    }
-                }
+    function closePreview() {
+        modal.classList.remove('open');
+        content.innerHTML = '';
+    }
+
+    document.querySelectorAll('.preview-button').forEach(function (button) {
+        button.addEventListener('click', function () {
+            title.textContent = button.dataset.title || 'Untitled note';
+            summary.textContent = button.dataset.summary || '';
+            try {
+                const binary = atob(button.dataset.content || '');
+                const bytes = Uint8Array.from(binary, function (char) { return char.charCodeAt(0); });
+                const html = new TextDecoder('utf-8').decode(bytes);
+                content.innerHTML = html;
+            } catch (error) {
+                content.textContent = 'Preview could not be loaded.';
             }
-        }
+            modal.classList.add('open');
+            close.focus();
+        });
     });
 
-    form.addEventListener('submit', function () {
-        contentField.value = quill.root.innerHTML;
+    close.addEventListener('click', closePreview);
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) closePreview();
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modal.classList.contains('open')) closePreview();
     });
 })();
 </script>
 </body>
+</html></body>
 </html>
