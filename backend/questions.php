@@ -414,12 +414,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $newImage = q_upload_image($_FILES['question_image'] ?? null);
                     $imagePath = $newImage ?: (string)($before['image_path'] ?? '');
+                    $pdo->beginTransaction();
+                    try {
                     if ($id) {
                         $stmt = $pdo->prepare('UPDATE questions SET category=?,question=?,option_a=?,option_b=?,option_c=?,option_d=?,correct_answer=?,explanation=?,difficulty=?,language=?,reference=?,status=?,image_path=? WHERE id=?');
                         $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status'],$imagePath ?: null,$id]);
                         $after=$q; $after['id']=$id; $after['image_path']=$imagePath ?: null; $after['is_archived']=(int)($before['is_archived']??0);
                         q_save_revision($pdo,$id,'updated',$before,$after);
-                        if($newImage && !empty($before['image_path'])) q_delete_local_image((string)$before['image_path']);
                         $message = 'প্রশ্নটি আপডেট করা হয়েছে।';
                     } else {
                         $stmt = $pdo->prepare('INSERT INTO questions (category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty,language,reference,status,image_path,is_archived) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)');
@@ -428,7 +429,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         q_save_revision($pdo,$newId,'created',null,$after);
                         $message = 'নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
                     }
-                    $near=q_near_duplicates($pdo,$q['question'],$id);
+                    $pdo->commit();
+                    } catch (Throwable $saveError) {
+                        if ($pdo->inTransaction()) $pdo->rollBack();
+                        throw $saveError;
+                    }
+                    if($newImage && $id && !empty($before['image_path'])) q_delete_local_image((string)$before['image_path']);
+                    $near=q_near_duplicates($pdo,$q['question'],$id ?: ($newId ?? null));
                     if($near){$message.=' কাছাকাছি মিল পাওয়া গেছে: #'.(int)$near[0]['id'].' ('.round($near[0]['score']*100).'%).';$messageType='warning';}
                 } catch(Throwable $e) {
                     if($newImage) q_delete_local_image($newImage);
