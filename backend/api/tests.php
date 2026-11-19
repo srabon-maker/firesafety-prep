@@ -75,8 +75,8 @@ try {
     if($action==='start'){
         $existing=$pdo->prepare("SELECT id FROM model_test_attempts WHERE test_id=? AND user_id=? AND status='in_progress' ORDER BY id DESC LIMIT 1");
         $existing->execute([$testId,$userId]);$attemptId=(int)($existing->fetchColumn()?:0);
-        $test=exam_test($pdo,$testId);
         if(!$attemptId){
+            $test=exam_test($pdo,$testId);
             $pdo->beginTransaction();
             $policyLock=$pdo->prepare('SELECT max_attempts FROM model_tests WHERE id=? FOR UPDATE');
             $policyLock->execute([$testId]);
