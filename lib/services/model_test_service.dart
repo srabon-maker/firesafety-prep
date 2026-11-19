@@ -43,6 +43,9 @@ class ModelTestService {
   }
   Future<Map<String,dynamic>> submit({required int attemptId,required int testId}) async =>
       _request('submit',body:{'test_id':testId,'attempt_id':attemptId},auth:true);
+  Future<Map<String,dynamic>> getResult(int attemptId) async =>
+      Map<String,dynamic>.from((await _request('result&attempt_id=$attemptId',auth:true))['result'] as Map);
+
   Future<List<Map<String,dynamic>>> myResults() async {
     final data=await _request('my_results',auth:true);
     return (data['data'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
