@@ -641,22 +641,34 @@ textarea {
     font-size: 12px;
 }
 .notes-editor {
-    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
     background: #fff;
     border: 1px solid #e7ded9;
     border-radius: 8px;
+    overflow: hidden;
+}
+.notes-editor .ql-toolbar.ql-snow {
+    flex: 0 0 auto;
+    border: 0;
+    border-bottom: 1px solid #eee4df;
+}
+.notes-editor .ql-container.ql-snow {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 280px;
+    border: 0;
 }
 .notes-editor .ql-editor {
     min-height: 280px;
     font-size: 15px;
     line-height: 1.7;
 }
-.notes-editor .ql-toolbar.ql-snow {
-    border: 0;
-    border-bottom: 1px solid #eee4df;
-}
-.notes-editor .ql-container.ql-snow {
-    border: 0;
+@media (max-width: 600px) {
+    .notes-editor { min-height: 300px; }
+    .notes-editor .ql-container.ql-snow,
+    .notes-editor .ql-editor { min-height: 260px; }
 }
 .preview-button {
     border: 1px solid #f1ddd6;
