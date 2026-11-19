@@ -316,14 +316,16 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 .nav-title{display:none}.nav{display:grid;gap:5px}.nav a{display:flex;align-items:center;gap:13px;color:#f4dfe0;text-decoration:none;padding:13px 15px;margin:0;border-radius:14px;font-size:16px}.nav a:hover{background:#ffffff12}.nav a.active{background:var(--orange);color:#29170b;font-weight:800}.nav .ico{width:22px;text-align:center;font-size:20px}
 .main{margin:0;width:auto;flex:1;min-width:0;padding:32px}.top{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.top h1{font-size:32px;font-weight:900;margin:0 0 8px;color:var(--maroon)}.top p{margin:0;color:var(--muted);font-size:16px}.btn{border:0;border-radius:8px;padding:10px 15px;background:var(--orange);color:#fff;font-weight:700;text-decoration:none;cursor:pointer;display:inline-block}.btn.secondary{background:#f1e5e7;color:var(--maroon)}.btn.danger{background:#b42335}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 5px 20px #450b1507}.stat{padding:22px 20px;min-height:118px}.stat span{font-size:14px;color:var(--muted)}.stat strong{display:block;font-size:30px;color:var(--maroon);margin-top:9px;font-weight:900}.panel{padding:25px;margin-bottom:22px;border-radius:18px}.panel h2{font-size:21px;margin:0 0 19px;color:var(--maroon);font-weight:900}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dfe1e7;border-radius:8px;padding:10px 11px;font:inherit;background:#fff}.field textarea{min-height:75px;resize:vertical}.field.full{grid-column:1/-1}.hint{font-size:12px;color:var(--muted);margin-top:5px}.radio-row{display:flex;gap:18px;flex-wrap:wrap;padding:9px 0}.question-box{border:1px solid var(--line);border-radius:9px;padding:12px;margin:9px 0;display:flex;gap:10px;align-items:flex-start}.question-box input{margin-top:4px}.question-box small{display:block;color:var(--muted);margin-top:4px}.question-box{position:relative;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}.question-box:hover{border-color:var(--maroon);background:#fffaf9}.question-box.is-selected{border:2px solid var(--maroon);background:#fff5f3;box-shadow:0 0 0 2px rgba(128,28,45,.08)}.question-box:has(input[type="checkbox"]:checked){border:2px solid var(--maroon);background:#fff5f3;box-shadow:0 0 0 2px rgba(128,28,45,.08)}.question-select-label{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;cursor:pointer}.question-box input[type="checkbox"]{width:23px;height:23px;min-width:23px;accent-color:var(--maroon);cursor:pointer;margin:2px 5px 0 1px}.question-content{flex:1;min-width:0;cursor:pointer;line-height:1.55}.question-actions{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}.question-actions button{border:1px solid var(--line);background:#fff;color:var(--maroon);border-radius:7px;padding:5px 8px;cursor:pointer}.question-actions button:disabled{opacity:.35;cursor:not-allowed}.question-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(170px,220px) auto;gap:9px;align-items:center}.question-toolbar input,.question-toolbar select{min-width:0;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;font:inherit}.selection-summary{font-weight:800;color:var(--maroon);white-space:nowrap}.question-empty{padding:16px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);display:none}.preview-modal{position:fixed;inset:0;background:#1b0b0dcc;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px}.preview-card{width:min(680px,100%);max-height:85vh;overflow:auto;background:#fff;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0005}.preview-card h3{margin:0 0 12px;color:var(--maroon)}.preview-options{display:grid;gap:8px;margin-top:12px}.preview-option{padding:10px;border:1px solid var(--line);border-radius:8px}.preview-close{float:right}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:10px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}th{background:#faf7f8;color:var(--maroon)}.pill{padding:4px 9px;border-radius:20px;font-size:11px;background:#f2e6e8;color:var(--maroon)}.pill.live{background:#e4f5ed;color:#08764b}.alert{padding:12px 15px;border-radius:8px;margin:0 0 16px}.success{background:#e7f7ef;color:#116b47}.error{background:#fff0f0;color:#9d1c2c}.section{scroll-margin-top:18px}.mobile-head{display:none}
 @media(max-width:1100px){.sidebar{width:250px;flex-basis:250px}.main{padding:26px 22px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:700px){.layout{display:block}.sidebar{position:relative;width:100%;height:auto;min-height:0;padding:14px 12px}.brand{padding:4px 7px 14px}.brand img{width:48px;height:48px}.brand strong{font-size:17px}.brand small{font-size:12px}.nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.nav a{font-size:13px;padding:10px}.nav .ico{font-size:17px}.main{padding:20px 14px 35px}.top{align-items:flex-start}.top h1{font-size:24px}.top .btn{white-space:nowrap}.cards{gap:10px}.stat{padding:15px;min-height:95px}.stat strong{font-size:24px}.panel{padding:17px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+.mobile-menu-toggle{display:none;border:1px solid #ffffff70;border-radius:9px;background:#ffffff12;color:#fff;padding:10px 13px;font:inherit;font-weight:700;cursor:pointer}
+@media(max-width:700px){.layout{display:block;width:100%;max-width:100%;overflow-x:hidden}.sidebar{position:relative;width:100%;max-width:100%;height:auto;min-height:0;padding:12px;overflow:visible}.brand{padding:4px 7px 10px}.brand img{width:48px;height:48px}.brand strong{font-size:17px}.brand small{font-size:12px}.mobile-menu-toggle{display:block;width:100%;text-align:left;margin:4px 0 0}.nav{display:none;grid-template-columns:1fr;gap:5px;margin-top:8px}.sidebar.menu-open .nav{display:grid}.nav a{font-size:14px;padding:11px}.nav .ico{font-size:17px}.main{display:block;width:100%;max-width:100%;min-width:0;padding:18px 12px 32px;overflow-x:hidden}.top{align-items:flex-start;gap:10px}.top h1{font-size:23px}.top .btn{white-space:normal;font-size:13px;padding:9px 11px}.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{padding:14px;min-height:90px;min-width:0}.stat strong{font-size:23px}.panel{padding:14px;min-width:0}.grid{grid-template-columns:minmax(0,1fr)}.field.full{grid-column:auto}.question-toolbar{grid-template-columns:minmax(0,1fr);}.toolbar .btn{flex:1;min-width:0}.question-box{min-width:0}.question-actions{flex-shrink:0}.selection-summary{white-space:normal}}
 </style>
 </head>
 <body>
 <div class="layout">
-<aside class="sidebar">
+<aside class="sidebar" id="modelTestSidebar">
  <div class="brand"><a href="index.php" aria-label="ড্যাশবোর্ডে ফিরুন"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"></a><div><a href="index.php"><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></a></div></div>
- <nav class="nav">
+ <button type="button" class="mobile-menu-toggle" id="modelTestMenuToggle" aria-expanded="false" aria-controls="modelTestNav">☰ মেনু</button>
+ <nav class="nav" id="modelTestNav">
   <a href="index.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
   <a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
   <a class="active" href="model_tests.php" aria-current="page"><span class="ico">☑</span>মডেল টেস্ট</a>
@@ -460,45 +462,69 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <script>
 (function () {
   'use strict';
-  function bindModelTestSelectionFallback() {
+  function initModelTestAdminUI() {
+    var sidebar = document.getElementById('modelTestSidebar');
+    var menuButton = document.getElementById('modelTestMenuToggle');
+    var nav = document.getElementById('modelTestNav');
+    if (menuButton && sidebar && !menuButton.dataset.bound) {
+      menuButton.dataset.bound = '1';
+      menuButton.onclick = function () {
+        var open = sidebar.classList.toggle('menu-open');
+        menuButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+    }
+
     var list = document.getElementById('questionList');
-    if (!list || list.dataset.inlineSelectionReady === '1') return;
-    list.dataset.inlineSelectionReady = '1';
+    if (!list || list.dataset.selectionInlineBound === '1') return;
+    list.dataset.selectionInlineBound = '1';
     var count = document.getElementById('selectedQuestionCount');
     var selectAll = document.getElementById('selectVisibleQuestions');
     var clearAll = document.getElementById('clearVisibleQuestions');
-    function rows() { return Array.prototype.slice.call(list.querySelectorAll('.question-box')); }
-    function checkbox(row) { return row.querySelector('input[name="question_ids[]"][type="checkbox"]'); }
+
+    function checkboxes() {
+      return Array.prototype.slice.call(list.querySelectorAll('input[type="checkbox"][name="question_ids[]"]'));
+    }
     function sync() {
       var selected = 0;
-      rows().forEach(function (row) {
-        var input = checkbox(row);
-        var checked = !!(input && input.checked);
-        row.classList.toggle('is-selected', checked);
-        row.setAttribute('aria-selected', checked ? 'true' : 'false');
+      checkboxes().forEach(function (input) {
+        var row = input.closest('.question-box');
+        var checked = input.checked === true;
         if (checked) selected++;
+        if (row) {
+          row.classList.toggle('is-selected', checked);
+          row.setAttribute('aria-selected', checked ? 'true' : 'false');
+        }
       });
       if (count) count.textContent = 'নির্বাচিত: ' + selected;
+      return selected;
     }
-    if (selectAll) selectAll.addEventListener('click', function (event) {
-      event.preventDefault();
-      rows().forEach(function (row) { var input = checkbox(row); if (input) input.checked = true; });
-      sync();
-    });
-    if (clearAll) clearAll.addEventListener('click', function (event) {
-      event.preventDefault();
-      rows().forEach(function (row) { var input = checkbox(row); if (input) input.checked = false; });
-      sync();
-    });
-    list.addEventListener('change', function (event) {
-      if (event.target && event.target.matches('input[name="question_ids[]"][type="checkbox"]')) sync();
+
+    if (selectAll) {
+      selectAll.onclick = function (event) {
+        event.preventDefault();
+        checkboxes().forEach(function (input) { input.checked = true; });
+        sync();
+        return false;
+      };
+    }
+    if (clearAll) {
+      clearAll.onclick = function (event) {
+        event.preventDefault();
+        checkboxes().forEach(function (input) { input.checked = false; });
+        sync();
+        return false;
+      };
+    }
+    checkboxes().forEach(function (input) {
+      input.onchange = sync;
     });
     sync();
   }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindModelTestSelectionFallback);
+    document.addEventListener('DOMContentLoaded', initModelTestAdminUI, { once: true });
   } else {
-    bindModelTestSelectionFallback();
+    initModelTestAdminUI();
   }
 })();
 </script>
