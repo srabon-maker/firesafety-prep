@@ -68,6 +68,7 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   void _onSearchChanged(String value) {
+    setState(() {});
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 450), () {
       _page = 1;
@@ -485,6 +486,58 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     data: note.content!,
                     onLinkTap: (url, attributes, element) {
                       if (url != null) _openFile(url);
+                    },
+                    style: {
+                      'body': Style(
+                        margin: Margins.zero,
+                        padding: HtmlPaddings.zero,
+                        fontSize: FontSize(16),
+                        lineHeight: const LineHeight(1.7),
+                      ),
+                      'p': Style(margin: Margins.only(bottom: 12)),
+                      'h1': Style(
+                        fontSize: FontSize(24),
+                        fontWeight: FontWeight.w800,
+                        color: notesMaroon,
+                      ),
+                      'h2': Style(
+                        fontSize: FontSize(21),
+                        fontWeight: FontWeight.w800,
+                        color: notesMaroon,
+                      ),
+                      'h3': Style(
+                        fontSize: FontSize(18),
+                        fontWeight: FontWeight.w700,
+                      ),
+                      'img': Style(
+                        width: Width(100, Unit.percent),
+                        alignment: Alignment.center,
+                      ),
+                      'table': Style(
+                        width: Width(100, Unit.percent),
+                        border: Border.all(color: const Color(0xFFD8DDE5)),
+                      ),
+                      'th': Style(
+                        backgroundColor: const Color(0xFFFFE8E8),
+                        padding: HtmlPaddings.all(8),
+                        fontWeight: FontWeight.w700,
+                        border: Border.all(color: const Color(0xFFD8DDE5)),
+                      ),
+                      'td': Style(
+                        padding: HtmlPaddings.all(8),
+                        border: Border.all(color: const Color(0xFFD8DDE5)),
+                      ),
+                      'blockquote': Style(
+                        backgroundColor: const Color(0xFFFFF5F3),
+                        padding: HtmlPaddings.only(left: 12, top: 8, bottom: 8),
+                        border: Border(
+                          left: BorderSide(color: notesMaroon, width: 3),
+                        ),
+                      ),
+                      'a': Style(
+                        color: notesMaroon,
+                        textDecoration: TextDecoration.underline,
+                      ),
                     },
                   ),
                 ],
