@@ -1,159 +1,161 @@
-
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/auth_guard.dart';
+import '../services/model_test_service.dart';
 
-const Color maroon = Color(0xFF650D18);
-const Color deepMaroon = Color(0xFF36060D);
-const Color red = Color(0xFFE32636);
-const Color ink = Color(0xFF27191B);
+const Color _maroon = Color(0xFF650D18);
+const Color _deepMaroon = Color(0xFF36060D);
 
-class TestsPage extends StatelessWidget {
+class TestsPage extends StatefulWidget {
   const TestsPage({super.key});
-
-  final tests = const [
-    (
-      'ফায়ার সেফটি (সেট ০১)',
-      '৫০টি প্রশ্ন • ৪৫ মিনিট',
-      Icons.local_fire_department,
-      red
-    ),
-    (
-      'সেইফটি (সেট ০২)',
-      '৫০টি প্রশ্ন • ৪৫ মিনিট',
-      Icons.health_and_safety,
-      Colors.green
-    ),
-    (
-      'কমপ্লায়েন্স (সেট ০১)',
-      '৪০টি প্রশ্ন • ৩০ মিনিট',
-      Icons.verified_user,
-      Colors.deepPurple
-    ),
-    (
-      'টেকনিক্যাল (সেট ০১)',
-      '৫০টি প্রশ্ন • ৬০ মিনিট',
-      Icons.settings,
-      Colors.blue
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('মডেল টেস্ট'),
-          actions: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.search),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.tune),
-            ),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(14),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [deepMaroon, maroon],
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.track_changes,
-                    color: Colors.orangeAccent,
-                    size: 36,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'নিজেকে যাচাই করুন',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    'নিয়মিত মডেল টেস্ট দিয়ে প্রস্তুতি আরও মজবুত করুন।',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            for (final t in tests)
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 25,
-                      backgroundColor:
-                          (t.$4 as Color).withOpacity(.12),
-                      child: Icon(
-                        t.$3,
-                        color: t.$4 as Color,
-                        size: 27,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            t.$1,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            t.$2,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FilledButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'টেস্ট প্রশ্ন যুক্ত করলে এখানে পরীক্ষা শুরু হবে।',
-                            ),
-                          ),
-                        );
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: maroon,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('শুরু করুন'),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      );
+  State<TestsPage> createState() => _TestsPageState();
+}
+
+class _TestsPageState extends State<TestsPage> {
+  late Future<List<Map<String,dynamic>>> _tests;
+  @override
+  void initState(){super.initState();_tests=ModelTestService.instance.listTests();}
+  Future<void> _refresh() async {final next=ModelTestService.instance.listTests();setState(()=>_tests=next);await next;}
+  Future<void> _start(Map<String,dynamic> test) async {
+    if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
+    try {
+      final attempt=await ModelTestService.instance.start((test['id'] as num).toInt());
+      if(!mounted)return;
+      await Navigator.push(context,MaterialPageRoute(builder:(_)=>_ExamRunner(attempt:attempt)));
+      if(mounted) _refresh();
+    } catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
+  }
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))]),
+    body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
+      future:_tests,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+        if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('পরীক্ষার তালিকা লোড হয়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
+        final tests=snapshot.data??[];
+        if(tests.isEmpty)return ListView(children:[const SizedBox(height:100),Center(child:Icon(Icons.assignment_outlined,size:54,color:_maroon)),const Center(child:Text('এখন কোনো প্রকাশিত পরীক্ষা নেই।'))]);
+        return ListView(padding:const EdgeInsets.all(16),children:[
+          Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_deepMaroon,_maroon]),borderRadius:BorderRadius.circular(20)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.track_changes,color:Colors.orangeAccent,size:34),SizedBox(height:10),Text('নিজেকে যাচাই করুন',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.bold)),SizedBox(height:5),Text('প্রকাশিত পরীক্ষা নির্বাচন করে প্রস্তুতি যাচাই করুন।',style:TextStyle(color:Colors.white70))])),
+          const SizedBox(height:16),
+          for(final t in tests) Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
+            if((t['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(t['description'].toString())),
+            const SizedBox(height:10),Wrap(spacing:14,runSpacing:8,children:[
+              _meta(Icons.help_outline,'${t['question_count']} প্রশ্ন'),
+              _meta(Icons.timer_outlined,'${t['duration_minutes']} মিনিট'),
+              _meta(Icons.grade_outlined,'${t['total_marks']} নম্বর'),
+              if(t['pass_marks']!=null)_meta(Icons.flag_outlined,'পাস ${t['pass_marks']}'),
+            ]),
+            if((t['exam_instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Text('নির্দেশনা: ${t['exam_instructions']}',maxLines:3,overflow:TextOverflow.ellipsis)),
+            const SizedBox(height:12),Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:()=>_start(t),icon:const Icon(Icons.play_arrow),label:const Text('পরীক্ষা শুরু করুন'),style:FilledButton.styleFrom(backgroundColor:_maroon)))
+          ])))
+        ]);
+      })),
+  );
+  Widget _meta(IconData icon,String text)=>Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,size:16,color:_maroon),const SizedBox(width:4),Text(text,style:const TextStyle(fontSize:12))]);
+}
+
+class _ExamRunner extends StatefulWidget {
+  final Map<String,dynamic> attempt;
+  const _ExamRunner({required this.attempt});
+  @override
+  State<_ExamRunner> createState()=>_ExamRunnerState();
+}
+class _ExamRunnerState extends State<_ExamRunner>{
+  late final List<Map<String,dynamic>> _questions;
+  late final int _attemptId,_testId;
+  late int _remaining,_index=0;
+  Timer? _timer;
+  bool _submitting=false;
+  String? _saveError;
+  final Map<int,String> _answers={};
+  @override
+  void initState(){
+    super.initState();
+    _attemptId=(widget.attempt['attempt_id'] as num).toInt();
+    _testId=(widget.attempt['test_id'] as num).toInt();
+    _questions=(widget.attempt['questions'] as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+    for(final q in _questions){final a=q['selected_answer'];if(a!=null)_answers[(q['id'] as num).toInt()]=a.toString();}
+    _remaining=(widget.attempt['remaining_seconds'] as num?)?.toInt()??0;
+    _timer=Timer.periodic(const Duration(seconds:1),(_){
+      if(!mounted||_submitting)return;
+      if(_remaining<=1){setState(()=>_remaining=0);_finish(auto:true);return;}
+      setState(()=>_remaining--);
+    });
+  }
+  @override
+  void dispose(){_timer?.cancel();super.dispose();}
+  String get _clock=>'${(_remaining~/60).toString().padLeft(2,'0')}:${(_remaining%60).toString().padLeft(2,'0')}';
+  Future<void> _choose(String answer) async {
+    final q=_questions[_index];final id=(q['id'] as num).toInt();
+    setState(()=>_answers[id]=answer);
+    try{await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:id,answer:answer);if(mounted)setState(()=>_saveError=null);}
+    catch(e){if(mounted)setState(()=>_saveError='উত্তর সার্ভারে সংরক্ষণ হয়নি। ইন্টারনেট যাচাই করে আবার উত্তর নির্বাচন করুন।');}
+  }
+  Future<void> _finish({bool auto=false}) async {
+    if(_submitting)return;
+    if(!auto){final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('পরীক্ষা জমা দেবেন?'),content:const Text('জমা দেওয়ার পর উত্তর পরিবর্তন করা যাবে না।'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('ফিরে যান')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('জমা দিন'))]));if(ok!=true)return;}
+    setState(()=>_submitting=true);_timer?.cancel();
+    try{
+      final result=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
+      if(!mounted)return;
+      await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:result)));
+    }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));if(auto)_timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted)return;if(_remaining>0)setState(()=>_remaining--);});}}
+  }
+  @override
+  Widget build(BuildContext context){
+    if(_questions.isEmpty)return const Scaffold(body:Center(child:Text('এই পরীক্ষায় প্রশ্ন পাওয়া যায়নি।')));
+    final q=_questions[_index];final options=Map<String,dynamic>.from(q['options'] as Map);
+    return PopScope(canPop:false,onPopInvokedWithResult:(didPop,result){if(!didPop)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('পরীক্ষা জমা দিতে Submit বাটন ব্যবহার করুন।')));},child:Scaffold(
+      appBar:AppBar(title:Text(widget.attempt['title']?.toString()??'পরীক্ষা'),automaticallyImplyLeading:false,actions:[Padding(padding:const EdgeInsets.symmetric(horizontal:14),child:Center(child:Text(_clock,style:TextStyle(fontWeight:FontWeight.bold,color:_remaining<60?Colors.red:null))))]),
+      body:Column(children:[
+        LinearProgressIndicator(value:(_index+1)/_questions.length),
+        if((widget.attempt['instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.all(10),child:Text(widget.attempt['instructions'].toString())),
+        Padding(padding:const EdgeInsets.all(16),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('প্রশ্ন ${_index+1}/${_questions.length}',style:const TextStyle(fontWeight:FontWeight.bold)),Text('উত্তর: ${_answers.length}/${_questions.length}') ])),
+        Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
+          Text(q['question']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height:18),
+          for(final letter in ['A','B','C','D'])Card(child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
+          if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),
+          const SizedBox(height:16),Wrap(spacing:6,runSpacing:6,children:List.generate(_questions.length,(i)=>OutlinedButton(onPressed:()=>setState(()=>_index=i),style:OutlinedButton.styleFrom(backgroundColor:i==_index?_maroon:null,foregroundColor:i==_index?Colors.white:null,minimumSize:const Size(42,38),padding:const EdgeInsets.symmetric(horizontal:10)),child:Text('${i+1}'))))
+        ])),
+        SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[
+          OutlinedButton(onPressed:_index>0?()=>setState(()=>_index--):null,child:const Text('আগেরটি')),
+          const Spacer(),
+          if(_index<_questions.length-1)FilledButton(onPressed:()=>setState(()=>_index++),child:const Text('পরেরটি')),
+          if(_index==_questions.length-1)FilledButton(onPressed:_submitting?null:()=>_finish(),child:const Text('Submit'))
+        ])))
+      ])
+    ));
+  }
+}
+
+class _ExamResult extends StatelessWidget{
+  final Map<String,dynamic> result;
+  const _ExamResult({required this.result});
+  @override
+  Widget build(BuildContext context){
+    final score=(result['score'] as num?)?.toDouble()??0;
+    final total=(result['total_marks'] as num?)?.toDouble()??0;
+    final questions=(result['questions'] as List? ??[]).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
+    return Scaffold(appBar:AppBar(title:const Text('পরীক্ষার ফলাফল'),automaticallyImplyLeading:false),body:ListView(padding:const EdgeInsets.all(16),children:[
+      Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
+        Text('${score.toStringAsFixed(2)} / ${total.toStringAsFixed(2)}',style:Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight:FontWeight.bold,color:_maroon)),
+        Text(total>0?'${(score/total*100).clamp(0,100).toStringAsFixed(1)}%':'—'),
+        const SizedBox(height:12),Wrap(alignment:WrapAlignment.center,spacing:14,children:[
+          Text('সঠিক: ${result['correct_count']}'),Text('ভুল: ${result['incorrect_count']}'),Text('উত্তর নেই: ${result['unanswered_count']}')
+        ]),
+        const SizedBox(height:8),Text(result['passed']==null?'পাস নম্বর নির্ধারিত ছিল না.':(result['passed']==true?'অভিনন্দন! আপনি পাস করেছেন।':'আপনি পাস করতে পারেননি।'),style:const TextStyle(fontWeight:FontWeight.bold))
+      ]))),
+      const SizedBox(height:12),const Text('প্রশ্নভিত্তিক পর্যালোচনা',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+      for(final q in questions)Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('${q['order']}. ${q['question']}',style:const TextStyle(fontWeight:FontWeight.bold)),
+        for(final letter in ['A','B','C','D'])Padding(padding:const EdgeInsets.only(top:4),child:Text('$letter. ${(q['options'] as Map)[letter]}')),
+        const SizedBox(height:6),Text('তোমার উত্তর: ${q['selected_answer']??'উত্তর দাওনি'}'),Text('সঠিক উত্তর: ${q['correct_answer']}',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.bold)),
+        if((q['explanation']??'').toString().isNotEmpty)Text('ব্যাখ্যা: ${q['explanation']}')
+      ]))),
+      const SizedBox(height:12),FilledButton(onPressed:()=>Navigator.popUntil(context,(r)=>r.isFirst),child:const Text('পরীক্ষার তালিকায় ফিরুন'))
+    ]));
+  }
 }
