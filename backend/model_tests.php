@@ -368,13 +368,13 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field full"><label>পরীক্ষার বিবরণ</label><textarea name="description"><?=mt_h($form['description'] ?? '')?></textarea></div>
    <div class="field full"><label>পরীক্ষার নির্দেশনা (ঐচ্ছিক)</label><textarea name="exam_instructions" maxlength="5000" placeholder="পরীক্ষা শুরুর আগে শিক্ষার্থীদের জন্য নির্দেশনা লিখুন..."><?=mt_h($form['exam_instructions'] ?? '')?></textarea><div class="hint">সর্বোচ্চ ৫০০০ অক্ষর। Student-side exam API সংযুক্ত না হওয়া পর্যন্ত নির্দেশনাটি শুধু Admin-এ সংরক্ষিত থাকবে।</div></div>
    <div class="field"><label>সময় (মিনিট) *</label><input type="number" name="duration_minutes" min="1" value="<?=mt_h($form['duration_minutes'] ?? 30)?>" required></div>
-   <div class="field"><label>প্রশ্ন সংখ্যা (Random নির্বাচন হলে)</label><input type="number" name="question_count" min="1" max="500" value="<?= $editing ? max(1, count($selectedQuestionIds)) : 20 ?>" <?= $editing ? 'readonly' : '' ?>></div>
+   <div class="field" id="randomQuestionCountField" style="display:<?= $editingSelectionMode === 'random' ? 'block' : 'none' ?>"><label>প্রশ্ন সংখ্যা (Random নির্বাচন হলে)</label><input type="number" name="question_count" min="1" max="500" value="<?= $editing ? max(1, count($selectedQuestionIds)) : 20 ?>" <?= $editing ? 'readonly' : '' ?>></div>
    <div class="field"><label>প্রতি প্রশ্নের নম্বর</label><input type="number" name="marks_per_question" min="0.25" max="1000" step="0.25" value="<?=mt_h($editingMarksPerQuestion)?>" required></div>
    <div class="field"><label>প্রতি ভুল উত্তরের নেগেটিভ মার্ক</label><input type="number" name="negative_marks_per_question" min="0" max="1000" step="0.01" value="<?=mt_h($form['negative_marks_per_question'] ?? 0)?>" required><div class="hint">০ দিলে নেগেটিভ মার্কিং বন্ধ থাকবে।</div></div>
    <div class="field"><label>পাস নম্বর (ঐচ্ছিক)</label><input type="number" name="pass_marks" min="0" step="0.25" value="<?=mt_h($form['pass_marks'] ?? '')?>"></div>
    <div class="field"><label>সর্বোচ্চ Attempt (০ = সীমাহীন)</label><input type="number" name="max_attempts" min="0" max="1000" step="1" value="<?=mt_h($form['max_attempts'] ?? 0)?>"><div class="hint">একজন শিক্ষার্থী সর্বোচ্চ কতবার পরীক্ষা দিতে পারবে।</div></div>
    <div class="field"><label>ফলাফল প্রকাশ</label><select name="results_released"><option value="1" <?=((int)($form['results_released'] ?? 1)===1)?'selected':''?>>Submit-এর পর সঙ্গে সঙ্গে</option><option value="0" <?=((int)($form['results_released'] ?? 1)===0)?'selected':''?>>Admin প্রকাশ না করা পর্যন্ত গোপন</option></select></div>
-   <div class="field"><label>প্রশ্ন নির্বাচন পদ্ধতি</label><div class="radio-row"><label><input type="radio" name="selection_mode" value="random" <?=$editingSelectionMode==='random'?'checked':''?> <?= $editing ? 'disabled' : '' ?>> Random প্রশ্ন</label><label><input type="radio" name="selection_mode" value="manual" <?=$editingSelectionMode==='manual'?'checked':''?>> নিজে নির্বাচন</label>
+   <div class="field"><label>প্রশ্ন নির্বাচন পদ্ধতি</label><div class="radio-row"><label><input type="radio" name="selection_mode" value="random" <?=$editingSelectionMode==='random'?'checked':''?> <?= $editing ? 'disabled' : '' ?> onchange="window.modelTestUpdateSelectionMode(this.value)"> Random প্রশ্ন</label><label><input type="radio" name="selection_mode" value="manual" <?=$editingSelectionMode==='manual'?'checked':''?> onchange="window.modelTestUpdateSelectionMode(this.value)"> নিজে নির্বাচন</label>
    <?php if ($editing): ?><input type="hidden" name="selection_mode" value="manual"><div class="hint">আগের নির্বাচিত প্রশ্নগুলো অক্ষত রাখতে সম্পাদনার সময় Manual Mode ব্যবহার হচ্ছে।</div><?php endif; ?></div></div>
    <div class="field"><label>প্রশ্নের ক্রম</label><select name="randomize_questions"><option value="1" <?=((int)($form['randomize_questions'] ?? 0)===1)?'selected':''?>>এলোমেলো (Random)</option><option value="0" <?=((int)($form['randomize_questions'] ?? 0)===0)?'selected':''?>>নির্ধারিত ক্রম</option></select></div>
    <div class="field"><label>পরীক্ষার স্ট্যাটাস</label><select name="status"><option value="draft" <?=($form['status'] ?? 'draft')==='draft'?'selected':''?>>খসড়া</option><option value="published" <?=($form['status'] ?? '')==='published'?'selected':''?>>প্রকাশিত</option><option value="archived" <?=($form['status'] ?? '')==='archived'?'selected':''?>>আর্কাইভ</option></select></div>
@@ -510,6 +510,19 @@ window.modelTestSetAllQuestions = function (checked) {
   if (debug) debug.textContent = (checked ? 'সব প্রশ্ন নির্বাচন সম্পন্ন। ' : 'সব নির্বাচন বাতিল। ') + 'Checkbox: ' + boxes.length + 'টি · নির্বাচিত: ' + selected + 'টি';
 };
 window.modelTestSyncQuestionSelection();
+</script>
+<script>
+window.modelTestUpdateSelectionMode = function (mode) {
+  var manual = document.getElementById('manualQuestions');
+  var randomCount = document.getElementById('randomQuestionCountField');
+  var isManual = mode === 'manual';
+  if (manual) manual.style.display = isManual ? 'block' : 'none';
+  if (randomCount) randomCount.style.display = isManual ? 'none' : 'block';
+};
+(function () {
+  var selected = document.querySelector('input[name="selection_mode"]:checked');
+  if (selected) window.modelTestUpdateSelectionMode(selected.value);
+})();
 </script>
 <script src="/assets/model-tests.js?v=debug-20261119-1" defer></script>
 </body></html>
