@@ -116,10 +116,10 @@ try {
             $rows=$pdo->prepare('SELECT correct_answer,selected_answer,marks FROM model_test_attempt_questions WHERE attempt_id=?');$rows->execute([$attemptId]);$questions=$rows->fetchAll(PDO::FETCH_ASSOC);
             $correct=0;$incorrect=0;$unanswered=0;$earned=0.0;$negative=(float)$test['negative_marks_per_question'];
             foreach($questions as $row){if(empty($row['selected_answer'])){$unanswered++;continue;}if(strtoupper($row['selected_answer'])===strtoupper($row['correct_answer'])){$correct++;$earned+=(float)$row['marks'];}else{$incorrect++;$earned-=$negative;}}
-            $earned=max(0.0,$earned);$pass=$attempt['total_marks']>0 && $test['pass_marks']!==null?($earned >= (float)$test['pass_marks']):false;
+            $earned=max(0.0,$earned);$pass=($attempt['total_marks']>0 && $test['pass_marks']!==null)?($earned >= (float)$test['pass_marks']):null;
             $status=(strtotime($attempt['expires_at'])<=time())?'expired':'submitted';
             $upd=$pdo->prepare('UPDATE model_test_attempts SET status=?,submitted_at=NOW(),score=?,correct_count=?,incorrect_count=?,unanswered_count=?,passed=? WHERE id=?');
-            $upd->execute([$status,$earned,$correct,$incorrect,$unanswered,$pass?1:0,$attemptId]);
+            $upd->execute([$status,$earned,$correct,$incorrect,$unanswered,$pass===null?null:($pass?1:0),$attemptId]);
         }
         $pdo->commit();exam_reply(200,['success'=>true,'result'=>exam_result_payload($pdo,$attemptId,$userId)]);
     }
@@ -139,7 +139,7 @@ function exam_attempt_payload(PDO $pdo,int $attemptId,int $userId,bool $reveal):
     $q=$pdo->prepare("SELECT a.id,a.test_id,a.started_at,a.expires_at,a.status,a.negative_marks_per_question,t.title,t.exam_instructions FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? LIMIT 1");
     $q->execute([$attemptId,$userId]);$a=$q->fetch(PDO::FETCH_ASSOC);
     if(!$a)exam_reply(404,['success'=>false,'message'=>'পরীক্ষার Attempt পাওয়া যায়নি।']);
-    $rows=$pdo->prepare('SELECT id,question_id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
+    $rows=$pdo->prepare('SELECT question_id AS id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
     $questions=array_map(static fn($r)=>exam_public_question($r,$reveal),$rows->fetchAll(PDO::FETCH_ASSOC));
     return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'instructions'=>$a['exam_instructions'],'started_at'=>$a['started_at'],'expires_at'=>$a['expires_at'],'remaining_seconds'=>max(0,strtotime((string)$a['expires_at'])-time()),'status'=>$a['status'],'negative_marks_per_question'=>(float)$a['negative_marks_per_question'],'questions'=>$questions];
 }
