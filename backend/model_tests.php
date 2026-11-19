@@ -58,8 +58,12 @@ try {
 $hasQuestionArchiveColumn = mt_question_archive_column_exists($pdo);
 
 $hasRandomColumn = false;
+$hasNegativeMarkingColumn = false;
+$hasInstructionsColumn = false;
 try {
     $hasRandomColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
+    $hasNegativeMarkingColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);
+    $hasInstructionsColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'exam_instructions'")->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $errors[] = 'model_tests টেবিল পাওয়া যায়নি। আগে প্রয়োজনীয় SQL Migration চালান।';
 }
@@ -84,6 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['test_id'] ?? 0);
             $title = trim((string)($_POST['title'] ?? ''));
             $description = trim((string)($_POST['description'] ?? ''));
+            $examInstructions = trim((string)($_POST['exam_instructions'] ?? ''));
+            $negativeMarks = (float)($_POST['negative_marks_per_question'] ?? 0);
             $categoryId = (int)($_POST['category_id'] ?? 0);
             $duration = (int)($_POST['duration_minutes'] ?? 30);
             $questionCount = (int)($_POST['question_count'] ?? 20);
@@ -99,6 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($title === '') throw new RuntimeException('পরীক্ষার নাম লিখুন।');
             if (!in_array($status, ['draft', 'published', 'archived'], true)) throw new RuntimeException('স্ট্যাটাস সঠিক নয়।');
             if (!in_array($selectionMode, ['manual', 'random'], true)) throw new RuntimeException('প্রশ্ন নির্বাচনের ধরন সঠিক নয়।');
+            if (!is_finite($negativeMarks) || $negativeMarks < 0 || $negativeMarks > 1000) throw new RuntimeException('প্রতি ভুল উত্তরের নেগেটিভ মার্ক ০ থেকে ১০০০-এর মধ্যে হতে হবে।');
+            if (mb_strlen($examInstructions) > 5000) throw new RuntimeException('পরীক্ষার নির্দেশনা সর্বোচ্চ ৫০০০ অক্ষরের মধ্যে হতে হবে।');
+            if ($status === 'published' && $endsAt !== null && strtotime($endsAt) <= time()) throw new RuntimeException('ইতোমধ্যে শেষ হয়ে যাওয়া পরীক্ষা প্রকাশ করা যাবে না।');
+            if ($status === 'published' && $startsAt !== null && $endsAt !== null && strtotime($endsAt) <= strtotime($startsAt)) throw new RuntimeException('প্রকাশিত পরীক্ষার শেষের সময় শুরুর সময়ের পরে হতে হবে।');
 
             $categoryName = null;
             if ($categoryId > 0) {
@@ -176,9 +186,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lock = $pdo->prepare('SELECT id FROM model_tests WHERE id = ? FOR UPDATE');
                 $lock->execute([$id]);
                 if (!$lock->fetchColumn()) throw new RuntimeException('সম্পাদনার পরীক্ষাটি আর পাওয়া যাচ্ছে না। তালিকা রিফ্রেশ করে আবার চেষ্টা করুন।');
-                $st = $pdo->prepare("UPDATE model_tests SET category_id=?, title=?, description=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, starts_at=?, ends_at=?, updated_at=NOW()" . ($hasRandomColumn ? ", randomize_questions=?" : "") . " WHERE id=?");
+                $optionalUpdates = ($hasRandomColumn ? ", randomize_questions=?" : "") . ($hasNegativeMarkingColumn ? ", negative_marks_per_question=?" : "") . ($hasInstructionsColumn ? ", exam_instructions=?" : "");
+                $st = $pdo->prepare("UPDATE model_tests SET category_id=?, title=?, description=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, starts_at=?, ends_at=?, updated_at=NOW()" . $optionalUpdates . " WHERE id=?");
                 $args = [$categoryId ?: null, $title, $description ?: null, $duration, $totalMarks, $passMarks, $status, $startsAt, $endsAt];
                 if ($hasRandomColumn) $args[] = $random ? 1 : 0;
+                if ($hasNegativeMarkingColumn) $args[] = $negativeMarks;
+                if ($hasInstructionsColumn) $args[] = $examInstructions ?: null;
                 $args[] = $id;
                 $st->execute($args);
                 $pdo->prepare('DELETE FROM model_test_questions WHERE test_id=?')->execute([$id]);
@@ -187,6 +200,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $vals = "?,?,?,?,?,?,?,?,?,NOW(),NOW()";
                 $args = [$categoryId ?: null, $title, $description ?: null, $duration, $totalMarks, $passMarks, $status, $startsAt, $endsAt];
                 if ($hasRandomColumn) { $cols .= ",randomize_questions"; $vals .= ",?"; $args[] = $random ? 1 : 0; }
+                if ($hasNegativeMarkingColumn) { $cols .= ",negative_marks_per_question"; $vals .= ",?"; $args[] = $negativeMarks; }
+                if ($hasInstructionsColumn) { $cols .= ",exam_instructions"; $vals .= ",?"; $args[] = $examInstructions ?: null; }
                 $st = $pdo->prepare("INSERT INTO model_tests ($cols) VALUES ($vals)");
                 $st->execute($args);
                 $id = (int)$pdo->lastInsertId();
@@ -305,9 +320,11 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field"><label>পরীক্ষার নাম *</label><input name="title" required value="<?=mt_h($form['title'] ?? '')?>" placeholder="যেমন: Fire Safety Model Test 01"></div>
    <div class="field"><label>ক্যাটাগরি</label><select name="category_id"><option value="0">সব ক্যাটাগরি (মিশ্র প্রশ্ন)</option><?php foreach ($categories as $cat): ?><option value="<?=(int)$cat['id']?>" <?=((int)($form['category_id'] ?? 0)===(int)$cat['id'])?'selected':''?>><?=mt_h($cat['name'])?></option><?php endforeach; ?></select><div class="hint">ক্যাটাগরি পেজে সক্রিয় Test ক্যাটাগরি পরিবর্তন করলে এখানে স্বয়ংক্রিয়ভাবে আপডেট হবে।</div></div>
    <div class="field full"><label>পরীক্ষার বিবরণ</label><textarea name="description"><?=mt_h($form['description'] ?? '')?></textarea></div>
+   <div class="field full"><label>পরীক্ষার নির্দেশনা (ঐচ্ছিক)</label><textarea name="exam_instructions" maxlength="5000" placeholder="পরীক্ষা শুরুর আগে শিক্ষার্থীদের জন্য নির্দেশনা লিখুন..."><?=mt_h($form['exam_instructions'] ?? '')?></textarea><div class="hint">সর্বোচ্চ ৫০০০ অক্ষর। Student-side exam API সংযুক্ত না হওয়া পর্যন্ত নির্দেশনাটি শুধু Admin-এ সংরক্ষিত থাকবে।</div></div>
    <div class="field"><label>সময় (মিনিট) *</label><input type="number" name="duration_minutes" min="1" value="<?=mt_h($form['duration_minutes'] ?? 30)?>" required></div>
    <div class="field"><label>প্রশ্ন সংখ্যা (Random নির্বাচন হলে)</label><input type="number" name="question_count" min="1" max="500" value="<?= $editing ? max(1, count($selectedQuestionIds)) : 20 ?>" <?= $editing ? 'readonly' : '' ?>></div>
    <div class="field"><label>প্রতি প্রশ্নের নম্বর</label><input type="number" name="marks_per_question" min="0.25" max="1000" step="0.25" value="<?=mt_h($editingMarksPerQuestion)?>" required></div>
+   <div class="field"><label>প্রতি ভুল উত্তরের নেগেটিভ মার্ক</label><input type="number" name="negative_marks_per_question" min="0" max="1000" step="0.01" value="<?=mt_h($form['negative_marks_per_question'] ?? 0)?>" required><div class="hint">০ দিলে নেগেটিভ মার্কিং বন্ধ থাকবে।</div></div>
    <div class="field"><label>পাস নম্বর (ঐচ্ছিক)</label><input type="number" name="pass_marks" min="0" step="0.25" value="<?=mt_h($form['pass_marks'] ?? '')?>"></div>
    <div class="field"><label>প্রশ্ন নির্বাচন পদ্ধতি</label><div class="radio-row"><label><input type="radio" name="selection_mode" value="random" <?=$editingSelectionMode==='random'?'checked':''?> <?= $editing ? 'disabled' : '' ?>> Random প্রশ্ন</label><label><input type="radio" name="selection_mode" value="manual" <?=$editingSelectionMode==='manual'?'checked':''?>> নিজে নির্বাচন</label>
    <?php if ($editing): ?><input type="hidden" name="selection_mode" value="manual"><div class="hint">আগের নির্বাচিত প্রশ্নগুলো অক্ষত রাখতে সম্পাদনার সময় Manual Mode ব্যবহার হচ্ছে।</div><?php endif; ?></div></div>
