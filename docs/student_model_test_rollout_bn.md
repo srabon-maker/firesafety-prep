@@ -6,7 +6,8 @@ This release connects the Flutter Model Test screen to server-managed exams.
 1. Back up the production database.
 2. Select the same database used by `backend/db.php` in phpMyAdmin.
 3. Run `backend/migrations/20261119_student_model_test_attempts.sql` once.
-4. Verify both tables exist: `model_test_attempts` and `model_test_attempt_questions`.
+4. Run `backend/migrations/20261119_model_test_policies.sql` once after the attempts migration.
+5. Verify both attempt tables exist and `model_tests` contains `max_attempts` and `results_released`.
 
 The migration adds new tables only; it does not alter existing user, question, or model-test rows.
 
@@ -22,11 +23,13 @@ Deploy together:
 - Starting an exam creates an attempt and immutable question/answer snapshots.
 - Answer selections are sent to the server immediately.
 - The server owns the expiry timestamp and calculates the final score.
-- Correct answers and explanations are returned only after submission.
+- Correct answers and explanations are returned only after submission and Admin result release.
+- Admin can review student attempts, scores and question-by-question answers in Model Test Admin.
+- Admin can hold/release results per test and configure a maximum number of attempts per student (0 means unlimited).
 - A test with attempts/results cannot be hard-deleted in Admin; archive it instead.
 
 ## Important current limits
-- A user can create a new attempt after a previous attempt is submitted; attempt limits are not configured yet.
-- Results are visible immediately after submission; per-test result-release controls are not implemented yet.
+- Attempt limits count all attempts, including submitted/expired attempts. Set 0 for unlimited attempts.
+- Results release is configured per test. Existing tests default to immediate release after migration.
 - App timer submits when the local countdown reaches zero; server rejects answers after its own expiry timestamp.
 - Push notifications, proctoring, tab/app switching detection, and server-driven forced submission while the app is closed are not included.
