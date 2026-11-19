@@ -446,6 +446,11 @@ const emptyState=document.getElementById('questionEmpty');
 function questionRows(){return questionList?[...questionList.querySelectorAll('.question-box')]:[];}
 function updateSelectionSummary(){
   if(!selectedCount)return;
+  questionRows().forEach(row=>{
+    const checked=!!row.querySelector('input[type="checkbox"]')?.checked;
+    row.classList.toggle('is-selected',checked);
+    row.setAttribute('aria-selected',checked?'true':'false');
+  });
   const selected=questionRows().filter(row=>row.querySelector('input[type="checkbox"]')?.checked).length;
   selectedCount.textContent='নির্বাচিত: '+selected;
   updateMoveButtons();
@@ -486,9 +491,16 @@ questionList?.addEventListener('change',event=>{
 questionList?.addEventListener('click',event=>{
   const row=event.target.closest('.question-box');
   if(!row)return;
-  if(event.target.closest('.move-question-up'))moveSelectedQuestion(row,-1);
-  if(event.target.closest('.move-question-down'))moveSelectedQuestion(row,1);
-  if(event.target.closest('.preview-question'))openQuestionPreview(event.target.closest('.preview-question').dataset.id);
+  if(event.target.closest('.move-question-up')){moveSelectedQuestion(row,-1);return;}
+  if(event.target.closest('.move-question-down')){moveSelectedQuestion(row,1);return;}
+  if(event.target.closest('.preview-question')){openQuestionPreview(event.target.closest('.preview-question').dataset.id);return;}
+  // Let the browser handle a direct checkbox click. Clicking anywhere else
+  // on the question card toggles that checkbox and synchronizes its visual state.
+  if(event.target.closest('input[type="checkbox"]'))return;
+  const checkbox=row.querySelector('input[type="checkbox"]');
+  if(!checkbox)return;
+  checkbox.checked=!checkbox.checked;
+  checkbox.dispatchEvent(new Event('change',{bubbles:true}));
 });
 searchInput?.addEventListener('input',applyQuestionFilters);
 categoryFilter?.addEventListener('change',applyQuestionFilters);
