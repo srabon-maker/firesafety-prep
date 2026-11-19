@@ -456,4 +456,49 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
 <script src="/assets/model-tests.js?v=7351e043" defer></script>
+<script>
+(function () {
+  'use strict';
+  function bindModelTestSelectionFallback() {
+    var list = document.getElementById('questionList');
+    if (!list || list.dataset.inlineSelectionReady === '1') return;
+    list.dataset.inlineSelectionReady = '1';
+    var count = document.getElementById('selectedQuestionCount');
+    var selectAll = document.getElementById('selectVisibleQuestions');
+    var clearAll = document.getElementById('clearVisibleQuestions');
+    function rows() { return Array.prototype.slice.call(list.querySelectorAll('.question-box')); }
+    function checkbox(row) { return row.querySelector('input[name="question_ids[]"][type="checkbox"]'); }
+    function sync() {
+      var selected = 0;
+      rows().forEach(function (row) {
+        var input = checkbox(row);
+        var checked = !!(input && input.checked);
+        row.classList.toggle('is-selected', checked);
+        row.setAttribute('aria-selected', checked ? 'true' : 'false');
+        if (checked) selected++;
+      });
+      if (count) count.textContent = 'নির্বাচিত: ' + selected;
+    }
+    if (selectAll) selectAll.addEventListener('click', function (event) {
+      event.preventDefault();
+      rows().forEach(function (row) { var input = checkbox(row); if (input) input.checked = true; });
+      sync();
+    });
+    if (clearAll) clearAll.addEventListener('click', function (event) {
+      event.preventDefault();
+      rows().forEach(function (row) { var input = checkbox(row); if (input) input.checked = false; });
+      sync();
+    });
+    list.addEventListener('change', function (event) {
+      if (event.target && event.target.matches('input[name="question_ids[]"][type="checkbox"]')) sync();
+    });
+    sync();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindModelTestSelectionFallback);
+  } else {
+    bindModelTestSelectionFallback();
+  }
+})();
+</script>
 </body></html>
