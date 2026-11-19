@@ -49,6 +49,9 @@ class _TestsPageState extends State<TestsPage> {
               _meta(Icons.timer_outlined,'${t['duration_minutes']} মিনিট'),
               _meta(Icons.grade_outlined,'${t['total_marks']} নম্বর'),
               if(t['pass_marks']!=null)_meta(Icons.flag_outlined,'পাস ${t['pass_marks']}'),
+              if(((t['negative_marks_per_question'] as num?)?.toDouble() ?? 0) > 0)
+                _meta(Icons.remove_circle_outline,'ভুলে -${t['negative_marks_per_question']}'),
+              if(t['randomize_questions']==true)_meta(Icons.shuffle,'প্রশ্নের ক্রম এলোমেলো'),
               if((t['max_attempts'] as num?)?.toInt()!=null && (t['max_attempts'] as num).toInt()>0)_meta(Icons.replay,'সর্বোচ্চ ${t['max_attempts']} বার'),
             ]),
             if((t['exam_instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Text('নির্দেশনা: ${t['exam_instructions']}',maxLines:3,overflow:TextOverflow.ellipsis)),
@@ -164,7 +167,26 @@ class _ExamRunnerState extends State<_ExamRunner>{
       appBar:AppBar(title:Text(widget.attempt['title']?.toString()??'পরীক্ষা'),automaticallyImplyLeading:false,actions:[Padding(padding:const EdgeInsets.symmetric(horizontal:14),child:Center(child:Text(_clock,style:TextStyle(fontWeight:FontWeight.bold,color:_remaining<60?Colors.red:null))))]),
       body:Column(children:[
         LinearProgressIndicator(value:(_index+1)/_questions.length),
-        if((widget.attempt['instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.all(10),child:Text(widget.attempt['instructions'].toString())),
+        if((widget.attempt['instructions']??'').toString().isNotEmpty)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF5F3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFF0D7D3)),
+            ),
+            child: Text(widget.attempt['instructions'].toString()),
+          ),
+        if(((widget.attempt['negative_marks_per_question'] as num?)?.toDouble() ?? 0) > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              'প্রতি ভুল উত্তরে ${widget.attempt['negative_marks_per_question']} নম্বর কাটা হবে।',
+              style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600),
+            ),
+          ),
         Padding(padding:const EdgeInsets.all(16),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('প্রশ্ন ${_index+1}/${_questions.length}',style:const TextStyle(fontWeight:FontWeight.bold)),Text('উত্তর: ${_answers.length}/${_questions.length}') ])),
         Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
           Text(q['question']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),
