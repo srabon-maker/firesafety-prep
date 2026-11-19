@@ -643,37 +643,42 @@ textarea {
 .form-grid > .form-group {
     min-width: 0;
 }
-.notes-editor {
-    display: block;
+.notes-editor-wrap {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 360px;
     min-height: 0;
     box-sizing: border-box;
+    overflow: hidden;
     background: #fff;
     border: 1px solid #e7ded9;
     border-radius: 8px;
-    overflow: hidden;
 }
-.notes-editor .ql-toolbar.ql-snow {
+.notes-editor-wrap .ql-toolbar.ql-snow {
+    flex: 0 0 auto;
+    width: 100%;
     box-sizing: border-box;
     border: 0;
     border-bottom: 1px solid #eee4df;
 }
-.notes-editor .ql-container.ql-snow {
-    box-sizing: border-box;
-    height: calc(100% - 42px);
+.notes-editor-wrap .notes-editor.ql-container.ql-snow {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto !important;
     min-height: 0;
+    box-sizing: border-box;
     border: 0;
 }
-.notes-editor .ql-editor {
-    box-sizing: border-box;
+.notes-editor-wrap .ql-editor {
     height: 100%;
     min-height: 0;
+    box-sizing: border-box;
     overflow-y: auto;
     font-size: 15px;
     line-height: 1.7;
 }
-.form-group.full > .editor-help {
+.notes-editor-help {
     position: static;
     display: block;
     clear: both;
@@ -684,7 +689,7 @@ textarea {
     overflow-wrap: anywhere;
 }
 @media (max-width: 600px) {
-    .notes-editor { height: 340px; }
+    .notes-editor-wrap { height: 340px; }
 }
 .preview-button {
     border: 1px solid #f1ddd6;
@@ -1077,9 +1082,11 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 
                 <div class="form-group full">
                     <label>Note Content</label>
-                    <div id="notes-editor" class="notes-editor"><?= notesSanitizeHtml((string)$formContent) ?></div>
+                    <div class="notes-editor-wrap">
+                        <div id="notes-editor" class="notes-editor"><?= notesSanitizeHtml((string)$formContent) ?></div>
+                    </div>
                     <textarea name="content" id="notes-content" hidden><?= nh($formContent) ?></textarea>
-                    <small class="editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
+                    <small class="editor-help notes-editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
                 </div>
 
                 <div class="form-group full">
