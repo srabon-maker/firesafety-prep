@@ -138,7 +138,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $conditions = [];
                     $checkParams = [];
                     if ($categoryName !== null) { $conditions[] = "category = ?"; $checkParams[] = $categoryName; }
-                    if ($hasQuestionArchiveColumn) $conditions[] = "is_archived = 0";
+                    if ($hasQuestionArchiveColumn) {
+                        if ($id > 0) {
+                            $conditions[] = "(is_archived = 0 OR id IN (SELECT question_id FROM model_test_questions WHERE test_id = ?))";
+                            $checkParams[] = $id;
+                        } else {
+                            $conditions[] = "is_archived = 0";
+                        }
+                    }
                     $conditions[] = "id IN ($marks)";
                     $check = $pdo->prepare("SELECT id FROM questions WHERE " . implode(" AND ", $conditions));
                     $check->execute(array_merge($checkParams, $chosen));
@@ -199,8 +206,13 @@ if ($editId > 0) {
 
 try {
     $tests = $pdo->query("SELECT mt.*, c.name AS category_name, (SELECT COUNT(*) FROM model_test_questions q WHERE q.test_id=mt.id) AS question_count FROM model_tests mt LEFT JOIN categories c ON c.id=mt.category_id ORDER BY mt.id DESC LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-    $questionArchiveWhere = $hasQuestionArchiveColumn ? " WHERE is_archived = 0" : "";
-    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer FROM questions" . $questionArchiveWhere . " ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
+    $questionArchiveWhere = "";
+    if ($hasQuestionArchiveColumn) {
+        $questionArchiveWhere = $editId > 0
+            ? " WHERE is_archived = 0 OR id IN (SELECT question_id FROM model_test_questions WHERE test_id = " . (int)$editId . ")"
+            : " WHERE is_archived = 0";
+    }
+    $questions = $pdo->query("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer" . ($hasQuestionArchiveColumn ? ",is_archived" : "") . " FROM questions" . $questionArchiveWhere . " ORDER BY id DESC LIMIT 1000")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $errors[] = 'মডেল টেস্ট বা প্রশ্ন লোড করা যায়নি। SQL Migration এবং টেবিলের নাম যাচাই করুন।';
 }
