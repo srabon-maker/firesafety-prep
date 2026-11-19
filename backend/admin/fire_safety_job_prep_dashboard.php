@@ -607,6 +607,21 @@ a {
     padding: 4px 9px 26px;
 }
 
+/* Keep the sidebar brand links free from the browser's default blue underline. */
+.brand a,
+.brand a:link,
+.brand a:visited,
+.brand a:hover,
+.brand a:focus,
+.brand a:active {
+    color: inherit;
+    text-decoration: none !important;
+}
+.brand-name,
+.brand-sub {
+    text-decoration: none !important;
+}
+
 .logo {
     width: 65px;
     height: 65px;
