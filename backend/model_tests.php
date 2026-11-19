@@ -388,11 +388,11 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
     <select id="questionCategoryFilter" aria-label="ক্যাটাগরি ফিল্টার"><option value="">সব ক্যাটাগরি</option><?php $questionCategories = array_values(array_unique(array_filter(array_map(static fn($q) => (string)$q['category'], $questions)))); sort($questionCategories, SORT_NATURAL | SORT_FLAG_CASE); foreach ($questionCategories as $qc): ?><option value="<?=mt_h(mb_strtolower($qc))?>"><?=mt_h($qc)?></option><?php endforeach; ?></select>
     <span class="selection-summary" id="selectedQuestionCount" aria-live="polite">নির্বাচিত: <?=count($selectedQuestionIds)?></span>
    </div>
-   <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">সব প্রশ্ন নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
+   <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions" onclick="window.modelTestSetAllQuestions(true)">সব প্রশ্ন নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions" onclick="window.modelTestSetAllQuestions(false)">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
     <div id="selectionDebugPanel" role="status" aria-live="polite" style="margin:8px 0 12px;padding:10px 12px;border:1px solid #d8c8ca;border-radius:8px;background:#fff;font-size:13px;color:#510d18">নির্বাচন ব্যবস্থা পরীক্ষা করা হচ্ছে…</div>
    <div id="questionList">
    <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>" data-question="<?=mt_h($q['question'])?>" data-option-a="<?=mt_h($q['option_a'])?>" data-option-b="<?=mt_h($q['option_b'])?>" data-option-c="<?=mt_h($q['option_c'])?>" data-option-d="<?=mt_h($q['option_d'])?>">
-    <label class="question-select-label"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
+    <label class="question-select-label"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> onchange="window.modelTestSyncQuestionSelection()" aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
     <span class="question-content"><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small><?php if(!empty($q['is_archived'])): ?><small style="color:#a15b13;font-weight:700">Archived · এই পরীক্ষায় আগে থেকেই যুক্ত</small><?php endif; ?></span></label>
     <span class="question-actions"><button type="button" class="preview-question" aria-label="প্রশ্নের প্রিভিউ" data-id="<?=(int)$q['id']?>">প্রিভিউ</button><button type="button" class="move-question-up" aria-label="উপরে সরান">↑</button><button type="button" class="move-question-down" aria-label="নিচে সরান">↓</button></span>
    </div><?php endforeach; ?>
@@ -483,6 +483,33 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
     window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
   }
 })();
+</script>
+<script>
+window.modelTestSyncQuestionSelection = function () {
+  var list = document.getElementById('questionList');
+  var boxes = list ? list.querySelectorAll('input[name="question_ids[]"][type="checkbox"]') : [];
+  var selected = 0;
+  boxes.forEach(function (box) {
+    var row = box.closest('.question-box');
+    if (box.checked) selected++;
+    if (row) {
+      row.classList.toggle('is-selected', box.checked);
+      row.setAttribute('aria-selected', box.checked ? 'true' : 'false');
+    }
+  });
+  var counter = document.getElementById('selectedQuestionCount');
+  if (counter) counter.textContent = 'নির্বাচিত: ' + selected;
+  return selected;
+};
+window.modelTestSetAllQuestions = function (checked) {
+  var list = document.getElementById('questionList');
+  var boxes = list ? list.querySelectorAll('input[name="question_ids[]"][type="checkbox"]') : [];
+  boxes.forEach(function (box) { box.checked = checked; });
+  var selected = window.modelTestSyncQuestionSelection();
+  var debug = document.getElementById('selectionDebugPanel');
+  if (debug) debug.textContent = (checked ? 'সব প্রশ্ন নির্বাচন সম্পন্ন। ' : 'সব নির্বাচন বাতিল। ') + 'Checkbox: ' + boxes.length + 'টি · নির্বাচিত: ' + selected + 'টি';
+};
+window.modelTestSyncQuestionSelection();
 </script>
 <script src="/assets/model-tests.js?v=debug-20261119-1" defer></script>
 </body></html>
