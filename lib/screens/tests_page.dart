@@ -336,6 +336,21 @@ class _ExamResult extends StatelessWidget{
         ]),
         const SizedBox(height:8),Text(result['passed']==null?'পাস নম্বর নির্ধারিত ছিল না.':(result['passed']==true?'অভিনন্দন! আপনি পাস করেছেন।':'আপনি পাস করতে পারেননি।'),style:const TextStyle(fontWeight:FontWeight.bold))
       ]))),
+      const SizedBox(height:12),
+      if (questions.any((q) =>
+          q['selected_answer'] != null &&
+          q['selected_answer'].toString().toUpperCase() != q['correct_answer'].toString().toUpperCase()))
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => _WrongAnswerPracticePage(questions: questions),
+            )),
+            icon: const Icon(Icons.psychology_alt_outlined),
+            label: const Text('ভুল প্রশ্নগুলো আবার অনুশীলন করুন'),
+            style: FilledButton.styleFrom(backgroundColor: _maroon),
+          ),
+        ),
       const SizedBox(height:12),const Text('প্রশ্নভিত্তিক পর্যালোচনা',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
       for(final q in questions)Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text('${q['order']}. ${q['question']}',style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -348,6 +363,135 @@ class _ExamResult extends StatelessWidget{
   }
 }
 
+
+class _WrongAnswerPracticePage extends StatefulWidget {
+  final List<Map<String, dynamic>> questions;
+  const _WrongAnswerPracticePage({required this.questions});
+
+  @override
+  State<_WrongAnswerPracticePage> createState() => _WrongAnswerPracticePageState();
+}
+
+class _WrongAnswerPracticePageState extends State<_WrongAnswerPracticePage> {
+  late final List<Map<String, dynamic>> _wrongQuestions;
+  final Set<int> _revealed = {};
+  int _index = 0;
+  int _correctOnRetry = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _wrongQuestions = widget.questions.where((q) {
+      final selected = q['selected_answer']?.toString().toUpperCase();
+      final correct = q['correct_answer']?.toString().toUpperCase();
+      return selected != null && selected.isNotEmpty && selected != correct;
+    }).toList();
+  }
+
+  void _reveal() {
+    if (_revealed.contains(_index)) return;
+    final q = _wrongQuestions[_index];
+    final selected = q['selected_answer']?.toString().toUpperCase();
+    final correct = q['correct_answer']?.toString().toUpperCase();
+    setState(() {
+      _revealed.add(_index);
+      if (selected == correct) _correctOnRetry++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_wrongQuestions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('ভুল প্রশ্ন অনুশীলন')),
+        body: const Center(child: Text('অনুশীলনের জন্য ভুল উত্তর পাওয়া যায়নি।')),
+      );
+    }
+    final q = _wrongQuestions[_index];
+    final options = Map<String, dynamic>.from(q['options'] as Map? ?? {});
+    final revealed = _revealed.contains(_index);
+    final correct = q['correct_answer']?.toString().toUpperCase() ?? '';
+    return Scaffold(
+      appBar: AppBar(title: const Text('ভুল প্রশ্ন অনুশীলন')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          LinearProgressIndicator(value: (_index + 1) / _wrongQuestions.length),
+          const SizedBox(height: 12),
+          Text('প্রশ্ন ${_index + 1} / ${_wrongQuestions.length}',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon)),
+          const SizedBox(height: 12),
+          Text(q['question']?.toString() ?? '',
+            style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
+          for (final letter in ['A', 'B', 'C', 'D'])
+            Card(
+              color: revealed && letter == correct ? Colors.green.shade50 : null,
+              child: ListTile(
+                title: Text('$letter. ${options[letter] ?? ''}'),
+                trailing: revealed && letter == correct
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : null,
+              ),
+            ),
+          if (!revealed)
+            FilledButton.icon(
+              onPressed: _reveal,
+              icon: const Icon(Icons.visibility),
+              label: const Text('সঠিক উত্তর ও ব্যাখ্যা দেখুন'),
+              style: FilledButton.styleFrom(backgroundColor: _maroon),
+            )
+          else ...[
+            Card(
+              color: const Color(0xFFEAF7EC),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('সঠিক উত্তর: $correct',
+                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  if ((q['explanation'] ?? '').toString().trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('ব্যাখ্যা: ${q['explanation']}'),
+                  ],
+                  const SizedBox(height: 8),
+                  Text('আগের উত্তর: ${q['selected_answer'] ?? 'উত্তর দেওয়া হয়নি'}'),
+                ]),
+              ),
+            ),
+            Row(children: [
+              if (_index > 0)
+                OutlinedButton(
+                  onPressed: () => setState(() => _index--),
+                  child: const Text('আগের প্রশ্ন'),
+                ),
+              const Spacer(),
+              if (_index < _wrongQuestions.length - 1)
+                FilledButton(
+                  onPressed: () => setState(() => _index++),
+                  child: const Text('পরের প্রশ্ন'),
+                )
+              else
+                FilledButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('অনুশীলন সম্পন্ন'),
+                      content: Text('${_wrongQuestions.length}টি ভুল প্রশ্ন পর্যালোচনা করেছেন।'),
+                      actions: [TextButton(
+                        onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
+                        child: const Text('শেষ করুন'),
+                      )],
+                    ),
+                  ),
+                  child: const Text('সম্পন্ন'),
+                ),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _ResultPending extends StatelessWidget{
   const _ResultPending();
