@@ -178,13 +178,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title = trim((string)($_POST['title'] ?? ''));
             $summary = trim((string)($_POST['summary'] ?? ''));
             $content = notesSanitizeHtml((string)($_POST['content'] ?? ''));
-            $fileUrl = trim((string)($_POST['file_url'] ?? ''));
 
             $categoryId = (int)($_POST['category_id'] ?? 0);
-            $fileType = (string)($_POST['file_type'] ?? 'none');
+            $fileUrl = null;
+            $fileType = 'none';
 
-            if (!empty($_FILES['attachment']['name'])) {
-                $storedAttachment = notesStoreUpload($_FILES['attachment'], 'attachment');
+            // Keep the existing attachment unless a replacement is uploaded.
+            if ($noteId > 0) {
+                $existingFileStmt = $pdo->prepare("SELECT file_url, file_type FROM notes WHERE id = ? LIMIT 1");
+                $existingFileStmt->execute([$noteId]);
+                $existingFile = $existingFileStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$existingFile) {
+                    throw new RuntimeException('The note you are trying to edit no longer exists.');
+                }
+                $fileUrl = $existingFile['file_url'] ?: null;
+                $fileType = $existingFile['file_type'] ?: 'none';
+            }
+
+            $attachment = $_FILES['attachment'] ?? [];
+            if (($attachment['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $storedAttachment = notesStoreUpload($attachment, 'attachment');
                 $fileUrl = $storedAttachment['url'];
                 $fileType = $storedAttachment['extension'];
             }
@@ -201,14 +214,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!in_array($fileType, $allowedFileTypes, true)) {
                 throw new RuntimeException('Invalid file type.');
-            }
-
-            if (
-                $fileUrl !== '' &&
-                !filter_var($fileUrl, FILTER_VALIDATE_URL) &&
-                !preg_match('#^uploads/notes/(files|images)/[a-f0-9]{32}\.(pdf|doc|docx|jpg|jpeg|png|webp|gif)$#i', $fileUrl)
-            ) {
-                throw new RuntimeException('Please enter a valid HTTP(S) URL or upload a supported file.');
             }
 
             $publishedAt = null;
@@ -230,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $categoryValue = $categoryId > 0 ? $categoryId : null;
             $summaryValue = $summary !== '' ? $summary : null;
             $contentValue = $content !== '' ? $content : null;
-            $fileUrlValue = $fileUrl !== '' ? $fileUrl : null;
+            $fileUrlValue = $fileUrl;
 
             if ($noteId > 0) {
                 $stmt = $pdo->prepare("
@@ -1030,34 +1035,17 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
                     <small class="editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
                 </div>
 
-                <div class="form-group">
-                    <label>Upload PDF / DOC / DOCX (maximum 15 MB)</label>
-                    <input type="file" name="attachment" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                    <?php if (!empty($formFileUrl)): ?>
-                        <small class="editor-help">Current file: <a href="<?= nh($formFileUrl) ?>" target="_blank" rel="noopener noreferrer">Open attachment</a>. Choose a new file to replace it, or leave empty to keep the current file.</small>
-                    <?php endif; ?>
-                </div>
-
-                <div class="form-group">
-                    <label>Or use an external File URL</label>
+                <div class="form-group full">
+                    <label>ফাইল আপলোড (PDF / DOC / DOCX · সর্বোচ্চ ১৫ MB)</label>
                     <input
-                        type="url"
-                        name="file_url"
-                        value="<?= nh($formFileUrl) ?>"
-                        placeholder="https://example.com/file.pdf"
+                        type="file"
+                        name="attachment"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     >
-                </div>
-
-                <div class="form-group">
-                    <label>File Type</label>
-
-                    <select name="file_type">
-                        <option value="none" <?= $formFileType === 'none' ? 'selected' : '' ?>>No File</option>
-                        <option value="pdf" <?= $formFileType === 'pdf' ? 'selected' : '' ?>>PDF</option>
-                        <option value="doc" <?= $formFileType === 'doc' ? 'selected' : '' ?>>DOC</option>
-                        <option value="docx" <?= $formFileType === 'docx' ? 'selected' : '' ?>>DOCX</option>
-                        <option value="other" <?= $formFileType === 'other' ? 'selected' : '' ?>>Other</option>
-                    </select>
+                    <small class="editor-help">আপনার ডিভাইস থেকে সরাসরি ফাইল নির্বাচন করুন। নতুন ফাইল দিলে বর্তমান ফাইলটি প্রতিস্থাপিত হবে। কোনো নতুন ফাইল না দিলে বর্তমান ফাইল অপরিবর্তিত থাকবে।</small>
+                    <?php if (!empty($formFileUrl)): ?>
+                        <small class="editor-help">বর্তমান সংযুক্তি: <a href="<?= nh($formFileUrl) ?>" target="_blank" rel="noopener noreferrer">ফাইল খুলুন</a> (<?= nh(strtoupper((string)$formFileType)) ?>)</small>
+                    <?php endif; ?>
                 </div>
 
                 <div class="form-group">
