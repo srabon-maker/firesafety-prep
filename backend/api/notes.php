@@ -4,6 +4,30 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
+function notes_api_public_url(?string $url): ?string {
+    $url = trim((string)$url);
+    if ($url === '') return null;
+    if (filter_var($url, FILTER_VALIDATE_URL)) {
+        $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+        return in_array($scheme, ['http', 'https'], true) ? $url : null;
+    }
+    if (preg_match('~^/?uploads/notes/(?:files|images)/[a-f0-9]{32}\\.(?:pdf|doc|docx|jpg|jpeg|png|webp|gif)$~i', $url)) {
+        return 'https://fire.manobikishwarganj.com/' . ltrim($url, '/');
+    }
+    return null;
+}
+
+function notes_api_content_urls(?string $html): ?string {
+    if ($html === null || $html === '') return $html;
+    return preg_replace_callback(
+        "~((?:src|href)\\s*=\\s*)([\"'])(/?uploads/notes/(?:files|images)/[a-f0-9]{32}\\.(?:pdf|doc|docx|jpg|jpeg|png|webp|gif))\\2~i",
+        static function (array $match): string {
+            return $match[1] . $match[2] . 'https://fire.manobikishwarganj.com/' . ltrim($match[3], '/') . $match[2];
+        },
+        $html
+    );
+}
+
 function notes_api_reply(int $status, array $body): never {
     http_response_code($status);
     echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -31,7 +55,8 @@ try {
         if (!$note) notes_api_reply(404,['success'=>false,'message'=>'প্রকাশিত নোটটি পাওয়া যায়নি।']);
         $note['id']=(int)$note['id'];
         $note['category_id']=$note['category_id']===null?null:(int)$note['category_id'];
-        if (!is_string($note['file_url']) || !preg_match('~^https?://~i',$note['file_url'])) $note['file_url']=null;
+        $note['file_url'] = notes_api_public_url(is_string($note['file_url']) ? $note['file_url'] : null);
+        $note['content'] = notes_api_content_urls(is_string($note['content']) ? $note['content'] : null);
         notes_api_reply(200,['success'=>true,'data'=>$note]);
     }
     if ($action !== 'list') notes_api_reply(404,['success'=>false,'message'=>'অনুরোধটি পাওয়া যায়নি।']);
@@ -57,7 +82,8 @@ try {
     foreach($rows as &$row){
         $row['id']=(int)$row['id'];
         $row['category_id']=$row['category_id']===null?null:(int)$row['category_id'];
-        if(!is_string($row['file_url'])||!preg_match('~^https?://~i',$row['file_url']))$row['file_url']=null;
+        $row['file_url'] = notes_api_public_url(is_string($row['file_url']) ? $row['file_url'] : null);
+        $row['content'] = notes_api_content_urls(is_string($row['content']) ? $row['content'] : null);
     }
     unset($row);
     $categoryStmt=$pdo->query("SELECT id,name FROM categories WHERE category_type='note' AND is_active=1 ORDER BY sort_order ASC,name ASC");
