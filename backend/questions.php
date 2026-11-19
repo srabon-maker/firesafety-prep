@@ -798,6 +798,12 @@ $token = csrf_token();
 <div class="field-full"><label>প্রশ্নগুলো পেস্ট করুন *</label><textarea name="bulk_questions" required style="min-height:260px" placeholder="প্রশ্ন: আগুন জ্বলতে কোন তিনটি উপাদান প্রয়োজন?&#10;A. পানি, বাতাস ও তাপ&#10;B. জ্বালানি, অক্সিজেন ও তাপ&#10;C. ধোঁয়া, পানি ও অক্সিজেন&#10;D. তাপ, ধোঁয়া ও পানি&#10;সঠিক উত্তর: B&#10;&#10;প্রশ্ন: NFPA 10 কোন বিষয়ের সঙ্গে সম্পর্কিত?&#10;A. Fire Alarm&#10;B. Sprinkler System&#10;C. Portable Fire Extinguishers&#10;D. Standpipe System&#10;সঠিক উত্তর: C"></textarea></div></div>
 <div class="form-actions"><button class="btn orange" type="submit">তথ্য সাজান ও Preview দেখুন</button></div>
 </form>
+<?php if (is_array($preview) && !empty($preview['rows'])):
+$validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empty($r['_duplicate']))$validPreview++;}
+?>
+<div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'DOCX')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
+<div class="table-wrap"><table class="preview-table"><thead><tr><th>#</th><th>প্রশ্ন ও অপশন</th><th>উত্তর</th><th>যাচাই</th></tr></thead><tbody>
+<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?>
 </div></details>
 
 <details class="panel tool-panel" id="docx-import" <?= (is_array($preview) && (($preview['filename'] ?? '') !== 'কপি-পেস্ট করা প্রশ্ন')) ? 'open' : '' ?>>
@@ -808,12 +814,7 @@ $token = csrf_token();
 <div class="form-grid"><div><label>DOCX ফাইল নির্বাচন করুন *</label><input type="file" name="docx_file" accept=".docx" required></div><div><label>ডিফল্ট ক্যাটাগরি</label><input name="default_category" maxlength="100" value="General" placeholder="টেবিলে ক্যাটাগরি না থাকলে ব্যবহৃত হবে"></div></div>
 <div class="form-actions"><button class="btn orange" type="submit">Upload & Preview</button></div>
 </form>
-<?php if (is_array($preview) && !empty($preview['rows'])):
-$validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empty($r['_duplicate']))$validPreview++;}
-?>
-<div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'DOCX')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
-<div class="table-wrap"><table class="preview-table"><thead><tr><th>#</th><th>প্রশ্ন ও অপশন</th><th>উত্তর</th><th>যাচাই</th></tr></thead><tbody>
-<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?></td></tr><?php endforeach; ?>
+</td></tr><?php endforeach; ?>
 </tbody></table></div>
 <div class="form-actions">
 <?php if($validPreview>0): ?><form method="post" action="questions.php#docx-import" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_import"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
