@@ -342,10 +342,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$before) { $message='প্রশ্নটি পাওয়া যায়নি।'; $messageType='warning'; }
             else {
                 $value = $action === 'archive' ? 1 : 0;
-                $pdo->prepare('UPDATE questions SET is_archived=? WHERE id=?')->execute([$value,$id]);
-                $after=$before; $after['is_archived']=$value;
-                q_save_revision($pdo,(int)$id,$action==='archive'?'archived':'restored',$before,$after);
-                $message = $action === 'archive' ? 'প্রশ্নটি Archive করা হয়েছে।' : 'প্রশ্নটি Restore করা হয়েছে।';
+                $pdo->beginTransaction();
+                try {
+                    $pdo->prepare('UPDATE questions SET is_archived=? WHERE id=?')->execute([$value,$id]);
+                    $after=$before; $after['is_archived']=$value;
+                    q_save_revision($pdo,(int)$id,$action==='archive'?'archived':'restored',$before,$after);
+                    $pdo->commit();
+                    $message = $action === 'archive' ? 'প্রশ্নটি Archive করা হয়েছে।' : 'প্রশ্নটি Restore করা হয়েছে।';
+                } catch(Throwable $e) {
+                    if($pdo->inTransaction())$pdo->rollBack();
+                    $message='Archive/Restore সম্পন্ন হয়নি।'; $messageType='error'; error_log('Question archive/restore: '.$e->getMessage());
+                }
             }
         }
     } elseif ($action === 'bulk_action') {
@@ -358,6 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             $marks=implode(',',array_fill(0,count($ids),'?'));
             $st=$pdo->prepare("SELECT * FROM questions WHERE id IN ($marks)"); $st->execute($ids); $rows=$st->fetchAll(PDO::FETCH_ASSOC);
+            $imagesToDelete = [];
             $pdo->beginTransaction();
             try {
                 foreach($rows as $row) {
@@ -365,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if($operation==='delete') {
                         q_save_revision($pdo,$id,'deleted',$row,null);
                         $pdo->prepare('DELETE FROM questions WHERE id=?')->execute([$id]);
-                        if (!empty($row['image_path'])) q_delete_local_image((string)$row['image_path']);
+                        if (!empty($row['image_path'])) $imagesToDelete[] = (string)$row['image_path'];
                     } else {
                         $after=$row;
                         if($operation==='publish'||$operation==='draft') {$after['status']=$operation;$pdo->prepare('UPDATE questions SET status=? WHERE id=?')->execute([$operation,$id]);}
@@ -373,8 +381,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         q_save_revision($pdo,$id,'bulk_'.$operation,$row,$after);
                     }
                 }
-                $pdo->commit(); $message=count($rows).'টি প্রশ্নে Bulk Action সম্পন্ন হয়েছে।';
-            } catch(Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); throw $e; }
+                $pdo->commit();
+                foreach($imagesToDelete as $imagePathToDelete) q_delete_local_image($imagePathToDelete);
+                $message=count($rows).'টি প্রশ্নে Bulk Action সম্পন্ন হয়েছে।';
+            } catch(Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); $message='Bulk Action সম্পন্ন হয়নি। কোনো পরিবর্তন সংরক্ষণ করা হয়নি।'; $messageType='error'; error_log('Question bulk action: '.$e->getMessage()); }
         }
     } elseif ($action === 'save') {
         $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
