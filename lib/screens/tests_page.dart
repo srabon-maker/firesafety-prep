@@ -28,7 +28,10 @@ class _TestsPageState extends State<TestsPage> {
   }
   @override
   Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))]),
+    appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[
+      IconButton(tooltip:'আমার ফলাফল',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const _MyTestResultsPage()));},icon:const Icon(Icons.history)),
+      IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))
+    ]),
     body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
       future:_tests,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
@@ -46,6 +49,7 @@ class _TestsPageState extends State<TestsPage> {
               _meta(Icons.timer_outlined,'${t['duration_minutes']} মিনিট'),
               _meta(Icons.grade_outlined,'${t['total_marks']} নম্বর'),
               if(t['pass_marks']!=null)_meta(Icons.flag_outlined,'পাস ${t['pass_marks']}'),
+              if((t['max_attempts'] as num?)?.toInt()!=null && (t['max_attempts'] as num).toInt()>0)_meta(Icons.replay,'সর্বোচ্চ ${t['max_attempts']} বার'),
             ]),
             if((t['exam_instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Text('নির্দেশনা: ${t['exam_instructions']}',maxLines:3,overflow:TextOverflow.ellipsis)),
             const SizedBox(height:12),Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:()=>_start(t),icon:const Icon(Icons.play_arrow),label:const Text('পরীক্ষা শুরু করুন'),style:FilledButton.styleFrom(backgroundColor:_maroon)))
@@ -98,9 +102,13 @@ class _ExamRunnerState extends State<_ExamRunner>{
     if(!auto){final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('পরীক্ষা জমা দেবেন?'),content:const Text('জমা দেওয়ার পর উত্তর পরিবর্তন করা যাবে না।'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('ফিরে যান')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('জমা দিন'))]));if(ok!=true)return;}
     setState(()=>_submitting=true);_timer?.cancel();
     try{
-      final result=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
+      final response=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
       if(!mounted)return;
-      await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:result)));
+      if(response['result_released']==true && response['result'] is Map){
+        await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:Map<String,dynamic>.from(response['result'] as Map))));
+      }else{
+        await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const _ResultPending()));
+      }
     }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));if(auto)_timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted)return;if(_remaining>0)setState(()=>_remaining--);});}}
   }
   @override
@@ -158,4 +166,55 @@ class _ExamResult extends StatelessWidget{
       const SizedBox(height:12),FilledButton(onPressed:()=>Navigator.popUntil(context,(r)=>r.isFirst),child:const Text('পরীক্ষার তালিকায় ফিরুন'))
     ]));
   }
+}
+
+
+class _ResultPending extends StatelessWidget{
+  const _ResultPending();
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('পরীক্ষা জমা হয়েছে'),automaticallyImplyLeading:false),
+    body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const Icon(Icons.lock_clock,color:_maroon,size:64),
+      const SizedBox(height:16),
+      const Text('তোমার পরীক্ষা সফলভাবে জমা হয়েছে।',style:TextStyle(fontSize:19,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
+      const SizedBox(height:8),
+      const Text('Admin ফলাফল প্রকাশ করলে স্কোর ও সঠিক উত্তর দেখতে পারবে।',textAlign:TextAlign.center),
+      const SizedBox(height:20),
+      FilledButton(onPressed:()=>Navigator.popUntil(context,(r)=>r.isFirst),child:const Text('ফিরে যাও'))
+    ])))
+  );
+}
+
+class _MyTestResultsPage extends StatefulWidget{
+  const _MyTestResultsPage();
+  @override
+  State<_MyTestResultsPage> createState()=>_MyTestResultsPageState();
+}
+class _MyTestResultsPageState extends State<_MyTestResultsPage>{
+  late Future<List<Map<String,dynamic>>> _future;
+  @override
+  void initState(){super.initState();_future=ModelTestService.instance.myResults();}
+  Future<void> _refresh()async{final f=ModelTestService.instance.myResults();setState(()=>_future=f);await f;}
+  @override
+  Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('আমার পরীক্ষার ফলাফল'),actions:[IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))]),
+    body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
+      future:_future,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+        if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('ফলাফল লোড করা যায়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
+        final rows=snapshot.data??[];
+        if(rows.isEmpty)return ListView(children:[const SizedBox(height:110),const Center(child:Icon(Icons.assignment_outlined,size:56,color:_maroon)),const Center(child:Text('এখনো কোনো প্রকাশিত ফলাফল নেই।'))]);
+        return ListView(padding:const EdgeInsets.all(16),children:[
+          for(final r in rows)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(r['title']?.toString()??'মডেল টেস্ট',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+            const SizedBox(height:8),
+            Text('স্কোর: ${r['score']??'—'} / ${r['total_marks']??'—'}'),
+            Text('সঠিক: ${r['correct_count']??0}  •  ভুল: ${r['incorrect_count']??0}  •  উত্তর নেই: ${r['unanswered_count']??0}'),
+            Text('জমা: ${r['submitted_at']??'—'}'),
+            Text(r['passed']==null?'পাস নম্বর নির্ধারিত নয়':((r['passed']==true||r['passed']==1)?'Pass':'Fail'),style:TextStyle(fontWeight:FontWeight.bold,color:(r['passed']==true||r['passed']==1)?Colors.green:Colors.red))
+          ])))
+        ]);
+      }))
+  );
 }
