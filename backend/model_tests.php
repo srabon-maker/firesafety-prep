@@ -261,7 +261,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 .layout{display:flex;min-height:100vh}.sidebar{width:280px;flex:0 0 280px;background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7;padding:24px 16px;min-height:100vh;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
 .brand{display:flex;align-items:center;gap:13px;padding:4px 9px 26px;border:0}.brand img{width:65px;height:65px;border:2px solid #fff;border-radius:13px;background:#510d18;object-fit:contain;padding:0}.brand strong{font-size:20px;font-weight:800;color:#fff;line-height:1.25}.brand small{display:block;color:#e0bfc2;font-size:14px;margin-top:5px}
 .nav-title{display:none}.nav{display:grid;gap:5px}.nav a{display:flex;align-items:center;gap:13px;color:#f4dfe0;text-decoration:none;padding:13px 15px;margin:0;border-radius:14px;font-size:16px}.nav a:hover{background:#ffffff12}.nav a.active{background:var(--orange);color:#29170b;font-weight:800}.nav .ico{width:22px;text-align:center;font-size:20px}
-.main{margin:0;width:auto;flex:1;min-width:0;padding:32px}.top{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.top h1{font-size:32px;font-weight:900;margin:0 0 8px;color:var(--maroon)}.top p{margin:0;color:var(--muted);font-size:16px}.btn{border:0;border-radius:8px;padding:10px 15px;background:var(--orange);color:#fff;font-weight:700;text-decoration:none;cursor:pointer;display:inline-block}.btn.secondary{background:#f1e5e7;color:var(--maroon)}.btn.danger{background:#b42335}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 5px 20px #450b1507}.stat{padding:22px 20px;min-height:118px}.stat span{font-size:14px;color:var(--muted)}.stat strong{display:block;font-size:30px;color:var(--maroon);margin-top:9px;font-weight:900}.panel{padding:25px;margin-bottom:22px;border-radius:18px}.panel h2{font-size:21px;margin:0 0 19px;color:var(--maroon);font-weight:900}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dfe1e7;border-radius:8px;padding:10px 11px;font:inherit;background:#fff}.field textarea{min-height:75px;resize:vertical}.field.full{grid-column:1/-1}.hint{font-size:12px;color:var(--muted);margin-top:5px}.radio-row{display:flex;gap:18px;flex-wrap:wrap;padding:9px 0}.question-box{border:1px solid var(--line);border-radius:9px;padding:12px;margin:9px 0;display:flex;gap:10px;align-items:flex-start}.question-box input{margin-top:4px}.question-box small{display:block;color:var(--muted);margin-top:4px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:10px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}th{background:#faf7f8;color:var(--maroon)}.pill{padding:4px 9px;border-radius:20px;font-size:11px;background:#f2e6e8;color:var(--maroon)}.pill.live{background:#e4f5ed;color:#08764b}.alert{padding:12px 15px;border-radius:8px;margin:0 0 16px}.success{background:#e7f7ef;color:#116b47}.error{background:#fff0f0;color:#9d1c2c}.section{scroll-margin-top:18px}.mobile-head{display:none}
+.main{margin:0;width:auto;flex:1;min-width:0;padding:32px}.top{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.top h1{font-size:32px;font-weight:900;margin:0 0 8px;color:var(--maroon)}.top p{margin:0;color:var(--muted);font-size:16px}.btn{border:0;border-radius:8px;padding:10px 15px;background:var(--orange);color:#fff;font-weight:700;text-decoration:none;cursor:pointer;display:inline-block}.btn.secondary{background:#f1e5e7;color:var(--maroon)}.btn.danger{background:#b42335}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 5px 20px #450b1507}.stat{padding:22px 20px;min-height:118px}.stat span{font-size:14px;color:var(--muted)}.stat strong{display:block;font-size:30px;color:var(--maroon);margin-top:9px;font-weight:900}.panel{padding:25px;margin-bottom:22px;border-radius:18px}.panel h2{font-size:21px;margin:0 0 19px;color:var(--maroon);font-weight:900}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dfe1e7;border-radius:8px;padding:10px 11px;font:inherit;background:#fff}.field textarea{min-height:75px;resize:vertical}.field.full{grid-column:1/-1}.hint{font-size:12px;color:var(--muted);margin-top:5px}.radio-row{display:flex;gap:18px;flex-wrap:wrap;padding:9px 0}.question-box{border:1px solid var(--line);border-radius:9px;padding:12px;margin:9px 0;display:flex;gap:10px;align-items:flex-start}.question-box input{margin-top:4px}.question-box small{display:block;color:var(--muted);margin-top:4px}.question-box{position:relative}.question-content{flex:1;min-width:0}.question-actions{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}.question-actions button{border:1px solid var(--line);background:#fff;color:var(--maroon);border-radius:7px;padding:5px 8px;cursor:pointer}.question-actions button:disabled{opacity:.35;cursor:not-allowed}.question-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(170px,220px) auto;gap:9px;align-items:center}.question-toolbar input,.question-toolbar select{min-width:0;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;font:inherit}.selection-summary{font-weight:800;color:var(--maroon);white-space:nowrap}.question-empty{padding:16px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);display:none}.preview-modal{position:fixed;inset:0;background:#1b0b0dcc;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px}.preview-card{width:min(680px,100%);max-height:85vh;overflow:auto;background:#fff;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0005}.preview-card h3{margin:0 0 12px;color:var(--maroon)}.preview-options{display:grid;gap:8px;margin-top:12px}.preview-option{padding:10px;border:1px solid var(--line);border-radius:8px}.preview-close{float:right}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:10px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px}th{background:#faf7f8;color:var(--maroon)}.pill{padding:4px 9px;border-radius:20px;font-size:11px;background:#f2e6e8;color:var(--maroon)}.pill.live{background:#e4f5ed;color:#08764b}.alert{padding:12px 15px;border-radius:8px;margin:0 0 16px}.success{background:#e7f7ef;color:#116b47}.error{background:#fff0f0;color:#9d1c2c}.section{scroll-margin-top:18px}.mobile-head{display:none}
 @media(max-width:1100px){.sidebar{width:250px;flex-basis:250px}.main{padding:26px 22px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}\n@media(max-width:700px){.layout{display:block}.sidebar{position:relative;width:100%;height:auto;min-height:0;padding:14px 12px}.brand{padding:4px 7px 14px}.brand img{width:48px;height:48px}.brand strong{font-size:17px}.brand small{font-size:12px}.nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.nav a{font-size:13px;padding:10px}.nav .ico{font-size:17px}.main{padding:20px 14px 35px}.top{align-items:flex-start}.top h1{font-size:24px}.top .btn{white-space:nowrap}.cards{gap:10px}.stat{padding:15px;min-height:95px}.stat strong{font-size:24px}.panel{padding:17px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
 </style>
 </head>
@@ -316,8 +316,21 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field"><label>শুরুর তারিখ ও সময়</label><input type="datetime-local" name="starts_at" value="<?=mt_h($fmtDate($form['starts_at'] ?? null))?>"></div>
    <div class="field"><label>শেষের তারিখ ও সময়</label><input type="datetime-local" name="ends_at" value="<?=mt_h($fmtDate($form['ends_at'] ?? null))?>"></div>
   </div>
-  <div id="manualQuestions" style="display:none;margin-top:18px"><h3>প্রশ্ন নির্বাচন</h3><div class="toolbar"><input id="questionSearch" placeholder="প্রশ্ন বা ক্যাটাগরি দিয়ে খুঁজুন..."><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন দেখানো হচ্ছে।</span></div>
-  <?php foreach ($questions as $q): ?><label class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?>><span><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small><?php if(!empty($q['is_archived'])): ?><small style="color:#a15b13;font-weight:700">Archived · এই পরীক্ষায় আগে থেকেই যুক্ত</small><?php endif; ?></span></label><?php endforeach; ?>
+  <div id="manualQuestions" style="display:none;margin-top:18px">
+   <h3>প্রশ্ন নির্বাচন</h3>
+   <div class="question-toolbar">
+    <input id="questionSearch" type="search" placeholder="প্রশ্ন বা ক্যাটাগরি দিয়ে খুঁজুন..." aria-label="প্রশ্ন খুঁজুন">
+    <select id="questionCategoryFilter" aria-label="ক্যাটাগরি ফিল্টার"><option value="">সব ক্যাটাগরি</option><?php $questionCategories = array_values(array_unique(array_filter(array_map(static fn($q) => (string)$q['category'], $questions)))); sort($questionCategories, SORT_NATURAL | SORT_FLAG_CASE); foreach ($questionCategories as $qc): ?><option value="<?=mt_h(mb_strtolower($qc))?>"><?=mt_h($qc)?></option><?php endforeach; ?></select>
+    <span class="selection-summary" id="selectedQuestionCount" aria-live="polite">নির্বাচিত: 0</span>
+   </div>
+   <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">দেখানো সব নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
+   <div id="questionList">
+   <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>">
+    <input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
+    <span class="question-content"><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small><?php if(!empty($q['is_archived'])): ?><small style="color:#a15b13;font-weight:700">Archived · এই পরীক্ষায় আগে থেকেই যুক্ত</small><?php endif; ?></span>
+    <span class="question-actions"><button type="button" class="preview-question" aria-label="প্রশ্নের প্রিভিউ" data-id="<?=(int)$q['id']?>">প্রিভিউ</button><button type="button" class="move-question-up" aria-label="উপরে সরান">↑</button><button type="button" class="move-question-down" aria-label="নিচে সরান">↓</button></span>
+   </div><?php endforeach; ?>
+   </div><div id="questionEmpty" class="question-empty">এই ফিল্টারে কোনো প্রশ্ন পাওয়া যায়নি।</div>
   </div>
   <div class="toolbar"><button class="btn" type="submit">সংরক্ষণ করুন</button><?php if ($editing): ?><a class="btn secondary" href="model_tests.php">সম্পাদনা বাতিল</a><?php endif; ?></div>
  </form>
@@ -337,6 +350,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
  </tbody></table></div></section>
 <section id="results" class="panel section"><h2>পরীক্ষার ফলাফল</h2><p>ফলাফল দেখানোর জন্য পরীক্ষার্থীর attempt/submission টেবিল এবং student-side exam submission API সংযুক্ত করতে হবে। বর্তমান ডেটাবেজে সেই কাঠামো নিশ্চিত না হওয়ায় এখানে কোনো ফলাফল বানিয়ে দেখানো হচ্ছে না।</p></section>
 <section id="performance" class="panel section"><h2>পারফরম্যান্স বিশ্লেষণ</h2><p>শিক্ষার্থীভিত্তিক স্কোর, সঠিক/ভুল উত্তর, সময় এবং ক্যাটাগরিভিত্তিক পারফরম্যান্সের তথ্য attempt/result ডেটা সংরক্ষণের পর দেখানো যাবে।</p></section>
+<div class="preview-modal" id="questionPreviewModal" role="dialog" aria-modal="true" aria-labelledby="questionPreviewTitle"><div class="preview-card"><button type="button" class="btn secondary preview-close" id="closeQuestionPreview">বন্ধ করুন ✕</button><h3 id="questionPreviewTitle">প্রশ্নের প্রিভিউ</h3><div id="questionPreviewBody"></div></div></div>
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
 <script>
@@ -345,9 +359,94 @@ const manual=document.getElementById('manualQuestions');
 function updateMode(){
   const selected=document.querySelector('input[name="selection_mode"]:checked');
   if(manual) manual.style.display=selected?.value==='manual'?'block':'none';
+  updateSelectionSummary();
 }
 modeRadios.forEach(x=>x.addEventListener('change',updateMode));
+const questionList=document.getElementById('questionList');
+const searchInput=document.getElementById('questionSearch');
+const categoryFilter=document.getElementById('questionCategoryFilter');
+const selectedCount=document.getElementById('selectedQuestionCount');
+const emptyState=document.getElementById('questionEmpty');
+function questionRows(){return questionList?[...questionList.querySelectorAll('.question-box')]:[];}
+function updateSelectionSummary(){
+  if(!selectedCount)return;
+  const selected=questionRows().filter(row=>row.querySelector('input[type="checkbox"]')?.checked).length;
+  selectedCount.textContent='নির্বাচিত: '+selected;
+  updateMoveButtons();
+}
+function applyQuestionFilters(){
+  const query=(searchInput?.value||'').trim().toLocaleLowerCase();
+  const category=categoryFilter?.value||'';
+  let visible=0;
+  questionRows().forEach(row=>{
+    const matchesText=(row.dataset.search||'').includes(query);
+    const matchesCategory=!category||(row.dataset.category||'')===category;
+    const show=matchesText&&matchesCategory;
+    row.hidden=!show;
+    if(show)visible++;
+  });
+  if(emptyState)emptyState.style.display=visible?'none':'block';
+}
+function updateMoveButtons(){
+  const selected=questionRows().filter(row=>row.querySelector('input[type="checkbox"]')?.checked);
+  questionRows().forEach(row=>{
+    const isSelected=row.querySelector('input[type="checkbox"]')?.checked;
+    const up=row.querySelector('.move-question-up'),down=row.querySelector('.move-question-down');
+    if(up)up.disabled=!isSelected||selected.indexOf(row)===0;
+    if(down)down.disabled=!isSelected||selected.indexOf(row)===selected.length-1;
+  });
+}
+function moveSelectedQuestion(row,direction){
+  const selected=questionRows().filter(item=>item.querySelector('input[type="checkbox"]')?.checked);
+  const index=selected.indexOf(row),target=selected[index+direction];
+  if(index<0||!target)return;
+  if(direction<0)questionList.insertBefore(row,target);
+  else questionList.insertBefore(target,row);
+  updateSelectionSummary();
+}
+questionList?.addEventListener('change',event=>{
+  if(event.target.matches('input[type="checkbox"]'))updateSelectionSummary();
+});
+questionList?.addEventListener('click',event=>{
+  const row=event.target.closest('.question-box');
+  if(!row)return;
+  if(event.target.closest('.move-question-up'))moveSelectedQuestion(row,-1);
+  if(event.target.closest('.move-question-down'))moveSelectedQuestion(row,1);
+  if(event.target.closest('.preview-question'))openQuestionPreview(event.target.closest('.preview-question').dataset.id);
+});
+searchInput?.addEventListener('input',applyQuestionFilters);
+categoryFilter?.addEventListener('change',applyQuestionFilters);
+document.getElementById('selectVisibleQuestions')?.addEventListener('click',()=>{
+  questionRows().filter(row=>!row.hidden).forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=true;});
+  updateSelectionSummary();
+});
+document.getElementById('clearVisibleQuestions')?.addEventListener('click',()=>{
+  questionRows().filter(row=>!row.hidden).forEach(row=>{const cb=row.querySelector('input[type="checkbox"]');if(cb)cb.checked=false;});
+  updateSelectionSummary();
+});
+const previewModal=document.getElementById('questionPreviewModal');
+const previewBody=document.getElementById('questionPreviewBody');
+function openQuestionPreview(id){
+  const row=questionRows().find(item=>item.querySelector('input[type="checkbox"]')?.value===String(id));
+  if(!row||!previewModal||!previewBody)return;
+  const content=row.querySelector('.question-content');
+  const title=content?.querySelector('strong')?.textContent||('Question #'+id);
+  const text=content?.childNodes[2]?.textContent?.trim()||content?.innerText||'';
+  const optionText=content?.querySelector('small')?.textContent||'';
+  previewBody.replaceChildren();
+  const heading=document.createElement('p');heading.textContent=title+' — '+text;previewBody.appendChild(heading);
+  const options=document.createElement('div');options.className='preview-options';
+  optionText.split(' · ').filter(Boolean).forEach(option=>{
+    const item=document.createElement('div');item.className='preview-option';item.textContent=option;options.appendChild(item);
+  });
+  previewBody.appendChild(options);
+  previewModal.style.display='flex';
+}
+function closeQuestionPreview(){if(previewModal)previewModal.style.display='none';}
+document.getElementById('closeQuestionPreview')?.addEventListener('click',closeQuestionPreview);
+previewModal?.addEventListener('click',event=>{if(event.target===previewModal)closeQuestionPreview();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeQuestionPreview();});
 updateMode();
-document.getElementById('questionSearch')?.addEventListener('input',function(){const q=this.value.toLocaleLowerCase();document.querySelectorAll('.question-box').forEach(el=>{el.style.display=el.dataset.search.includes(q)?'flex':'none';});});
-</script>
+applyQuestionFilters();
+</script>>
 </body></html>
