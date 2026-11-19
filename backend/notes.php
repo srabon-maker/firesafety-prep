@@ -281,8 +281,17 @@ if ($where) {
     $sql .= " WHERE " . implode(' AND ', $where);
 }
 
-$sql .= " ORDER BY n.id DESC LIMIT 300";
-
+$perPage = 20;
+$currentPage = max(1, (int)($_GET['page'] ?? 1));
+$countSql = "SELECT COUNT(*) FROM notes n LEFT JOIN categories c ON c.id = n.category_id";
+if ($where) $countSql .= " WHERE " . implode(' AND ', $where);
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$totalFilteredNotes = (int)$countStmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalFilteredNotes / $perPage));
+$currentPage = min($currentPage, $totalPages);
+$offset = ($currentPage - 1) * $perPage;
+$sql .= " ORDER BY n.id DESC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -353,7 +362,7 @@ $formPublishedAt = notesDateInput($editingNote['published_at'] ?? null);
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -773,46 +782,21 @@ th {
         grid-template-columns: 1fr;
     }
 }
+
+/* Dashboard-matched Notes page */
+body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","SolaimanLipi",sans-serif}.app{min-height:100vh;display:flex}.sidebar{width:280px;flex:0 0 280px;background:linear-gradient(180deg,#450b15,#6a111f);color:#f9e9e7;padding:24px 16px;min-height:100vh}.brand{display:flex;align-items:center;gap:13px;padding:4px 9px 26px}.brand a{color:inherit;text-decoration:none!important}.logo{width:65px;height:65px;border:2px solid white;border-radius:13px;background:#510d18;object-fit:contain;display:block}.brand-name{font-size:20px;font-weight:800;color:white}.brand-sub{font-size:14px;color:#e0bfc2;margin-top:5px}.nav{display:grid;gap:5px}.nav a{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:14px;font-size:16px;color:#f4dfe0;text-decoration:none}.nav a:hover{background:#ffffff12}.nav a.active{background:#ffa400;color:#29170b;font-weight:800}.nav .ico{width:22px;text-align:center;font-size:20px}.nav a.logout{margin-top:15px;border:1px solid #ffffff40;color:#ffd6d6}.main{flex:1;min-width:0;padding:32px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px;background:transparent;color:inherit;padding:0;box-shadow:none}.topline{display:flex;align-items:center;gap:12px}.page-title{font-size:32px;font-weight:900;margin:0 0 8px;color:#30191b}.subtitle{color:#8b7777;font-size:16px}.top-actions{display:flex;align-items:center;gap:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:24px}.stat-card{background:white;border:1px solid #f1ddd6;border-radius:22px;padding:22px 20px;min-height:125px;box-shadow:none}.stat-label{color:#8b7777;font-size:15px}.stat-number{font-size:35px;font-weight:900;color:#781523;margin:16px 0 0}.card{background:white;border:1px solid #f1ddd6;border-radius:22px;padding:22px;margin-bottom:22px;box-shadow:none}.card h2{font-size:21px;font-weight:900;margin:0 0 19px;color:#510d18}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.form-group{margin:0;min-width:0}.form-group label{font-size:14px;color:#30191b;margin-bottom:7px}.form-group input,.form-group select,.form-group textarea{width:100%;min-height:48px;border:1px solid #f1ddd6;border-radius:12px;padding:12px 14px;font:inherit;background:#fff;color:#30191b}.form-group textarea{min-height:110px}.content-area{min-height:240px}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:14px;padding:13px 20px;background:#ffa400;color:#29170b;text-decoration:none;cursor:pointer;font:inherit;font-weight:800;white-space:nowrap}.btn-secondary{background:#510d18;color:#fff}.btn-light{background:#f1e5e7;color:#510d18}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.alert{padding:13px 16px;border-radius:13px;margin:0 0 18px}.alert.success{color:#176b3b;background:#e1f4e8}.alert.danger{color:#8b2323;background:#ffe8e8}.filters{display:grid;grid-template-columns:minmax(180px,2fr) minmax(140px,1fr) minmax(140px,1fr) auto;gap:10px;margin-bottom:18px}.filters input,.filters select{width:100%;min-width:0;min-height:48px;border:1px solid #f1ddd6;border-radius:12px;padding:11px 13px;font:inherit;background:#fff}.table-wrap{overflow-x:auto;border:1px solid #f1e7e3;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:850px}th,td{padding:14px 12px;text-align:left;border-bottom:1px solid #f5e7e2;font-size:13px;vertical-align:middle}th{background:#fff8f5;color:#510d18;font-weight:800;white-space:nowrap}.status{display:inline-block;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:800}.status-published{background:#e1f4e8;color:#176b3b}.status-draft{background:#fff1d4;color:#88540a}.status-archived{background:#f1e9e9;color:#775d5d}.edit-link{display:inline-flex;color:#791623;font-weight:800;text-decoration:none;border:1px solid #f1ddd6;border-radius:10px;padding:8px 11px}.delete-button{border:0;background:#fff0f0;color:#a51f32;border-radius:10px;padding:9px 11px;font-weight:800}.notes-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;color:#8b7777;font-size:13px}.notes-page-actions{display:flex;gap:8px}.notes-page-actions a,.notes-page-actions .disabled{padding:9px 13px;border:1px solid #f1ddd6;border-radius:10px;color:#791623;text-decoration:none;font-weight:800;background:white}.notes-page-actions .disabled{opacity:.45}.mobile-toggle{display:none;background:#510d18;color:white;border:0;border-radius:10px;padding:9px 12px;font-size:20px}
+@media(max-width:1250px){.sidebar{width:245px;flex-basis:245px}.main{padding:24px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:900px){.topbar{align-items:flex-start;flex-direction:column}}@media(max-width:640px){.app{display:block}.sidebar{display:none;width:100%;min-height:auto;padding:14px}.sidebar.open{display:block}.brand{padding-bottom:12px}.nav{grid-template-columns:repeat(2,minmax(0,1fr))}.nav a{font-size:14px;padding:10px}.main{padding:18px 14px 28px}.mobile-toggle{display:inline-block}.page-title{font-size:27px}.top-actions,.top-actions .btn{width:100%}.stats{gap:10px}.stat-card{padding:15px 13px;min-height:110px}.stat-number{font-size:28px}.card{padding:15px}.form-grid,.filters{grid-template-columns:1fr}.notes-pagination{align-items:flex-start;flex-direction:column}}
+
 </style>
 </head>
 
 <body>
 
-<header class="topbar">
-
-    <a href="fire_safety_job_prep_dashboard.php"
-       class="brand"
-       title="Dashboard-এ ফিরে যান">
-
-        <img
-            src="assets/fire-safety-bd-logo.png"
-            alt="Fire Safety BD Logo"
-            class="brand-logo"
-        >
-
-        <div>
-            <div class="brand-name">Fire Safety BD</div>
-            <div class="brand-subtitle">Admin Panel · Notes Management</div>
-        </div>
-
-    </a>
-
-    <nav class="nav-links">
-        <a href="fire_safety_job_prep_dashboard.php">Dashboard</a>
-        <a href="questions.php">Question Bank</a>
-        <a href="model_tests.php">Model Test</a>
-        <a href="logout.php">Logout</a>
-    </nav>
-
-</header>
-
-<main class="container">
-
-    <h1 class="page-title">Notes Management</h1>
-
-    <p class="page-subtitle">
-        Create, edit and manage your Fire Safety learning notes.
-    </p>
+<div class="app"><aside class="sidebar" id="notesSidebar">
+<div class="brand"><a href="admin/fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo" class="logo"></a><div><a href="admin/fire_safety_job_prep_dashboard.php"><div class="brand-name">Fire Safety BD</div><div class="brand-sub">অ্যাডমিন প্যানেল</div></a></div></div>
+<nav class="nav" aria-label="Admin navigation">
+<a href="admin/fire_safety_job_prep_dashboard.php"><span class="ico">▦</span> ড্যাশবোর্ড</a><a href="questions.php"><span class="ico">ⓘ</span> প্রশ্ন ব্যাংক</a><a href="model_tests.php"><span class="ico">☑</span> মডেল টেস্ট</a><a class="active" href="notes.php" aria-current="page"><span class="ico">◫</span> নোট</a><a href="job_circulars.php"><span class="ico">▣</span> চাকরির সার্কুলার</a><a href="admin/fire_safety_job_prep_dashboard.php?section=marketplace"><span class="ico">🛒</span> মার্কেটপ্লেস</a><a href="category_management.php"><span class="ico">⊞</span> ক্যাটাগরি</a><a href="admin/fire_safety_job_prep_dashboard.php?section=community"><span class="ico">▱</span> কমিউনিটি</a><a href="logout.php" class="logout"><span class="ico">↪</span> লগ আউট</a>
+</nav></aside><main class="main"><div class="topbar"><div class="topline"><button class="mobile-toggle" type="button" onclick="document.getElementById('notesSidebar').classList.toggle('open')" aria-label="মেনু">☰</button><div><h1 class="page-title">নোট ব্যবস্থাপনা</h1><div class="subtitle">শিক্ষামূলক নোট তৈরি, সম্পাদনা ও প্রকাশ ব্যবস্থাপনা</div></div></div><div class="top-actions"><a class="btn" href="#noteEditor">＋ নতুন নোট তৈরি</a></div></div>
 
     <?php if ($message): ?>
         <div class="alert success"><?= nh($message) ?></div>
@@ -846,11 +830,7 @@ th {
 
     </section>
 
-    <section class="card">
-
-        <h2>
-            <?= $editingNote ? 'Edit Note' : 'Add New Note' ?>
-        </h2>
+    <section class="card panel" id="noteEditor"><h2><?= $editingNote ? 'নোট সম্পাদনা' : 'নতুন নোট তৈরি' ?></h2>
 
         <form method="POST" action="notes.php<?= $editingNote ? '?edit=' . (int)$editingNote['id'] : '' ?>">
 
@@ -966,9 +946,7 @@ th {
 
     </section>
 
-    <section class="card">
-
-        <h2>All Notes</h2>
+    <section class="card panel"><h2>সকল নোট</h2>
 
         <form method="GET" action="notes.php" class="filters">
 
@@ -1117,11 +1095,11 @@ th {
 
             </table>
 
-        </div>
-
-    </section>
-
+</div>
+<div class="notes-pagination"><span>মোট <?= (int)$totalFilteredNotes ?>টি নোট · পৃষ্ঠা <?= (int)$currentPage ?> / <?= (int)$totalPages ?></span><div class="notes-page-actions"><?php $pageQuery=$_GET; $pageQuery['page']=max(1,$currentPage-1); ?><?php if($currentPage>1): ?><a href="notes.php?<?= nh(http_build_query($pageQuery)) ?>">← আগের</a><?php else: ?><span class="disabled">← আগের</span><?php endif; ?><?php $pageQuery['page']=min($totalPages,$currentPage+1); ?><?php if($currentPage<$totalPages): ?><a href="notes.php?<?= nh(http_build_query($pageQuery)) ?>">পরের →</a><?php else: ?><span class="disabled">পরের →</span><?php endif; ?></div></div>
+</section>
 </main>
+</div>
 
 </body>
 </html>
