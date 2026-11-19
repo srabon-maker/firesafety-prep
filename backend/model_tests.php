@@ -516,13 +516,14 @@ window.modelTestUpdateSelectionMode = function (mode) {
   var manual = document.getElementById('manualQuestions');
   var randomCount = document.getElementById('randomQuestionCountField');
   var isManual = mode === 'manual';
-  if (manual) manual.style.display = isManual ? 'block' : 'none';
-  if (randomCount) randomCount.style.display = isManual ? 'none' : 'block';
+  // Use !important so legacy page CSS cannot force the question panel visible.
+  if (manual) manual.style.setProperty('display', isManual ? 'block' : 'none', 'important');
+  if (randomCount) randomCount.style.setProperty('display', isManual ? 'none' : 'block', 'important');
 };
 (function () {
   var selected = document.querySelector('input[name="selection_mode"]:checked');
   if (selected) window.modelTestUpdateSelectionMode(selected.value);
 })();
 </script>
-<script src="/assets/model-tests.js?v=debug-20261119-1" defer></script>
+<script src="/assets/model-tests.js?v=mode-visibility-20261119-2" defer></script>
 </body></html>
