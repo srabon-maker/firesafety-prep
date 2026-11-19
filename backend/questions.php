@@ -243,7 +243,8 @@ function q_json_snapshot(array $row): string {
 function q_save_revision(PDO $pdo, int $questionId, string $event, ?array $before, ?array $after): void {
     $actor = (string)($_SESSION['admin_username'] ?? $_SESSION['admin_name'] ?? 'admin');
     $st = $pdo->prepare('INSERT INTO question_revisions (question_id,event_type,before_data,after_data,changed_by,created_at) VALUES (?,?,?,?,?,NOW())');
-    $st->execute([$questionId, $event, $before ? q_json_snapshot($before) : null, $after ? q_json_snapshot($after) : null, mb_substr((function_exists('mb_substr') ? mb_substr($actor, 0, 120, 'UTF-8') : substr($actor, 0, 120))]);
+    $actorName = function_exists('mb_substr') ? mb_substr($actor, 0, 120, 'UTF-8') : substr($actor, 0, 120);
+    $st->execute([$questionId, $event, $before ? q_json_snapshot($before) : null, $after ? q_json_snapshot($after) : null, $actorName]);
 }
 function q_upload_image(?array $file): ?string {
     if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
