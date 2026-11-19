@@ -1354,5 +1354,4 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 </body>
-</body>
 </html>
