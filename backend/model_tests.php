@@ -325,7 +325,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    </div>
    <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">দেখানো সব নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
    <div id="questionList">
-   <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>">
+   <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>" data-question="<?=mt_h($q['question'])?>" data-option-a="<?=mt_h($q['option_a'])?>" data-option-b="<?=mt_h($q['option_b'])?>" data-option-c="<?=mt_h($q['option_c'])?>" data-option-d="<?=mt_h($q['option_d'])?>">
     <input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
     <span class="question-content"><strong>#<?=(int)$q['id']?> · <?=mt_h($q['category'])?></strong><br><?=mt_h($q['question'])?><small>A. <?=mt_h($q['option_a'])?> · B. <?=mt_h($q['option_b'])?></small><?php if(!empty($q['is_archived'])): ?><small style="color:#a15b13;font-weight:700">Archived · এই পরীক্ষায় আগে থেকেই যুক্ত</small><?php endif; ?></span>
     <span class="question-actions"><button type="button" class="preview-question" aria-label="প্রশ্নের প্রিভিউ" data-id="<?=(int)$q['id']?>">প্রিভিউ</button><button type="button" class="move-question-up" aria-label="উপরে সরান">↑</button><button type="button" class="move-question-down" aria-label="নিচে সরান">↓</button></span>
@@ -429,15 +429,13 @@ const previewBody=document.getElementById('questionPreviewBody');
 function openQuestionPreview(id){
   const row=questionRows().find(item=>item.querySelector('input[type="checkbox"]')?.value===String(id));
   if(!row||!previewModal||!previewBody)return;
-  const content=row.querySelector('.question-content');
-  const title=content?.querySelector('strong')?.textContent||('Question #'+id);
-  const text=content?.childNodes[2]?.textContent?.trim()||content?.innerText||'';
-  const optionText=content?.querySelector('small')?.textContent||'';
+  const title=row.querySelector('.question-content strong')?.textContent||('Question #'+id);
   previewBody.replaceChildren();
-  const heading=document.createElement('p');heading.textContent=title+' — '+text;previewBody.appendChild(heading);
+  const heading=document.createElement('p');heading.textContent=title+' — '+(row.dataset.question||'');previewBody.appendChild(heading);
   const options=document.createElement('div');options.className='preview-options';
-  optionText.split(' · ').filter(Boolean).forEach(option=>{
-    const item=document.createElement('div');item.className='preview-option';item.textContent=option;options.appendChild(item);
+  ['a','b','c','d'].forEach(letter=>{
+    const value=row.dataset['option'+letter.toUpperCase()];
+    if(value){const item=document.createElement('div');item.className='preview-option';item.textContent=letter.toUpperCase()+'. '+value;options.appendChild(item);}
   });
   previewBody.appendChild(options);
   previewModal.style.display='flex';
@@ -448,5 +446,5 @@ previewModal?.addEventListener('click',event=>{if(event.target===previewModal)cl
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeQuestionPreview();});
 updateMode();
 applyQuestionFilters();
-</script>>
+</script>
 </body></html>
