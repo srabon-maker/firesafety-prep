@@ -141,7 +141,7 @@ function exam_attempt_payload(PDO $pdo,int $attemptId,int $userId,bool $reveal):
     if(!$a)exam_reply(404,['success'=>false,'message'=>'পরীক্ষার Attempt পাওয়া যায়নি।']);
     $rows=$pdo->prepare('SELECT id,question_id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
     $questions=array_map(static fn($r)=>exam_public_question($r,$reveal),$rows->fetchAll(PDO::FETCH_ASSOC));
-    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'instructions'=>$a['exam_instructions'],'started_at'=>$a['started_at'],'expires_at'=>$a['expires_at'],'status'=>$a['status'],'negative_marks_per_question'=>(float)$a['negative_marks_per_question'],'questions'=>$questions];
+    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'instructions'=>$a['exam_instructions'],'started_at'=>$a['started_at'],'expires_at'=>$a['expires_at'],'remaining_seconds'=>max(0,strtotime((string)$a['expires_at'])-time()),'status'=>$a['status'],'negative_marks_per_question'=>(float)$a['negative_marks_per_question'],'questions'=>$questions];
 }
 function exam_test_for_attempt(PDO $pdo,int $testId): array {
     $q=$pdo->prepare('SELECT negative_marks_per_question,pass_marks FROM model_tests WHERE id=?');$q->execute([$testId]);return $q->fetch(PDO::FETCH_ASSOC)?:['negative_marks_per_question'=>0,'pass_marks'=>0];
