@@ -360,7 +360,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
    <div class="field"><label>শুরুর তারিখ ও সময়</label><input type="datetime-local" name="starts_at" value="<?=mt_h($fmtDate($form['starts_at'] ?? null))?>"></div>
    <div class="field"><label>শেষের তারিখ ও সময়</label><input type="datetime-local" name="ends_at" value="<?=mt_h($fmtDate($form['ends_at'] ?? null))?>"></div>
   </div>
-  <div id="manualQuestions" style="display:none;margin-top:18px">
+  <div id="manualQuestions" style="display:<?= $editingSelectionMode === 'manual' ? 'block' : 'none' ?>;margin-top:18px">
    <h3>প্রশ্ন নির্বাচন</h3>
    <div class="question-toolbar">
     <input id="questionSearch" type="search" placeholder="প্রশ্ন বা ক্যাটাগরি দিয়ে খুঁজুন..." aria-label="প্রশ্ন খুঁজুন">
