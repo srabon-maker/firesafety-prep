@@ -79,7 +79,7 @@ try {
             $duration=(int)$test['duration_minutes'];
             $expires=$now->modify('+'.$duration.' minutes');
             if(!empty($test['ends_at'])){$hardEnd=new DateTimeImmutable((string)$test['ends_at']);if($hardEnd<$expires)$expires=$hardEnd;}
-            $ins=$pdo->prepare("INSERT INTO model_test_attempts undefined");
+            $ins=$pdo->prepare("INSERT INTO model_test_attempts (test_id,user_id,status,started_at,expires_at,question_count,total_marks,pass_marks,negative_marks_per_question) VALUES (?,?,'in_progress',?,?,0,0,?,?)");
             $ins->execute([$testId,$userId,$now->format('Y-m-d H:i:s'),$expires->format('Y-m-d H:i:s'),$test['pass_marks'],$test['negative_marks_per_question']]);
             $attemptId=(int)$pdo->lastInsertId();
             $order=((int)($test['randomize_questions']??0)===1)?'RAND()':'mtq.question_order ASC';
@@ -136,7 +136,7 @@ try {
 }
 
 function exam_attempt_payload(PDO $pdo,int $attemptId,int $userId,bool $reveal): array {
-    $q=$pdo->prepare("SELECT a.id,a.test_id,a.started_at,a.expires_at,a.status,t.title,t.exam_instructions,t.negative_marks_per_question FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? LIMIT 1");
+    $q=$pdo->prepare("SELECT a.id,a.test_id,a.started_at,a.expires_at,a.status,a.negative_marks_per_question,t.title,t.exam_instructions FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? LIMIT 1");
     $q->execute([$attemptId,$userId]);$a=$q->fetch(PDO::FETCH_ASSOC);
     if(!$a)exam_reply(404,['success'=>false,'message'=>'পরীক্ষার Attempt পাওয়া যায়নি।']);
     $rows=$pdo->prepare('SELECT id,question_id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
