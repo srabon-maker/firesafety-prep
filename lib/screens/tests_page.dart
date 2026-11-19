@@ -16,9 +16,37 @@ class TestsPage extends StatefulWidget {
 
 class _TestsPageState extends State<TestsPage> {
   late Future<List<Map<String,dynamic>>> _tests;
+  Map<int, Map<String, dynamic>> _activeAttempts = {};
+  bool _loadingActiveAttempts = false;
   @override
-  void initState(){super.initState();_tests=ModelTestService.instance.listTests();}
-  Future<void> _refresh() async {final next=ModelTestService.instance.listTests();setState(()=>_tests=next);await next;}
+  void initState(){
+    super.initState();
+    _tests=ModelTestService.instance.listTests();
+    _loadActiveAttempts();
+  }
+  Future<void> _loadActiveAttempts() async {
+    if (_loadingActiveAttempts) return;
+    _loadingActiveAttempts = true;
+    try {
+      final rows = await ModelTestService.instance.activeAttempts();
+      if (!mounted) return;
+      setState(() {
+        _activeAttempts = {
+          for (final row in rows) (row['test_id'] as num).toInt(): row,
+        };
+      });
+    } catch (_) {
+      // A signed-out student can still browse published tests.
+      if (mounted) setState(() => _activeAttempts = {});
+    } finally {
+      _loadingActiveAttempts = false;
+    }
+  }
+  Future<void> _refresh() async {
+    final next=ModelTestService.instance.listTests();
+    setState(()=>_tests=next);
+    await Future.wait([next, _loadActiveAttempts()]);
+  }
   Future<void> _start(Map<String,dynamic> test) async {
     if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
     try {
@@ -42,6 +70,41 @@ class _TestsPageState extends State<TestsPage> {
         if(tests.isEmpty)return ListView(children:[const SizedBox(height:100),Center(child:Icon(Icons.assignment_outlined,size:54,color:_maroon)),const Center(child:Text('এখন কোনো প্রকাশিত পরীক্ষা নেই।'))]);
         return ListView(padding:const EdgeInsets.all(16),children:[
           Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_deepMaroon,_maroon]),borderRadius:BorderRadius.circular(20)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.track_changes,color:Colors.orangeAccent,size:34),SizedBox(height:10),Text('নিজেকে যাচাই করুন',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.bold)),SizedBox(height:5),Text('প্রকাশিত পরীক্ষা নির্বাচন করে প্রস্তুতি যাচাই করুন।',style:TextStyle(color:Colors.white70))])),
+          if (_activeAttempts.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Card(
+              color: const Color(0xFFFFF5E8),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(children: [
+                      Icon(Icons.pending_actions, color: Colors.deepOrange),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('আপনার অসমাপ্ত পরীক্ষা',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                    ]),
+                    const SizedBox(height: 8),
+                    for (final entry in _activeAttempts.entries)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(entry.value['title']?.toString() ?? 'মডেল টেস্ট'),
+                        subtitle: Text('বাকি সময়: ${((entry.value['remaining_seconds'] as num?)?.toInt() ?? 0) ~/ 60} মিনিট'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          final test = tests.firstWhere(
+                            (t) => (t['id'] as num).toInt() == entry.key,
+                            orElse: () => <String, dynamic>{},
+                          );
+                          if (test.isNotEmpty) _start(test);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height:16),
           for(final t in tests) Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
@@ -57,7 +120,18 @@ class _TestsPageState extends State<TestsPage> {
               if((t['max_attempts'] as num?)?.toInt()!=null && (t['max_attempts'] as num).toInt()>0)_meta(Icons.replay,'সর্বোচ্চ ${t['max_attempts']} বার'),
             ]),
             if((t['exam_instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Text('নির্দেশনা: ${t['exam_instructions']}',maxLines:3,overflow:TextOverflow.ellipsis)),
-            const SizedBox(height:12),Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:()=>_start(t),icon:const Icon(Icons.play_arrow),label:const Text('পরীক্ষা শুরু করুন'),style:FilledButton.styleFrom(backgroundColor:_maroon)))
+            const SizedBox(height:12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => _start(t),
+                icon: Icon(_activeAttempts.containsKey((t['id'] as num).toInt())
+                    ? Icons.play_circle_outline : Icons.play_arrow),
+                label: Text(_activeAttempts.containsKey((t['id'] as num).toInt())
+                    ? 'পরীক্ষা চালিয়ে যান' : 'পরীক্ষা শুরু করুন'),
+                style: FilledButton.styleFrom(backgroundColor: _maroon),
+              ),
+            )
           ])))
         ]);
       })),
