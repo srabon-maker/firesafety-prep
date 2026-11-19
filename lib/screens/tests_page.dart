@@ -651,10 +651,20 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
         final totalAttempts = rows.length;
         final passedAttempts = rows.where((r) => r['passed'] == true || r['passed'] == 1).length;
         final validScores = rows.where((r) => ((r['total_marks'] as num?)?.toDouble() ?? 0) > 0).toList();
-        final average = validScores.isEmpty ? 0.0 : validScores
+        final percentages = validScores
             .map((r) => ((r['score'] as num?)?.toDouble() ?? 0) /
                 (r['total_marks'] as num).toDouble() * 100)
-            .reduce((a, b) => a + b) / validScores.length;
+            .toList();
+        final average = percentages.isEmpty ? 0.0 :
+            percentages.reduce((a, b) => a + b) / percentages.length;
+        final bestScore = percentages.isEmpty ? 0.0 :
+            percentages.reduce((a, b) => a > b ? a : b);
+        final totalQuestions = rows.fold<int>(0, (sum, r) =>
+            sum + ((r['question_count'] as num?)?.toInt() ?? 0));
+        final totalCorrect = rows.fold<int>(0, (sum, r) =>
+            sum + ((r['correct_count'] as num?)?.toInt() ?? 0));
+        final accuracy = totalQuestions == 0 ? 0.0 :
+            totalCorrect / totalQuestions * 100;
         return ListView(padding:const EdgeInsets.all(16),children:[
           Card(
             color: const Color(0xFFFFF5F3),
@@ -675,6 +685,36 @@ class _MyTestResultsPageState extends State<_MyTestResultsPage>{
                   ),
                   const SizedBox(height: 8),
                   Text('প্রকাশিত ফলাফলের ভিত্তিতে হিসাব করা হয়েছে।',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('আরও কিছু পারফরম্যান্স তথ্য',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _resultMetric('সেরা স্কোর', '${bestScore.toStringAsFixed(1)}%')),
+                    Expanded(child: _resultMetric('সঠিক উত্তরের হার', '${accuracy.toStringAsFixed(1)}%')),
+                  ]),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: (accuracy / 100).clamp(0.0, 1.0),
+                      minHeight: 9,
+                      backgroundColor: Colors.grey.shade200,
+                      color: _maroon,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('প্রকাশিত ফলাফলের মোট প্রশ্ন ও সঠিক উত্তরের ভিত্তিতে হিসাব।',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
                 ],
               ),
