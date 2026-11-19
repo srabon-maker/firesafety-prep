@@ -77,6 +77,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'delete_test') {
             $id = (int)($_POST['test_id'] ?? 0);
             if ($id < 1) throw new RuntimeException('ভুল টেস্ট আইডি।');
+            if (mt_table_exists($pdo, 'model_test_attempts')) {
+                $attemptCheck = $pdo->prepare('SELECT COUNT(*) FROM model_test_attempts WHERE test_id = ?');
+                $attemptCheck->execute([$id]);
+                if ((int)$attemptCheck->fetchColumn() > 0) {
+                    throw new RuntimeException('এই পরীক্ষায় শিক্ষার্থীর Attempt/Result রয়েছে। ডেটা সংরক্ষণের জন্য এটি Delete করা যাবে না; Archive করুন।');
+                }
+            }
             $pdo->beginTransaction();
             $pdo->prepare('DELETE FROM model_test_questions WHERE test_id = ?')->execute([$id]);
             $pdo->prepare('DELETE FROM model_tests WHERE id = ?')->execute([$id]);
