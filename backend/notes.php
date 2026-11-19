@@ -32,6 +32,67 @@ function notesDateInput($value): string
     return $timestamp ? date('Y-m-d\TH:i', $timestamp) : '';
 }
 
+
+/** Sanitize HTML produced by the Notes rich-text editor. */
+function notesSanitizeHtml(string $html): string
+{
+    $html = strip_tags($html, '<p><br><strong><b><em><i><u><s><h1><h2><h3><h4><ol><ul><li><blockquote><pre><code><a><img><table><thead><tbody><tr><th><td>');
+    $html = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+    $html = preg_replace('/(href|src)\s*=\s*(["\'])(?!https?:\/\/|\/?uploads\/notes\/)[^"\']*\2/i', '$1="#"', $html);
+    $html = preg_replace('/\s+style\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $html);
+    return $html;
+}
+
+function notesEnsureUploadDirectory(string $relativePath): string
+{
+    $directory = __DIR__ . '/' . trim($relativePath, '/');
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        throw new RuntimeException('Upload directory could not be created.');
+    }
+    $htaccess = dirname($directory) . '/.htaccess';
+    if (!is_file($htaccess)) {
+        @file_put_contents($htaccess, "Options -Indexes\n<FilesMatch \"\\.(php|phtml|phar|php[0-9]*)$\">\nRequire all denied\n</FilesMatch>\n");
+    }
+    return $directory;
+}
+
+function notesStoreUpload(array $file, string $kind = 'attachment'): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('File upload failed. Please try again.');
+    }
+    $maxBytes = $kind === 'image' ? 5 * 1024 * 1024 : 15 * 1024 * 1024;
+    if (($file['size'] ?? 0) <= 0 || $file['size'] > $maxBytes) {
+        throw new RuntimeException($kind === 'image' ? 'Image size must be under 5 MB.' : 'Attachment size must be under 15 MB.');
+    }
+
+    $extension = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+    $mime = '';
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $mime = (string)finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+        }
+    }
+
+    $allowed = $kind === 'image'
+        ? ['jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'], 'png' => ['image/png'], 'webp' => ['image/webp'], 'gif' => ['image/gif']]
+        : ['pdf' => ['application/pdf'], 'doc' => ['application/msword', 'application/vnd.ms-office', 'application/octet-stream'], 'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream']];
+
+    if (!isset($allowed[$extension]) || ($mime !== '' && !in_array($mime, $allowed[$extension], true))) {
+        throw new RuntimeException($kind === 'image' ? 'Only JPG, PNG, WEBP and GIF images are allowed.' : 'Only PDF, DOC and DOCX files are allowed.');
+    }
+
+    $relative = $kind === 'image' ? 'uploads/notes/images' : 'uploads/notes/files';
+    $directory = notesEnsureUploadDirectory($relative);
+    $filename = bin2hex(random_bytes(16)) . '.' . $extension;
+    if (!is_uploaded_file($file['tmp_name']) || !move_uploaded_file($file['tmp_name'], $directory . '/' . $filename)) {
+        throw new RuntimeException('The uploaded file could not be saved.');
+    }
+    return ['url' => $relative . '/' . $filename, 'extension' => $extension];
+}
+
 $message = '';
 $error = '';
 
@@ -78,6 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $action = (string)($_POST['action'] ?? '');
 
+        if ($action === 'upload_inline_image') {
+            header('Content-Type: application/json; charset=utf-8');
+            $stored = notesStoreUpload($_FILES['inline_image'] ?? [], 'image');
+            echo json_encode(['success' => true, 'url' => $stored['url']]);
+            exit;
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Delete note
@@ -109,11 +177,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $title = trim((string)($_POST['title'] ?? ''));
             $summary = trim((string)($_POST['summary'] ?? ''));
-            $content = trim((string)($_POST['content'] ?? ''));
+            $content = notesSanitizeHtml((string)($_POST['content'] ?? ''));
             $fileUrl = trim((string)($_POST['file_url'] ?? ''));
 
             $categoryId = (int)($_POST['category_id'] ?? 0);
             $fileType = (string)($_POST['file_type'] ?? 'none');
+
+            if (!empty($_FILES['attachment']['name'])) {
+                $storedAttachment = notesStoreUpload($_FILES['attachment'], 'attachment');
+                $fileUrl = $storedAttachment['url'];
+                $fileType = $storedAttachment['extension'];
+            }
             $status = (string)($_POST['status'] ?? 'draft');
             $publishedAtInput = trim((string)($_POST['published_at'] ?? ''));
 
@@ -129,8 +203,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Invalid file type.');
             }
 
-            if ($fileUrl !== '' && !filter_var($fileUrl, FILTER_VALIDATE_URL)) {
-                throw new RuntimeException('Please enter a valid file URL starting with http:// or https://.');
+            if (
+                $fileUrl !== '' &&
+                !filter_var($fileUrl, FILTER_VALIDATE_URL) &&
+                !preg_match('#^uploads/notes/(files|images)/[a-f0-9]{32}\.(pdf|doc|docx|jpg|jpeg|png|webp|gif)$#i', $fileUrl)
+            ) {
+                throw new RuntimeException('Please enter a valid HTTP(S) URL or upload a supported file.');
             }
 
             $publishedAt = null;
@@ -214,6 +292,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         throw new RuntimeException('Unknown action.');
 
     } catch (Throwable $e) {
+        if (($_POST['action'] ?? '') === 'upload_inline_image') {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
         $error = $e->getMessage();
     }
 }
@@ -368,6 +452,7 @@ $formPublishedAt = notesDateInput($editingNote['published_at'] ?? null);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Notes Management - Fire Safety BD</title>
+
 
 <style>
 * {
@@ -542,6 +627,13 @@ textarea {
 
 .content-area {
     min-height: 220px;
+}
+
+.editor-help {
+    display: block;
+    margin-top: 7px;
+    color: #777;
+    font-size: 12px;
 }
 
 input:focus,
@@ -832,7 +924,7 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 
     <section class="card panel" id="noteEditor"><h2><?= $editingNote ? 'নোট সম্পাদনা' : 'নতুন নোট তৈরি' ?></h2>
 
-        <form method="POST" action="notes.php<?= $editingNote ? '?edit=' . (int)$editingNote['id'] : '' ?>">
+        <form method="POST" enctype="multipart/form-data" action="notes.php<?= $editingNote ? '?edit=' . (int)$editingNote['id'] : '' ?>">
 
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="csrf_token" value="<?= nh($_SESSION['notes_csrf_token']) ?>">
@@ -880,15 +972,20 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 
                 <div class="form-group full">
                     <label>Note Content</label>
-                    <textarea
-                        name="content"
-                        class="content-area"
-                        placeholder="Write the complete note content here..."
-                    ><?= nh($formContent) ?></textarea>
+                    <textarea name="content" id="notes-content" class="content-area"><?= nh($formContent) ?></textarea>
+                    <small class="editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
                 </div>
 
                 <div class="form-group">
-                    <label>File URL</label>
+                    <label>Upload PDF / DOC / DOCX (maximum 15 MB)</label>
+                    <input type="file" name="attachment" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                    <?php if (!empty($formFileUrl)): ?>
+                        <small class="editor-help">Current file: <a href="<?= nh($formFileUrl) ?>" target="_blank" rel="noopener noreferrer">Open attachment</a>. Choose a new file to replace it, or leave empty to keep the current file.</small>
+                    <?php endif; ?>
+                </div>
+
+                <div class="form-group">
+                    <label>Or use an external File URL</label>
                     <input
                         type="url"
                         name="file_url"
@@ -1101,5 +1198,117 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 </main>
 </div>
 
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const contentField = document.getElementById('notes-content');
+    const form = contentField ? contentField.closest('form') : null;
+    if (!contentField || !form || typeof tinymce === 'undefined') return;
+
+    tinymce.init({
+        selector: '#notes-content',
+        height: 420,
+        menubar: 'edit view insert format table',
+        plugins: 'lists link image table code wordcount',
+        toolbar: 'undo redo | blocks | bold italic underline | forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | removeformat | code',
+        branding: false,
+        promotion: false,
+        convert_urls: false,
+        images_upload_handler: function (blobInfo) {
+            return new Promise(function (resolve, reject) {
+                const data = new FormData();
+                data.append('action', 'upload_inline_image');
+                data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
+                data.append('inline_image', blobInfo.blob(), blobInfo.filename());
+                fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' })
+                    .then(function (response) {
+                        return response.json().then(function (result) {
+                            if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
+                            resolve(result.url);
+                        });
+                    })
+                    .catch(function (error) { reject(error.message || 'Image upload failed.'); });
+            });
+        },
+        setup: function (editor) {
+            editor.on('change input undo redo', function () { editor.save(); });
+        }
+    });
+
+    form.addEventListener('submit', function () {
+        tinymce.triggerSave();
+    });
+});
+</script>
+<script>
+(function () {
+    const editorElement = document.getElementById('notes-editor');
+    const contentField = document.getElementById('notes-content');
+    const form = editorElement ? editorElement.closest('form') : null;
+    if (!editorElement || !contentField || !form || typeof Quill === 'undefined') return;
+
+    const quill = new Quill(editorElement, {
+        theme: 'snow',
+        placeholder: 'Write the complete note content here...',
+        modules: {
+            toolbar: {
+                container: [
+                    [{ header: [1, 2, 3, 4, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ color: [] }, { background: [] }],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    [{ align: [] }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image', 'table'],
+                    ['clean']
+                ],
+                handlers: {
+                    image: function () {
+                        const picker = document.createElement('input');
+                        picker.type = 'file';
+                        picker.accept = 'image/jpeg,image/png,image/webp,image/gif';
+                        picker.click();
+                        picker.onchange = async function () {
+                            if (!picker.files || !picker.files[0]) return;
+                            const data = new FormData();
+                            data.append('action', 'upload_inline_image');
+                            data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
+                            data.append('inline_image', picker.files[0]);
+                            try {
+                                const response = await fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' });
+                                const result = await response.json();
+                                if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
+                                const range = quill.getSelection(true);
+                                quill.insertEmbed(range.index, 'image', result.url, 'user');
+                                quill.setSelection(range.index + 1);
+                            } catch (error) {
+                                alert(error.message || 'Image upload failed.');
+                            }
+                        };
+                    },
+                    table: function () {
+                        const rows = parseInt(prompt('Number of table rows (1–10):', '3'), 10);
+                        const cols = parseInt(prompt('Number of table columns (1–8):', '3'), 10);
+                        if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || rows > 10 || cols < 1 || cols > 8) return;
+                        let html = '<table><tbody>';
+                        for (let r = 0; r < rows; r++) {
+                            html += '<tr>';
+                            for (let col = 0; col < cols; col++) html += '<td><p><br></p></td>';
+                            html += '</tr>';
+                        }
+                        html += '</tbody></table><p><br></p>';
+                        const range = quill.getSelection(true);
+                        quill.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
+                    }
+                }
+            }
+        }
+    });
+
+    form.addEventListener('submit', function () {
+        contentField.value = quill.root.innerHTML;
+    });
+})();
+</script>
 </body>
 </html>
