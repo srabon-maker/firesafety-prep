@@ -62,6 +62,13 @@ try {
         unset($r); exam_reply(200,['success'=>true,'data'=>$rows]);
     }
 
+    if($method==='GET' && $action==='result'){
+        $userId=exam_user($pdo);
+        $attemptId=(int)($_GET['attempt_id']??0);
+        if($attemptId<1) exam_reply(422,['success'=>false,'message'=>'সঠিক Attempt নির্বাচন করুন।']);
+        exam_reply(200,['success'=>true,'result'=>exam_result_payload($pdo,$attemptId,$userId)]);
+    }
+
     if($method==='GET' && $action==='my_results'){
         $userId=exam_user($pdo);
         $q=$pdo->prepare("SELECT a.id AS attempt_id,a.test_id,t.title,a.started_at,a.submitted_at,a.question_count,a.total_marks,a.score,a.correct_count,a.incorrect_count,a.unanswered_count,a.passed FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.user_id=? AND a.status IN ('submitted','expired') AND t.results_released=1 ORDER BY a.submitted_at DESC,a.id DESC LIMIT 100");
