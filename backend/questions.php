@@ -243,7 +243,7 @@ function q_json_snapshot(array $row): string {
 function q_save_revision(PDO $pdo, int $questionId, string $event, ?array $before, ?array $after): void {
     $actor = (string)($_SESSION['admin_username'] ?? $_SESSION['admin_name'] ?? 'admin');
     $st = $pdo->prepare('INSERT INTO question_revisions (question_id,event_type,before_data,after_data,changed_by,created_at) VALUES (?,?,?,?,?,NOW())');
-    $st->execute([$questionId, $event, $before ? q_json_snapshot($before) : null, $after ? q_json_snapshot($after) : null, mb_substr($actor, 0, 120)]);
+    $st->execute([$questionId, $event, $before ? q_json_snapshot($before) : null, $after ? q_json_snapshot($after) : null, mb_substr((function_exists('mb_substr') ? mb_substr($actor, 0, 120, 'UTF-8') : substr($actor, 0, 120))]);
 }
 function q_upload_image(?array $file): ?string {
     if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
@@ -388,8 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status'=>(string)($_POST['status'] ?? 'published')
         ];
         $errors = validate_import_question($q);
-        if (!$featureSchemaReady) { $message = 'নতুন Question Bank features চালুর আগে migration SQL phpMyAdmin-এ চালান।'; $messageType='error'; }
-        elseif ($errors) { $message = implode(' · ', $errors); $messageType = 'error'; }
+        if ($errors) { $message = implode(' · ', $errors); $messageType = 'error'; }
         elseif (!in_array($q['difficulty'], ['easy','medium','hard'], true) || !in_array($q['language'], ['Bangla','English','Both'], true) || !in_array($q['status'], ['draft','published'], true)) {
             $message = 'Difficulty, Language অথবা Status-এর মান সঠিক নয়।'; $messageType = 'error';
         } else {
@@ -397,7 +396,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dupe->execute($id ? [$q['question'],$id] : [$q['question']]);
             $duplicateId = $dupe->fetchColumn();
             if ($duplicateId) { $message = 'একই প্রশ্ন আগে থেকেই আছে (ID: ' . (int)$duplicateId . ')।'; $messageType = 'warning'; }
-            else {
+            elseif (!$featureSchemaReady) {
+                if (!empty($_FILES['question_image']['name'])) { $message='Image Upload চালুর আগে migration SQL চালান।'; $messageType='error'; }
+                elseif ($id) {
+                    $stmt = $pdo->prepare('UPDATE questions SET category=?,question=?,option_a=?,option_b=?,option_c=?,option_d=?,correct_answer=?,explanation=?,difficulty=?,language=?,reference=?,status=? WHERE id=?');
+                    $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status'],$id]);
+                    $message='প্রশ্নটি আপডেট করা হয়েছে।';
+                } else {
+                    $stmt = $pdo->prepare('INSERT INTO questions (category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty,language,reference,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+                    $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status']]);
+                    $message='নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
+                }
+            } else {
                 $before = null;
                 if ($id) { $st=$pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before=$st->fetch(PDO::FETCH_ASSOC) ?: null; }
                 $newImage = null;
