@@ -344,7 +344,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 </aside>
 <main class="main">
 <header class="top"><div><h1>মডেল টেস্ট ব্যবস্থাপনা</h1><p>পরীক্ষা তৈরি, প্রশ্ন নির্বাচন ও প্রকাশনা পরিচালনা করুন।</p></div><a class="btn" href="#create">＋ নতুন পরীক্ষা</a></header>
-<?php if ($notice): ?><div class="alert success"><?=mt_h($notice)?></div><?php endif; ?>
+<?php if ($notice): ?><div class="alert success" id="modelTestSuccessNotice" role="status"><?=mt_h($notice)?></div><?php endif; ?>
 <?php foreach ($errors as $err): ?><div class="alert error"><?=mt_h($err)?></div><?php endforeach; ?>
 
 <section id="dashboard" class="section">
@@ -464,5 +464,25 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <div class="preview-modal" id="questionPreviewModal" role="dialog" aria-modal="true" aria-labelledby="questionPreviewTitle"><div class="preview-card"><button type="button" class="btn secondary preview-close" id="closeQuestionPreview">বন্ধ করুন ✕</button><h3 id="questionPreviewTitle">প্রশ্নের প্রিভিউ</h3><div id="questionPreviewBody"></div></div></div>
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
+<script>
+(function () {
+  var notice = document.getElementById('modelTestSuccessNotice');
+  if (!notice) return;
+  window.setTimeout(function () {
+    notice.style.transition = 'opacity .35s ease, max-height .35s ease, margin .35s ease, padding .35s ease';
+    notice.style.opacity = '0';
+    notice.style.maxHeight = '0';
+    notice.style.margin = '0';
+    notice.style.paddingTop = '0';
+    notice.style.paddingBottom = '0';
+    window.setTimeout(function () { notice.remove(); }, 400);
+  }, 5000);
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    ['deleted', 'saved', 'release_updated'].forEach(function (key) { url.searchParams.delete(key); });
+    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+  }
+})();
+</script>
 <script src="/assets/model-tests.js?v=debug-20261119-1" defer></script>
 </body></html>
