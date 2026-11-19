@@ -640,6 +640,24 @@ textarea {
     color: #777;
     font-size: 12px;
 }
+.notes-editor {
+    min-height: 280px;
+    background: #fff;
+    border: 1px solid #e7ded9;
+    border-radius: 8px;
+}
+.notes-editor .ql-editor {
+    min-height: 280px;
+    font-size: 15px;
+    line-height: 1.7;
+}
+.notes-editor .ql-toolbar.ql-snow {
+    border: 0;
+    border-bottom: 1px solid #eee4df;
+}
+.notes-editor .ql-container.ql-snow {
+    border: 0;
+}
 .preview-button {
     border: 1px solid #f1ddd6;
     background: #fff8f5;
@@ -1031,7 +1049,8 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
 
                 <div class="form-group full">
                     <label>Note Content</label>
-                    <textarea name="content" id="notes-content" class="content-area"><?= nh($formContent) ?></textarea>
+                    <div id="notes-editor" class="notes-editor"><?= notesSanitizeHtml((string)$formContent) ?></div>
+                    <textarea name="content" id="notes-content" hidden><?= nh($formContent) ?></textarea>
                     <small class="editor-help">Format text, add links, tables and images. Inline images: maximum 5 MB.</small>
                 </div>
 
@@ -1258,45 +1277,73 @@ body{background:#fff8f5;color:#30191b;font-family:Arial,"Noto Sans Bengali","Sol
     </div>
 </div>
 
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const editorElement = document.getElementById('notes-editor');
     const contentField = document.getElementById('notes-content');
-    const form = contentField ? contentField.closest('form') : null;
-    if (!contentField || !form || typeof tinymce === 'undefined') return;
+    const form = editorElement ? editorElement.closest('form') : null;
+    if (!editorElement || !contentField || !form || typeof Quill === 'undefined') return;
 
-    tinymce.init({
-        selector: '#notes-content',
-        height: 420,
-        menubar: 'edit view insert format table',
-        plugins: 'lists link image table code wordcount',
-        toolbar: 'undo redo | blocks | bold italic underline | forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | removeformat | code',
-        branding: false,
-        promotion: false,
-        convert_urls: false,
-        images_upload_handler: function (blobInfo) {
-            return new Promise(function (resolve, reject) {
-                const data = new FormData();
-                data.append('action', 'upload_inline_image');
-                data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
-                data.append('inline_image', blobInfo.blob(), blobInfo.filename());
-                fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' })
-                    .then(function (response) {
-                        return response.json().then(function (result) {
-                            if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
-                            resolve(result.url);
-                        });
-                    })
-                    .catch(function (error) { reject(error.message || 'Image upload failed.'); });
-            });
-        },
-        setup: function (editor) {
-            editor.on('change input undo redo', function () { editor.save(); });
+    const quill = new Quill(editorElement, {
+        theme: 'snow',
+        placeholder: 'Write the complete note content here...',
+        modules: {
+            toolbar: {
+                container: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image', 'table'],
+                    ['clean']
+                ],
+                handlers: {
+                    image: function () {
+                        const picker = document.createElement('input');
+                        picker.type = 'file';
+                        picker.accept = 'image/jpeg,image/png,image/webp,image/gif';
+                        picker.click();
+                        picker.onchange = async function () {
+                            if (!picker.files || !picker.files[0]) return;
+                            const data = new FormData();
+                            data.append('action', 'upload_inline_image');
+                            data.append('csrf_token', form.querySelector('[name="csrf_token"]').value);
+                            data.append('inline_image', picker.files[0]);
+                            try {
+                                const response = await fetch('notes.php', { method: 'POST', body: data, credentials: 'same-origin' });
+                                const result = await response.json();
+                                if (!response.ok || !result.success) throw new Error(result.message || 'Image upload failed.');
+                                const range = quill.getSelection(true) || { index: quill.getLength() };
+                                quill.insertEmbed(range.index, 'image', result.url, 'user');
+                                quill.setSelection(range.index + 1);
+                            } catch (error) {
+                                alert(error.message || 'Image upload failed.');
+                            }
+                        };
+                    },
+                    table: function () {
+                        const rows = parseInt(prompt('Number of table rows (1–10):', '3'), 10);
+                        const cols = parseInt(prompt('Number of table columns (1–8):', '3'), 10);
+                        if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || rows > 10 || cols < 1 || cols > 8) return;
+                        let html = '<table><tbody>';
+                        for (let r = 0; r < rows; r++) {
+                            html += '<tr>';
+                            for (let col = 0; col < cols; col++) html += '<td><p><br></p></td>';
+                            html += '</tr>';
+                        }
+                        html += '</tbody></table><p><br></p>';
+                        const range = quill.getSelection(true) || { index: quill.getLength() };
+                        quill.clipboard.dangerouslyPasteHTML(range.index, html, 'user');
+                    }
+                }
+            }
         }
     });
 
     form.addEventListener('submit', function () {
-        tinymce.triggerSave();
+        contentField.value = quill.root.innerHTML;
     });
 });
 </script>
