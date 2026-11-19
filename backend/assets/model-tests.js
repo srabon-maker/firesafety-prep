@@ -151,14 +151,12 @@ function initModelTestPage() {
   if (searchInput) searchInput.addEventListener('input', applyFilters);
   if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
 
-  const manual = document.getElementById('manualQuestions');
-  document.querySelectorAll('input[name="selection_mode"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      if (manual) manual.style.display = radio.checked && radio.value === 'manual' ? 'block' : 'none';
-    });
-  });
+  // Delegate mode visibility to the page's single authoritative handler.
+  // This prevents the legacy controller from overwriting the inline mode state.
   const selectedMode = document.querySelector('input[name="selection_mode"]:checked');
-  if (manual) manual.style.display = selectedMode?.value === 'manual' ? 'block' : 'none';
+  if (selectedMode && typeof window.modelTestUpdateSelectionMode === 'function') {
+    window.modelTestUpdateSelectionMode(selectedMode.value);
+  }
 
   function openPreview(id) {
     const row = rows().find(item => checkboxFor(item)?.value === String(id));
