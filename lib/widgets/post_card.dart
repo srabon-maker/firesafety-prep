@@ -129,12 +129,19 @@ class PostCard extends StatelessWidget {
                   backgroundColor: Colors.black,
                   insetPadding: const EdgeInsets.all(12),
                   child: InteractiveViewer(
-                    child: Image.network(image,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) =>
-                            const SizedBox(height: 220,
-                                child: Center(child: Icon(Icons.broken_image_outlined,
-                                    color: Colors.white))),
+                    child: Image.network(
+                      image,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        height: 220,
+                        child: Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
