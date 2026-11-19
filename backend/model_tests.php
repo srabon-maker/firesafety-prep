@@ -60,10 +60,13 @@ $hasQuestionArchiveColumn = mt_question_archive_column_exists($pdo);
 $hasRandomColumn = false;
 $hasNegativeMarkingColumn = false;
 $hasInstructionsColumn = false;
+$hasPolicyColumns = false;
 try {
     $hasRandomColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
     $hasNegativeMarkingColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);
     $hasInstructionsColumn = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'exam_instructions'")->fetch(PDO::FETCH_ASSOC);
+    $hasPolicyColumns = (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'max_attempts'")->fetch(PDO::FETCH_ASSOC)
+        && (bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'results_released'")->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $errors[] = 'model_tests টেবিল পাওয়া যায়নি। আগে প্রয়োজনীয় SQL Migration চালান।';
 }
@@ -74,6 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('নিরাপত্তা যাচাই ব্যর্থ হয়েছে। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
         }
         $action = (string)($_POST['action'] ?? '');
+        if ($action === 'set_results_release') {
+            if (!$hasPolicyColumns || !mt_table_exists($pdo, 'model_test_attempts')) throw new RuntimeException('Policy ও Attempt Migration আগে চালান।');
+            $id = (int)($_POST['test_id'] ?? 0);
+            $released = (int)($_POST['results_released'] ?? 0);
+            if ($id < 1 || !in_array($released, [0, 1], true)) throw new RuntimeException('ফলাফল প্রকাশের অনুরোধ সঠিক নয়।');
+            $st = $pdo->prepare('UPDATE model_tests SET results_released=? WHERE id=?');
+            $st->execute([$released, $id]);
+            mt_redirect('model_tests.php?release_updated=1#results');
+        }
         if ($action === 'delete_test') {
             $id = (int)($_POST['test_id'] ?? 0);
             if ($id < 1) throw new RuntimeException('ভুল টেস্ট আইডি।');
@@ -105,6 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $passInput = trim((string)($_POST['pass_marks'] ?? ''));
             $status = (string)($_POST['status'] ?? 'draft');
             $random = (int)($_POST['randomize_questions'] ?? 0) === 1;
+            $maxAttempts = (int)($_POST['max_attempts'] ?? 0);
+            $resultsReleased = (int)($_POST['results_released'] ?? 1);
+            if ($maxAttempts < 0 || $maxAttempts > 1000) throw new RuntimeException('সর্বোচ্চ Attempt সংখ্যা ০ থেকে ১০০০-এর মধ্যে হতে হবে।');
+            if (!in_array($resultsReleased, [0, 1], true)) throw new RuntimeException('Result Release সেটিং সঠিক নয়।');
+            if (!$hasPolicyColumns) throw new RuntimeException('আগে 20261119_model_test_policies.sql Migration চালান।');
             $selectionMode = (string)($_POST['selection_mode'] ?? 'manual');
             $startsRaw = trim((string)($_POST['starts_at'] ?? ''));
             $endsRaw = trim((string)($_POST['ends_at'] ?? ''));
@@ -193,12 +210,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lock = $pdo->prepare('SELECT id FROM model_tests WHERE id = ? FOR UPDATE');
                 $lock->execute([$id]);
                 if (!$lock->fetchColumn()) throw new RuntimeException('সম্পাদনার পরীক্ষাটি আর পাওয়া যাচ্ছে না। তালিকা রিফ্রেশ করে আবার চেষ্টা করুন।');
-                $optionalUpdates = ($hasRandomColumn ? ", randomize_questions=?" : "") . ($hasNegativeMarkingColumn ? ", negative_marks_per_question=?" : "") . ($hasInstructionsColumn ? ", exam_instructions=?" : "");
+                $optionalUpdates = ($hasRandomColumn ? ", randomize_questions=?" : "") . ($hasNegativeMarkingColumn ? ", negative_marks_per_question=?" : "") . ($hasInstructionsColumn ? ", exam_instructions=?" : "") . ($hasPolicyColumns ? ", max_attempts=?, results_released=?" : "");
                 $st = $pdo->prepare("UPDATE model_tests SET category_id=?, title=?, description=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, starts_at=?, ends_at=?, updated_at=NOW()" . $optionalUpdates . " WHERE id=?");
                 $args = [$categoryId ?: null, $title, $description ?: null, $duration, $totalMarks, $passMarks, $status, $startsAt, $endsAt];
                 if ($hasRandomColumn) $args[] = $random ? 1 : 0;
                 if ($hasNegativeMarkingColumn) $args[] = $negativeMarks;
                 if ($hasInstructionsColumn) $args[] = $examInstructions ?: null;
+                if ($hasPolicyColumns) { $args[] = $maxAttempts; $args[] = $resultsReleased; }
                 $args[] = $id;
                 $st->execute($args);
                 $pdo->prepare('DELETE FROM model_test_questions WHERE test_id=?')->execute([$id]);
@@ -209,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($hasRandomColumn) { $cols .= ",randomize_questions"; $vals .= ",?"; $args[] = $random ? 1 : 0; }
                 if ($hasNegativeMarkingColumn) { $cols .= ",negative_marks_per_question"; $vals .= ",?"; $args[] = $negativeMarks; }
                 if ($hasInstructionsColumn) { $cols .= ",exam_instructions"; $vals .= ",?"; $args[] = $examInstructions ?: null; }
+                if ($hasPolicyColumns) { $cols .= ",max_attempts,results_released"; $vals .= ",?,?"; $args[] = $maxAttempts; $args[] = $resultsReleased; }
                 $st = $pdo->prepare("INSERT INTO model_tests ($cols) VALUES ($vals)");
                 $st->execute($args);
                 $id = (int)$pdo->lastInsertId();
@@ -227,6 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['saved'])) $notice = 'মডেল টেস্ট সফলভাবে সংরক্ষণ করা হয়েছে।';
 if (isset($_GET['deleted'])) $notice = 'মডেল টেস্ট মুছে ফেলা হয়েছে।';
+if (isset($_GET['release_updated'])) $notice = 'ফলাফল প্রকাশের সেটিং আপডেট হয়েছে।';
 
 $editId = (int)($_GET['edit'] ?? 0);
 if ($editId > 0) {
@@ -361,9 +381,9 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 </section>
 
 <section id="all-tests" class="panel section">
- <h2>সকল মডেল টেস্ট</h2><div class="table-wrap"><table><thead><tr><th>পরীক্ষার নাম</th><th>ক্যাটাগরি</th><th>প্রশ্ন</th><th>সময়</th><th>নম্বর</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead><tbody>
- <?php if (!$tests): ?><tr><td colspan="7">এখনো কোনো মডেল টেস্ট তৈরি করা হয়নি।</td></tr><?php endif; ?>
- <?php foreach ($tests as $t): ?><tr><td><strong><?=mt_h($t['title'])?></strong><br><small>#<?=(int)$t['id']?></small></td><td><?=mt_h($t['category_name'] ?? 'সব ক্যাটাগরি')?></td><td><?=(int)$t['question_count']?></td><td><?=(int)$t['duration_minutes']?> মিনিট</td><td><?=mt_h($t['total_marks'])?></td><td><span class="pill <?=($t['status']??'')==='published'?'live':''?>"><?=mt_h($t['status'])?></span></td><td><a class="btn secondary" href="?edit=<?=(int)$t['id']?>#create">সম্পাদনা</a><form method="post" style="display:inline" onsubmit="return confirm('এই মডেল টেস্টটি মুছে ফেলবেন?')"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="delete_test"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><button class="btn danger" type="submit">মুছুন</button></form></td></tr><?php endforeach; ?>
+ <h2>সকল মডেল টেস্ট</h2><div class="table-wrap"><table><thead><tr><th>পরীক্ষার নাম</th><th>ক্যাটাগরি</th><th>প্রশ্ন</th><th>সময়</th><th>নম্বর</th><th>Attempt Limit</th><th>ফলাফল</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead><tbody>
+ <?php if (!$tests): ?><tr><td colspan="9">এখনো কোনো মডেল টেস্ট তৈরি করা হয়নি।</td></tr><?php endif; ?>
+ <?php foreach ($tests as $t): ?><tr><td><strong><?=mt_h($t['title'])?></strong><br><small>#<?=(int)$t['id']?></small></td><td><?=mt_h($t['category_name'] ?? 'সব ক্যাটাগরি')?></td><td><?=(int)$t['question_count']?></td><td><?=(int)$t['duration_minutes']?> মিনিট</td><td><?=mt_h($t['total_marks'])?></td><td><?=((int)($t['max_attempts'] ?? 0)===0)?'সীমাহীন':(int)$t['max_attempts']?></td><td><?=((int)($t['results_released'] ?? 1)===1)?'প্রকাশিত':'গোপন'?><form method="post" style="display:inline;margin-left:6px"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="set_results_release"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><input type="hidden" name="results_released" value="<?=((int)($t['results_released'] ?? 1)===1)?0:1?>"><button class="btn secondary" type="submit"><?=((int)($t['results_released'] ?? 1)===1)?'গোপন করুন':'প্রকাশ করুন'?></button></form></td><td><span class="pill <?=($t['status']??'')==='published'?'live':''?>"><?=mt_h($t['status'])?></span></td><td><a class="btn secondary" href="?edit=<?=(int)$t['id']?>#create">সম্পাদনা</a><form method="post" style="display:inline" onsubmit="return confirm('এই মডেল টেস্টটি মুছে ফেলবেন?')"><input type="hidden" name="csrf_token" value="<?=mt_h($_SESSION['csrf_token'])?>"><input type="hidden" name="action" value="delete_test"><input type="hidden" name="test_id" value="<?=(int)$t['id']?>"><button class="btn danger" type="submit">মুছুন</button></form></td></tr><?php endforeach; ?>
  </tbody></table></div>
 </section>
 
