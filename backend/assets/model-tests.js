@@ -5,6 +5,18 @@ function initModelTestPage() {
   const list = document.getElementById('questionList');
   const sidebar = document.getElementById('modelTestSidebar');
   const menuButton = document.getElementById('modelTestMenuToggle');
+  const debug = document.getElementById('selectionDebugPanel');
+  const countNode = document.getElementById('selectedQuestionCount');
+  const selectAllButton = document.getElementById('selectVisibleQuestions');
+  const clearButton = document.getElementById('clearVisibleQuestions');
+
+  const report = (message, ok) => {
+    if (!debug) return;
+    debug.textContent = message;
+    debug.style.borderColor = ok ? '#16845b' : '#b42335';
+    debug.style.background = ok ? '#effaf4' : '#fff1f1';
+    debug.style.color = ok ? '#116b47' : '#9d1c2c';
+  };
 
   if (menuButton && sidebar && !menuButton.dataset.bound) {
     menuButton.dataset.bound = '1';
@@ -13,27 +25,31 @@ function initModelTestPage() {
       menuButton.setAttribute('aria-expanded', String(open));
     });
   }
-  if (!list || list.dataset.controllerBound === '1') return;
-  list.dataset.controllerBound = '1';
 
-  const countNode = document.getElementById('selectedQuestionCount');
-  const selectAllButton = document.getElementById('selectVisibleQuestions');
-  const clearButton = document.getElementById('clearVisibleQuestions');
+  if (!list) {
+    report('ত্রুটি: #questionList পাওয়া যায়নি। পেজের HTML/Deploy path পরীক্ষা প্রয়োজন।', false);
+    return;
+  }
+  if (list.dataset.controllerBound === 'debug-1') {
+    report('নির্বাচন ব্যবস্থা ইতিমধ্যে চালু আছে।', true);
+    return;
+  }
+  list.dataset.controllerBound = 'debug-1';
+
   const searchInput = document.getElementById('questionSearch');
   const categoryFilter = document.getElementById('questionCategoryFilter');
   const emptyState = document.getElementById('questionEmpty');
   const previewModal = document.getElementById('questionPreviewModal');
   const previewBody = document.getElementById('questionPreviewBody');
-
   const rows = () => Array.from(list.querySelectorAll('.question-box'));
-  const checkbox = row => row.querySelector('input[name="question_ids[]"][type="checkbox"]');
-  const inputs = () => Array.from(list.querySelectorAll('input[name="question_ids[]"][type="checkbox"]'));
+  const inputs = () => Array.from(list.querySelectorAll('input[type="checkbox"][name="question_ids[]"]'));
+  const checkboxFor = row => row.querySelector('input[type="checkbox"][name="question_ids[]"]');
 
   function sync() {
     const all = inputs();
     let selected = 0;
     all.forEach(input => {
-      const checked = input.checked;
+      const checked = input.checked === true;
       if (checked) selected++;
       const row = input.closest('.question-box');
       if (row) {
@@ -42,28 +58,25 @@ function initModelTestPage() {
       }
     });
     if (countNode) countNode.textContent = 'নির্বাচিত: ' + selected;
-    const selectedRows = rows().filter(row => checkbox(row)?.checked);
-    rows().forEach(row => {
-      const up = row.querySelector('.move-question-up');
-      const down = row.querySelector('.move-question-down');
-      const index = selectedRows.indexOf(row);
-      if (up) up.disabled = index <= 0;
-      if (down) down.disabled = index < 0 || index === selectedRows.length - 1;
-    });
     return selected;
   }
 
   function setAll(checked) {
-    inputs().forEach(input => { input.checked = checked; });
-    sync();
+    const all = inputs();
+    all.forEach(input => {
+      input.checked = checked;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const selected = sync();
+    report((checked ? 'সব প্রশ্ন নির্বাচন সম্পন্ন। ' : 'সব নির্বাচন বাতিল। ') +
+      'Checkbox: ' + all.length + 'টি · নির্বাচিত: ' + selected + 'টি', !!all.length);
   }
 
-  // Bind directly to the real controls. No duplicate inline controller or
-  // document-level click interception is used for selection state.
   if (selectAllButton) {
     selectAllButton.type = 'button';
     selectAllButton.addEventListener('click', event => {
       event.preventDefault();
+      event.stopPropagation();
       setAll(true);
     });
   }
@@ -71,41 +84,50 @@ function initModelTestPage() {
     clearButton.type = 'button';
     clearButton.addEventListener('click', event => {
       event.preventDefault();
+      event.stopPropagation();
       setAll(false);
     });
   }
+
   list.addEventListener('change', event => {
-    if (event.target.matches('input[name="question_ids[]"][type="checkbox"]')) sync();
+    if (event.target && event.target.matches('input[type="checkbox"][name="question_ids[]"]')) {
+      const selected = sync();
+      report('Checkbox পরিবর্তন ধরা হয়েছে। মোট Checkbox: ' + inputs().length +
+        'টি · নির্বাচিত: ' + selected + 'টি', true);
+    }
   });
+
   list.addEventListener('click', event => {
-    const row = event.target.closest('.question-box');
+    const target = event.target;
+    const row = target && target.closest ? target.closest('.question-box') : null;
     if (!row) return;
-    if (event.target.closest('.move-question-up')) {
+    if (target.closest('.move-question-up')) {
       event.preventDefault();
       move(row, -1);
       return;
     }
-    if (event.target.closest('.move-question-down')) {
+    if (target.closest('.move-question-down')) {
       event.preventDefault();
       move(row, 1);
       return;
     }
-    const preview = event.target.closest('.preview-question');
+    const preview = target.closest('.preview-question');
     if (preview) {
       event.preventDefault();
       openPreview(preview.dataset.id);
       return;
     }
-    if (event.target.closest('.question-select-label') || event.target.matches('input[type="checkbox"]')) return;
-    const input = checkbox(row);
+    if (target.closest('.question-select-label') || target.matches('input[type="checkbox"]')) return;
+    const input = checkboxFor(row);
     if (input) {
       input.checked = !input.checked;
       sync();
+      report('প্রশ্নে ক্লিক ধরা হয়েছে। নির্বাচিত: ' + inputs().filter(item => item.checked).length + 'টি', true);
     }
   });
 
   function move(row, direction) {
-    const selected = rows().filter(item => checkbox(item)?.checked);
+    const selected = rows().filter(item => checkboxFor(item)?.checked);
     const index = selected.indexOf(row);
     const target = selected[index + direction];
     if (index < 0 || !target) return;
@@ -126,8 +148,8 @@ function initModelTestPage() {
     });
     if (emptyState) emptyState.style.display = visible ? 'none' : 'block';
   }
-  searchInput?.addEventListener('input', applyFilters);
-  categoryFilter?.addEventListener('change', applyFilters);
+  if (searchInput) searchInput.addEventListener('input', applyFilters);
+  if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
 
   const manual = document.getElementById('manualQuestions');
   document.querySelectorAll('input[name="selection_mode"]').forEach(radio => {
@@ -139,7 +161,7 @@ function initModelTestPage() {
   if (manual) manual.style.display = selectedMode?.value === 'manual' ? 'block' : 'none';
 
   function openPreview(id) {
-    const row = rows().find(item => checkbox(item)?.value === String(id));
+    const row = rows().find(item => checkboxFor(item)?.value === String(id));
     if (!row || !previewModal || !previewBody) return;
     previewBody.replaceChildren();
     const heading = document.createElement('p');
@@ -163,16 +185,24 @@ function initModelTestPage() {
   function closePreview() {
     if (previewModal) previewModal.style.display = 'none';
   }
-  document.getElementById('closeQuestionPreview')?.addEventListener('click', closePreview);
-  previewModal?.addEventListener('click', event => {
+  const closeButton = document.getElementById('closeQuestionPreview');
+  if (closeButton) closeButton.addEventListener('click', closePreview);
+  if (previewModal) previewModal.addEventListener('click', event => {
     if (event.target === previewModal) closePreview();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closePreview();
   });
 
-  sync();
   applyFilters();
+  const selected = sync();
+  const missing = [];
+  if (!countNode) missing.push('Counter');
+  if (!selectAllButton) missing.push('Select All');
+  if (!clearButton) missing.push('Clear All');
+  report('JavaScript চালু। Question List: পাওয়া গেছে · Checkbox: ' + inputs().length +
+    'টি · নির্বাচিত: ' + selected + 'টি' +
+    (missing.length ? ' · অনুপস্থিত: ' + missing.join(', ') : ''), missing.length === 0);
 }
 
 if (document.readyState === 'loading') {

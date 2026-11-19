@@ -384,6 +384,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
     <span class="selection-summary" id="selectedQuestionCount" aria-live="polite">নির্বাচিত: <?=count($selectedQuestionIds)?></span>
    </div>
    <div class="toolbar"><button class="btn secondary" type="button" id="selectVisibleQuestions">সব প্রশ্ন নির্বাচন</button><button class="btn secondary" type="button" id="clearVisibleQuestions">দেখানো সব বাতিল</button><span class="hint">সর্বোচ্চ ১০০০টি সাম্প্রতিক প্রশ্ন থেকে নির্বাচন করা যাবে।</span></div>
+    <div id="selectionDebugPanel" role="status" aria-live="polite" style="margin:8px 0 12px;padding:10px 12px;border:1px solid #d8c8ca;border-radius:8px;background:#fff;font-size:13px;color:#510d18">নির্বাচন ব্যবস্থা পরীক্ষা করা হচ্ছে…</div>
    <div id="questionList">
    <?php foreach ($questions as $q): ?><div class="question-box" data-search="<?=mt_h(mb_strtolower($q['category'].' '.$q['question']))?>" data-category="<?=mt_h(mb_strtolower($q['category']))?>" data-question="<?=mt_h($q['question'])?>" data-option-a="<?=mt_h($q['option_a'])?>" data-option-b="<?=mt_h($q['option_b'])?>" data-option-c="<?=mt_h($q['option_c'])?>" data-option-d="<?=mt_h($q['option_d'])?>">
     <label class="question-select-label"><input type="checkbox" name="question_ids[]" value="<?=(int)$q['id']?>" <?=in_array((int)$q['id'],$selectedQuestionIds,true)?'checked':''?> aria-label="প্রশ্ন #<?=(int)$q['id']?> নির্বাচন">
@@ -458,5 +459,5 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <div class="preview-modal" id="questionPreviewModal" role="dialog" aria-modal="true" aria-labelledby="questionPreviewTitle"><div class="preview-card"><button type="button" class="btn secondary preview-close" id="closeQuestionPreview">বন্ধ করুন ✕</button><h3 id="questionPreviewTitle">প্রশ্নের প্রিভিউ</h3><div id="questionPreviewBody"></div></div></div>
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
-<script src="/assets/model-tests.js?v=selection-fix-20261119" defer></script>
+<script src="/assets/model-tests.js?v=debug-20261119-1" defer></script>
 </body></html>
