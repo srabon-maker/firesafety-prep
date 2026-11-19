@@ -458,6 +458,5 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <div class="preview-modal" id="questionPreviewModal" role="dialog" aria-modal="true" aria-labelledby="questionPreviewTitle"><div class="preview-card"><button type="button" class="btn secondary preview-close" id="closeQuestionPreview">বন্ধ করুন ✕</button><h3 id="questionPreviewTitle">প্রশ্নের প্রিভিউ</h3><div id="questionPreviewBody"></div></div></div>
 <footer class="hint">Fire Safety Job Prep · Model Test Admin</footer>
 </main></div>
-<script src="/assets/model-tests.js?v=7351e043" defer></script>
 <script src="/assets/model-tests.js?v=selection-fix-20261119" defer></script>
 </body></html>
