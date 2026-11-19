@@ -17,6 +17,12 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 $message = '';
 $messageType = 'success';
+$saveSucceeded = false;
+if (!empty($_SESSION['question_flash']) && is_array($_SESSION['question_flash'])) {
+    $message = (string)($_SESSION['question_flash']['message'] ?? '');
+    $messageType = (string)($_SESSION['question_flash']['type'] ?? 'success');
+    unset($_SESSION['question_flash']);
+}
 $editQuestion = null;
 $preview = $_SESSION['question_docx_preview'] ?? null;
 
@@ -433,6 +439,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$q['category'],$q['question'],$q['option_a'],$q['option_b'],$q['option_c'],$q['option_d'],$q['correct_answer'],$q['explanation'],$q['difficulty'],$q['language'],$q['reference'],$q['status']]);
                     $message='নতুন প্রশ্ন সফলভাবে যুক্ত হয়েছে।';
                 }
+                $saveSucceeded = true;
             } else {
                 $before = null;
                 if ($id) { $st=$pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before=$st->fetch(PDO::FETCH_ASSOC) ?: null; }
@@ -471,6 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch(Throwable $duplicateCheckError) {
                     error_log('Question near-duplicate check: '.$duplicateCheckError->getMessage());
                 }
+                $saveSucceeded = true;
             }
         }
     } elseif ($action === 'docx_preview') {
@@ -590,6 +598,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $message = 'অনুরোধটি সঠিক নয়।'; $messageType = 'error';
     }
+}
+
+/* Post/Redirect/Get: close edit mode after a successful save and prevent resubmission. */
+if ($saveSucceeded) {
+    $_SESSION['question_flash'] = ['message'=>$message, 'type'=>$messageType];
+    header('Location: questions.php', true, 303);
+    exit;
 }
 
 /* Reload preview after POST. */
