@@ -140,12 +140,53 @@ class _ExamRunnerState extends State<_ExamRunner>{
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),
           const SizedBox(height:16),Wrap(spacing:6,runSpacing:6,children:List.generate(_questions.length,(i)=>OutlinedButton(onPressed:()=>setState(()=>_index=i),style:OutlinedButton.styleFrom(backgroundColor:i==_index?_maroon:null,foregroundColor:i==_index?Colors.white:null,minimumSize:const Size(42,38),padding:const EdgeInsets.symmetric(horizontal:10)),child:Text('${i+1}'))))
         ])),
-        SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:Row(children:[
-          OutlinedButton(onPressed:_index>0?()=>setState(()=>_index--):null,child:const Text('আগেরটি')),
-          const Spacer(),
-          if(_index<_questions.length-1)FilledButton(onPressed:()=>setState(()=>_index++),child:const Text('পরেরটি')),
-          if(_index==_questions.length-1)FilledButton(onPressed:_submitting?null:()=>_finish(),child:const Text('Submit'))
-        ])))
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: _index > 0 ? () => setState(() => _index--) : null,
+                      child: const Text('আগেরটি'),
+                    ),
+                    const Spacer(),
+                    if (_index < _questions.length - 1)
+                      FilledButton(
+                        onPressed: () => setState(() => _index++),
+                        child: const Text('পরেরটি'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _submitting ? null : () => _finish(),
+                    icon: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send),
+                    label: Text(_submitting ? 'জমা হচ্ছে...' : 'পরীক্ষা জমা দিন'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _maroon,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
       ])
     ));
   }
