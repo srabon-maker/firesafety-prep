@@ -1,44 +1,117 @@
 (() => {
 'use strict';
 
-function initModelTestQuestionPicker() {
-  const questionList = document.getElementById('questionList');
-  if (!questionList || questionList.dataset.selectionEventsReady === '1') return;
-  questionList.dataset.selectionEventsReady = '1';
+function initModelTestPage() {
+  const list = document.getElementById('questionList');
+  const sidebar = document.getElementById('modelTestSidebar');
+  const menuButton = document.getElementById('modelTestMenuToggle');
 
-  const manual = document.getElementById('manualQuestions');
-  const selectedCount = document.getElementById('selectedQuestionCount');
+  if (menuButton && sidebar && !menuButton.dataset.bound) {
+    menuButton.dataset.bound = '1';
+    menuButton.addEventListener('click', () => {
+      const open = sidebar.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+  }
+  if (!list || list.dataset.controllerBound === '1') return;
+  list.dataset.controllerBound = '1';
+
+  const countNode = document.getElementById('selectedQuestionCount');
+  const selectAllButton = document.getElementById('selectVisibleQuestions');
+  const clearButton = document.getElementById('clearVisibleQuestions');
   const searchInput = document.getElementById('questionSearch');
   const categoryFilter = document.getElementById('questionCategoryFilter');
   const emptyState = document.getElementById('questionEmpty');
   const previewModal = document.getElementById('questionPreviewModal');
   const previewBody = document.getElementById('questionPreviewBody');
 
-  const rows = () => Array.from(questionList.querySelectorAll('.question-box'));
-  const checkboxFor = row => row.querySelector('input[type="checkbox"][name="question_ids[]"]');
+  const rows = () => Array.from(list.querySelectorAll('.question-box'));
+  const checkbox = row => row.querySelector('input[name="question_ids[]"][type="checkbox"]');
+  const inputs = () => Array.from(list.querySelectorAll('input[name="question_ids[]"][type="checkbox"]'));
 
-  function updateMoveButtons() {
-    const selected = rows().filter(row => checkboxFor(row)?.checked);
+  function sync() {
+    const all = inputs();
+    let selected = 0;
+    all.forEach(input => {
+      const checked = input.checked;
+      if (checked) selected++;
+      const row = input.closest('.question-box');
+      if (row) {
+        row.classList.toggle('is-selected', checked);
+        row.setAttribute('aria-selected', checked ? 'true' : 'false');
+      }
+    });
+    if (countNode) countNode.textContent = 'নির্বাচিত: ' + selected;
+    const selectedRows = rows().filter(row => checkbox(row)?.checked);
     rows().forEach(row => {
-      const isSelected = !!checkboxFor(row)?.checked;
       const up = row.querySelector('.move-question-up');
       const down = row.querySelector('.move-question-down');
-      if (up) up.disabled = !isSelected || selected.indexOf(row) === 0;
-      if (down) down.disabled = !isSelected || selected.indexOf(row) === selected.length - 1;
+      const index = selectedRows.indexOf(row);
+      if (up) up.disabled = index <= 0;
+      if (down) down.disabled = index < 0 || index === selectedRows.length - 1;
     });
+    return selected;
   }
 
-  function syncSelection() {
-    const allRows = rows();
-    let count = 0;
-    allRows.forEach(row => {
-      const checked = !!checkboxFor(row)?.checked;
-      row.classList.toggle('is-selected', checked);
-      row.setAttribute('aria-selected', checked ? 'true' : 'false');
-      if (checked) count++;
+  function setAll(checked) {
+    inputs().forEach(input => { input.checked = checked; });
+    sync();
+  }
+
+  // Bind directly to the real controls. No duplicate inline controller or
+  // document-level click interception is used for selection state.
+  if (selectAllButton) {
+    selectAllButton.type = 'button';
+    selectAllButton.addEventListener('click', event => {
+      event.preventDefault();
+      setAll(true);
     });
-    if (selectedCount) selectedCount.textContent = 'নির্বাচিত: ' + count;
-    updateMoveButtons();
+  }
+  if (clearButton) {
+    clearButton.type = 'button';
+    clearButton.addEventListener('click', event => {
+      event.preventDefault();
+      setAll(false);
+    });
+  }
+  list.addEventListener('change', event => {
+    if (event.target.matches('input[name="question_ids[]"][type="checkbox"]')) sync();
+  });
+  list.addEventListener('click', event => {
+    const row = event.target.closest('.question-box');
+    if (!row) return;
+    if (event.target.closest('.move-question-up')) {
+      event.preventDefault();
+      move(row, -1);
+      return;
+    }
+    if (event.target.closest('.move-question-down')) {
+      event.preventDefault();
+      move(row, 1);
+      return;
+    }
+    const preview = event.target.closest('.preview-question');
+    if (preview) {
+      event.preventDefault();
+      openPreview(preview.dataset.id);
+      return;
+    }
+    if (event.target.closest('.question-select-label') || event.target.matches('input[type="checkbox"]')) return;
+    const input = checkbox(row);
+    if (input) {
+      input.checked = !input.checked;
+      sync();
+    }
+  });
+
+  function move(row, direction) {
+    const selected = rows().filter(item => checkbox(item)?.checked);
+    const index = selected.indexOf(row);
+    const target = selected[index + direction];
+    if (index < 0 || !target) return;
+    if (direction < 0) list.insertBefore(row, target);
+    else list.insertBefore(target, row);
+    sync();
   }
 
   function applyFilters() {
@@ -53,25 +126,20 @@ function initModelTestQuestionPicker() {
     });
     if (emptyState) emptyState.style.display = visible ? 'none' : 'block';
   }
+  searchInput?.addEventListener('input', applyFilters);
+  categoryFilter?.addEventListener('change', applyFilters);
 
-  function updateMode() {
-    const selected = document.querySelector('input[name="selection_mode"]:checked');
-    if (manual) manual.style.display = selected?.value === 'manual' ? 'block' : 'none';
-    syncSelection();
-  }
-
-  function moveSelectedQuestion(row, direction) {
-    const selected = rows().filter(item => checkboxFor(item)?.checked);
-    const index = selected.indexOf(row);
-    const target = selected[index + direction];
-    if (index < 0 || !target) return;
-    if (direction < 0) questionList.insertBefore(row, target);
-    else questionList.insertBefore(target, row);
-    syncSelection();
-  }
+  const manual = document.getElementById('manualQuestions');
+  document.querySelectorAll('input[name="selection_mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (manual) manual.style.display = radio.checked && radio.value === 'manual' ? 'block' : 'none';
+    });
+  });
+  const selectedMode = document.querySelector('input[name="selection_mode"]:checked');
+  if (manual) manual.style.display = selectedMode?.value === 'manual' ? 'block' : 'none';
 
   function openPreview(id) {
-    const row = rows().find(item => checkboxFor(item)?.value === String(id));
+    const row = rows().find(item => checkbox(item)?.value === String(id));
     if (!row || !previewModal || !previewBody) return;
     previewBody.replaceChildren();
     const heading = document.createElement('p');
@@ -92,82 +160,24 @@ function initModelTestQuestionPicker() {
     previewBody.appendChild(options);
     previewModal.style.display = 'flex';
   }
-
   function closePreview() {
     if (previewModal) previewModal.style.display = 'none';
   }
-
-  // Delegated listeners survive question-list redraws and do not depend on
-  // individual buttons being bound before/after the picker is rendered.
-  document.addEventListener('change', event => {
-    if (event.target.matches('#questionList input[type="checkbox"][name="question_ids[]"]')) syncSelection();
-    if (event.target.matches('input[name="selection_mode"]')) updateMode();
-    if (event.target.matches('#questionCategoryFilter')) applyFilters();
-  }, true);
-
-  document.addEventListener('input', event => {
-    if (event.target.matches('#questionSearch')) applyFilters();
-  }, true);
-
-  document.addEventListener('click', event => {
-    const selectAll = event.target.closest('#selectVisibleQuestions');
-    if (selectAll) {
-      event.preventDefault();
-      rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = true; });
-      syncSelection();
-      return;
-    }
-
-    const clearAll = event.target.closest('#clearVisibleQuestions');
-    if (clearAll) {
-      event.preventDefault();
-      rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = false; });
-      syncSelection();
-      return;
-    }
-
-    if (event.target.closest('#closeQuestionPreview')) { closePreview(); return; }
-    if (previewModal && event.target === previewModal) { closePreview(); return; }
-
-    const row = event.target.closest('#questionList .question-box');
-    if (!row) return;
-    if (event.target.closest('.move-question-up')) { event.preventDefault(); moveSelectedQuestion(row, -1); return; }
-    if (event.target.closest('.move-question-down')) { event.preventDefault(); moveSelectedQuestion(row, 1); return; }
-    const preview = event.target.closest('.preview-question');
-    if (preview) { event.preventDefault(); openPreview(preview.dataset.id); return; }
-
-    // Checkbox label clicks use the browser's native label activation.
-    if (event.target.closest('.question-select-label') || event.target.matches('input[type="checkbox"]')) return;
-    const checkbox = checkboxFor(row);
-    if (!checkbox) return;
-    checkbox.checked = !checkbox.checked;
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-  }, true);
-
+  document.getElementById('closeQuestionPreview')?.addEventListener('click', closePreview);
+  previewModal?.addEventListener('click', event => {
+    if (event.target === previewModal) closePreview();
+  });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closePreview();
-  }, true);
-
-  // Direct button handlers as a fallback for environments/scripts that stop bubbling.
-  document.getElementById('selectVisibleQuestions')?.addEventListener('click', event => {
-    event.preventDefault();
-    rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = true; });
-    syncSelection();
-  });
-  document.getElementById('clearVisibleQuestions')?.addEventListener('click', event => {
-    event.preventDefault();
-    rows().forEach(row => { const cb = checkboxFor(row); if (cb) cb.checked = false; });
-    syncSelection();
   });
 
-  syncSelection();
+  sync();
   applyFilters();
-  updateMode();
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initModelTestQuestionPicker, { once: true });
+  document.addEventListener('DOMContentLoaded', initModelTestPage, { once: true });
 } else {
-  initModelTestQuestionPicker();
+  initModelTestPage();
 }
 })();
