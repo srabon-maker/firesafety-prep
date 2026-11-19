@@ -353,11 +353,15 @@ class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
           if(!_cacheReady)
             const Padding(padding:EdgeInsets.all(8),child:LinearProgressIndicator()),
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),
-          if(_networkUnavailable && _remaining > 0)
+          if(_networkUnavailable)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: _submitting ? null : () async {
+                  if (_remaining <= 0) {
+                    await _finish(auto: true);
+                    return;
+                  }
                   try {
                     for (final entry in _answers.entries) {
                       await ModelTestService.instance.saveAnswer(
@@ -372,8 +376,10 @@ class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
                     );
                   }
                 },
-                icon: const Icon(Icons.sync),
-                label: const Text('উত্তর আবার সংরক্ষণ করুন'),
+                icon: Icon(_remaining <= 0 ? Icons.send : Icons.sync),
+                label: Text(_remaining <= 0
+                    ? 'পরীক্ষা জমা দেওয়ার চেষ্টা করুন'
+                    : 'উত্তর আবার সংরক্ষণ করুন'),
               ),
             ),
           const SizedBox(height: 16),
