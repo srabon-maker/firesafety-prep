@@ -326,10 +326,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             $st = $pdo->prepare('SELECT * FROM questions WHERE id=?'); $st->execute([$id]); $before = $st->fetch(PDO::FETCH_ASSOC);
             if ($before && $featureSchemaReady) q_save_revision($pdo, (int)$id, 'deleted', $before, null);
-            $imageStmt=$pdo->prepare('SELECT image_path FROM questions WHERE id=?'); $imageStmt->execute([$id]); $oldImage=$imageStmt->fetchColumn();
+            $oldImage = null;
+            if ($featureSchemaReady) { $imageStmt=$pdo->prepare('SELECT image_path FROM questions WHERE id=?'); $imageStmt->execute([$id]); $oldImage=$imageStmt->fetchColumn(); }
             $stmt = $pdo->prepare('DELETE FROM questions WHERE id=?');
             $stmt->execute([$id]);
-            if ($stmt->rowCount() && $featureSchemaReady && $oldImage) q_delete_local_image((string)$oldImage);
+            if ($stmt->rowCount() && $oldImage) q_delete_local_image((string)$oldImage);
             $message = $stmt->rowCount() ? 'প্রশ্নটি মুছে ফেলা হয়েছে। Revision History-তে আগের তথ্য সংরক্ষিত আছে।' : 'প্রশ্নটি পাওয়া যায়নি।';
             $messageType = $stmt->rowCount() ? 'success' : 'warning';
         }
@@ -364,6 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if($operation==='delete') {
                         q_save_revision($pdo,$id,'deleted',$row,null);
                         $pdo->prepare('DELETE FROM questions WHERE id=?')->execute([$id]);
+                        if (!empty($row['image_path'])) q_delete_local_image((string)$row['image_path']);
                     } else {
                         $after=$row;
                         if($operation==='publish'||$operation==='draft') {$after['status']=$operation;$pdo->prepare('UPDATE questions SET status=? WHERE id=?')->execute([$operation,$id]);}
