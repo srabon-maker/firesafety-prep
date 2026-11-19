@@ -133,11 +133,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $posted = $_POST['question_ids'] ?? [];
                 if (!is_array($posted)) $posted = [];
                 $chosen = array_values(array_unique(array_filter(array_map('intval', $posted), fn($v) => $v > 0)));
-                if ($categoryName !== null && $chosen) {
+                if ($chosen) {
                     $marks = implode(',', array_fill(0, count($chosen), '?'));
-                    $activeCondition = $hasQuestionArchiveColumn ? " AND is_archived = 0" : "";
-                    $check = $pdo->prepare("SELECT id FROM questions WHERE category = ?$activeCondition AND id IN ($marks)");
-                    $check->execute(array_merge([$categoryName], $chosen));
+                    $conditions = [];
+                    $checkParams = [];
+                    if ($categoryName !== null) { $conditions[] = "category = ?"; $checkParams[] = $categoryName; }
+                    if ($hasQuestionArchiveColumn) $conditions[] = "is_archived = 0";
+                    $conditions[] = "id IN ($marks)";
+                    $check = $pdo->prepare("SELECT id FROM questions WHERE " . implode(" AND ", $conditions));
+                    $check->execute(array_merge($checkParams, $chosen));
                     $chosen = $check->fetchAll(PDO::FETCH_COLUMN);
                 }
                 if (!$chosen) throw new RuntimeException('অন্তত একটি প্রশ্ন নির্বাচন করুন।');
