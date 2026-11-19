@@ -459,7 +459,7 @@ $token = csrf_token();
 
 @media(max-width:1100px){.filter-bar{grid-template-columns:repeat(3,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.sidebar{width:230px;flex-basis:230px;padding:20px 12px}.main{padding:22px 18px}.nav-link{font-size:13px;padding:12px 12px}}
-@media(max-width:650px){.layout{display:flex;align-items:stretch;min-width:760px}.sidebar{width:205px;flex:0 0 205px;padding:18px 12px;display:flex}.brand{gap:10px;padding:4px 3px 20px}.brand img{width:54px;height:54px}.brand-name{font-size:17px}.brand-sub{font-size:12px}.nav-title{display:block;padding:18px 8px 7px}.sidebar-bottom{display:block}.nav-list{display:grid;gap:4px;overflow:visible;padding-top:0}.nav-link{white-space:normal;padding:10px 10px;font-size:12px}.main{padding:18px 16px 30px;min-width:555px}.topbar{align-items:flex-start}.page-title{font-size:25px}.stats{grid-template-columns:1fr 1fr;gap:9px}.stat-card{padding:12px;min-height:100px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr 1fr}.question-head{display:block}.question-actions{margin-top:11px}}
+@media(max-width:650px){.layout{display:block}.sidebar{display:none;width:100%;min-height:auto;padding:14px}.sidebar.open{display:block}.brand{padding-bottom:12px;gap:11px}.brand img{width:54px;height:54px}.brand-name{font-size:17px}.nav-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.nav-link{font-size:13px;padding:10px}.main{padding:18px 14px 28px;min-width:0}.topbar{align-items:flex-start;flex-direction:column}.topline{display:flex;align-items:center;gap:12px}.mobile-toggle{display:inline-block;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--deep);padding:8px 11px;font-size:18px;cursor:pointer}.page-title{font-size:27px}.top-actions{width:100%;align-items:stretch;flex-direction:column}.top-actions .btn{width:100%}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat-card{padding:12px;min-height:100px}.stat-number{font-size:22px}.stat-icon{width:34px;height:34px}.panel{padding:16px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.filter-bar{grid-template-columns:1fr}.question-head{display:block}.question-actions{margin-top:11px}}
 
 </style>
 </head>
@@ -484,7 +484,7 @@ $token = csrf_token();
  </nav>
 </aside>
 <main class="main">
-<header class="topbar"><div><h1 class="page-title">প্রশ্ন ব্যবস্থাপনা</h1><div class="eyebrow">Fire Safety BD — প্রশ্ন ব্যাংক ব্যবস্থাপনা</div></div><div class="top-actions"><a class="btn orange" href="#question-form" id="open-question-form">＋ প্রশ্ন যোগ করুন</a></div></header>
+<header class="topbar"><div class="topline"><button class="mobile-toggle" type="button" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="মেনু">☰</button><div><h1 class="page-title">প্রশ্ন ব্যবস্থাপনা</h1><div class="eyebrow">Fire Safety BD — প্রশ্ন ব্যাংক ব্যবস্থাপনা</div></div></div><div class="top-actions"><a class="btn orange" href="#question-form" id="open-question-form">＋ প্রশ্ন যোগ করুন</a></div></header>
 <?php if ($message !== ''): ?><div class="alert <?= qh($messageType) ?>"><?= qh($message) ?></div><?php endif; ?>
 
 <section class="stats">
