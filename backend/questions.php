@@ -225,15 +225,17 @@ function validate_import_question(array $q): array {
 
 /* Optional feature schema introduced by migration 20261119_question_bank_features.sql. */
 function q_table_exists(PDO $pdo, string $table): bool {
-    $st = $pdo->prepare('SHOW TABLES LIKE ?');
+    // INFORMATION_SCHEMA supports bound parameters on MariaDB/MySQL.
+    $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?');
     $st->execute([$table]);
-    return (bool)$st->fetchColumn();
+    return (int)$st->fetchColumn() > 0;
 }
 function q_column_exists(PDO $pdo, string $column): bool {
     if (!in_array($column, ['image_path','is_archived'], true)) return false;
-    $st = $pdo->prepare('SHOW COLUMNS FROM questions LIKE ?');
-    $st->execute([$column]);
-    return (bool)$st->fetch(PDO::FETCH_ASSOC);
+    // SHOW COLUMNS does not reliably accept placeholders across MariaDB versions.
+    $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?');
+    $st->execute(['questions', $column]);
+    return (int)$st->fetchColumn() > 0;
 }
 function q_json_snapshot(array $row): string {
     $allowed = ['id','category','question','option_a','option_b','option_c','option_d','correct_answer','explanation','difficulty','language','reference','status','image_path','is_archived'];
