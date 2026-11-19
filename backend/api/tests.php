@@ -31,7 +31,10 @@ function exam_input(): array {
     return $data;
 }
 function exam_test(PDO $pdo,int $id): array {
-    $q=$pdo->prepare("SELECT id,title,description,exam_instructions,duration_minutes,total_marks,pass_marks,starts_at,ends_at,negative_marks_per_question,randomize_questions,max_attempts,results_released FROM model_tests WHERE id=? AND status='published' LIMIT 1");
+    $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
+    $randomSelect=$hasRandom?',randomize_questions':'';
+    $q=$pdo->prepare("SELECT id,title,description,exam_instructions,duration_minutes,total_marks,pass_marks,starts_at,ends_at,negative_marks_per_question,max_attempts,results_released".$randomSelect." FROM model_tests WHERE id=? AND status='published' LIMIT 1");
+
     $q->execute([$id]);$row=$q->fetch(PDO::FETCH_ASSOC);
     if(!$row) exam_reply(404,['success'=>false,'message'=>'পরীক্ষাটি পাওয়া যায়নি বা প্রকাশিত নয়।']);
     $now=time();
