@@ -150,7 +150,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             };
             $startsAt = $parseLocalDate($startsRaw, 'শুরুর তারিখ ও সময়');
             $endsAt = $parseLocalDate($endsRaw, 'শেষের তারিখ ও সময়');
-            if ($startsAt && $endsAt && strtotime($endsAt) < strtotime($startsAt)) throw new RuntimeException('শেষের সময় শুরুর সময়ের আগে হতে পারবে না।');
+            if ($startsAt && $endsAt && strtotime($endsAt) <= strtotime($startsAt)) throw new RuntimeException('শেষের সময় শুরুর সময়ের পরে হতে হবে।');
+            if ($status === 'published' && $endsAt !== null && strtotime($endsAt) <= time()) throw new RuntimeException('ইতোমধ্যে শেষ হয়ে যাওয়া পরীক্ষা প্রকাশ করা যাবে না।');
 
             $chosen = [];
             if ($selectionMode === 'random') {
