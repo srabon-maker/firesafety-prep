@@ -281,6 +281,30 @@ function q_delete_local_image(?string $path): void {
     $full = __DIR__ . '/' . $path;
     if (is_file($full)) @unlink($full);
 }
+/**
+ * Extract the actual question stem when an admin pastes a complete MCQ block
+ * (question + A-D options + correct answer + explanation) into the question field.
+ */
+function q_question_stem(string $value): string {
+    $value = trim(str_replace(["\\r\\n", "\\r"], "\\n", $value));
+    if ($value === '') return '';
+    // Stop at the first option marker, supporting A., A), Option A and Bengali labels.
+    $patterns = [
+        '/\\n\\s*(?:Option\\s*)?A\\s*[.)।:-]\\s*/iu',
+        '/\\n\\s*(?:অপশন\\s*)?ক\\s*[.)।:-]\\s*/u',
+        '/\\n\\s*(?:সঠিক\\s*উত্তর|Correct\\s*Answer)\\s*[:：]/iu',
+        '/\\n\\s*(?:ব্যাখ্যা|Explanation)\\s*[:：]/iu'
+    ];
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $value, $match, PREG_OFFSET_CAPTURE)) {
+            $value = substr($value, 0, $match[0][1]);
+            break;
+        }
+    }
+    $value = preg_replace('/^\\s*(?:প্রশ্ন|Question)\\s*[:：-]\\s*/iu', '', $value) ?? $value;
+    return trim($value);
+}
+
 function q_similarity(string $a, string $b): float {
     $a = qnorm($a); $b = qnorm($b);
     if ($a === '' || $b === '') return 0.0;
@@ -303,17 +327,27 @@ function q_similarity(string $a, string $b): float {
 }
 function q_similar_from_rows(array $rows, string $question, ?int $excludeId = null, int $limit = 3): array {
     $matches = [];
+    // Shared normalization means Manual Save, Bulk Paste Preview and DOCX Preview
+    // all compare the question stem, even if a full MCQ block was pasted.
+    $questionStem = q_question_stem($question);
+    if ($questionStem !== '') $question = $questionStem;
     foreach ($rows as $row) {
         if ($excludeId && (int)$row['id'] === $excludeId) continue;
-        $score = q_similarity($question, (string)$row['question']);
-        if ($score >= 0.55) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>(string)$row['question'],'score'=>$score];
+        $rowQuestion = q_question_stem((string)$row['question']);
+        if ($rowQuestion === '') $rowQuestion = (string)$row['question'];
+        $score = q_similarity($question, $rowQuestion);
+        if ($score >= 0.55) $matches[] = ['id'=>(int)$row['id'],'category'=>(string)$row['category'],'question'=>$rowQuestion,'score'=>$score];
     }
     usort($matches, static fn($a,$b) => $b['score'] <=> $a['score']);
     return array_slice($matches, 0, $limit);
 }
 function q_near_duplicates(PDO $pdo, string $question, ?int $excludeId = null, int $limit = 5): array {
     $rows = $pdo->query('SELECT id,category,question FROM questions ORDER BY id DESC LIMIT 3000')->fetchAll(PDO::FETCH_ASSOC);
-    return q_similar_from_rows($rows, $question, $excludeId, $limit);
+    $stem = q_question_stem($question);
+    // Existing records may themselves contain a pasted full MCQ block.
+    foreach ($rows as &$row) $row['question'] = q_question_stem((string)$row['question']);
+    unset($row);
+    return q_similar_from_rows($rows, $stem !== '' ? $stem : $question, $excludeId, $limit);
 }
 
 function existing_question_map(PDO $pdo): array {
