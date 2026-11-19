@@ -55,6 +55,21 @@ try {
     $method=$_SERVER['REQUEST_METHOD']??'GET';
     $action=(string)($_GET['action']??'list');
 
+    if($method==='GET' && $action==='active_attempts'){
+        $userId=exam_user($pdo);
+        $q=$pdo->prepare("SELECT a.id AS attempt_id,a.test_id,t.title,a.started_at,a.expires_at,a.question_count,a.total_marks,a.negative_marks_per_question FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.user_id=? AND a.status='in_progress' AND a.expires_at>NOW() AND t.status='published' ORDER BY a.expires_at ASC");
+        $q->execute([$userId]);
+        $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row){
+            $row['attempt_id']=(int)$row['attempt_id'];
+            $row['test_id']=(int)$row['test_id'];
+            $row['question_count']=(int)$row['question_count'];
+            $row['remaining_seconds']=max(0,strtotime((string)$row['expires_at'])-time());
+        }
+        unset($row);
+        exam_reply(200,['success'=>true,'data'=>$rows]);
+    }
+
     if($method==='GET' && $action==='list'){
         $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
         $hasNegative=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);
