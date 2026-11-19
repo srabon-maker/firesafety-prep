@@ -800,10 +800,24 @@ $token = csrf_token();
 </form>
 <?php if (is_array($preview) && !empty($preview['rows'])):
 $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empty($r['_duplicate']))$validPreview++;}
+$isPastePreview = (($preview['filename'] ?? '') === 'কপি-পেস্ট করা প্রশ্ন');
 ?>
-<div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'DOCX')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
+<div class="panel-head" style="margin-top:22px"><div><h3 class="panel-title">Import Preview</h3><div class="panel-note"><?= qh((string)($preview['filename']??'Import')) ?> · মোট <?= count($preview['rows']) ?> · Import করা যাবে <?= $validPreview ?>টি</div></div></div>
 <div class="table-wrap"><table class="preview-table"><thead><tr><th>#</th><th>প্রশ্ন ও অপশন</th><th>উত্তর</th><th>যাচাই</th></tr></thead><tbody>
-<?php foreach($preview['rows'] as $i=>$r): ?><tr><td><?= $i+1 ?></td><td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td><td><?= qh((string)$r['correct_answer']) ?></td><td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?>
+<?php foreach($preview['rows'] as $i=>$r): ?>
+<tr>
+<td><?= $i+1 ?></td>
+<td><strong><?= qh((string)$r['question']) ?></strong><br>A. <?= qh((string)$r['option_a']) ?><br>B. <?= qh((string)$r['option_b']) ?><br>C. <?= qh((string)$r['option_c']) ?><br>D. <?= qh((string)$r['option_d']) ?><br><small><?= qh((string)$r['category']) ?> · <?= qh((string)$r['difficulty']) ?> · <?= qh((string)$r['language']) ?></small></td>
+<td><?= qh((string)$r['correct_answer']) ?></td>
+<td><?php if(!empty($r['_errors'])): ?><span class="bad"><?= qh(implode(', ',$r['_errors'])) ?></span><?php elseif(!empty($r['_duplicate'])): ?><span class="bad">Duplicate: <?= qh((string)$r['_duplicate']) ?></span><?php elseif(!empty($r['_similar'])): ?><span class="warn">Similar to #<?= (int)$r['_similar'][0]['id'] ?> (<?= (int)round($r['_similar'][0]['score']*100) ?>% match)</span><?php else: ?><span class="good">Ready</span><?php endif; ?></td>
+</tr>
+<?php endforeach; ?>
+</tbody></table></div>
+<div class="form-actions">
+<?php if($validPreview>0): ?><form method="post" action="questions.php#<?= $isPastePreview ? 'paste-import' : 'docx-import' ?>" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="<?= $isPastePreview ? 'paste_import' : 'docx_import' ?>"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
+<form method="post" action="questions.php#<?= $isPastePreview ? 'paste-import' : 'docx-import' ?>"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="clear_preview"><button class="btn light" type="submit">Preview বাতিল</button></form>
+</div>
+<?php endif; ?>
 </div></details>
 
 <details class="panel tool-panel" id="docx-import" <?= (is_array($preview) && (($preview['filename'] ?? '') !== 'কপি-পেস্ট করা প্রশ্ন')) ? 'open' : '' ?>>
@@ -814,13 +828,6 @@ $validPreview=0; foreach($preview['rows'] as $r){if(empty($r['_errors']) && empt
 <div class="form-grid"><div><label>DOCX ফাইল নির্বাচন করুন *</label><input type="file" name="docx_file" accept=".docx" required></div><div><label>ডিফল্ট ক্যাটাগরি</label><input name="default_category" maxlength="100" value="General" placeholder="টেবিলে ক্যাটাগরি না থাকলে ব্যবহৃত হবে"></div></div>
 <div class="form-actions"><button class="btn orange" type="submit">Upload & Preview</button></div>
 </form>
-</td></tr><?php endforeach; ?>
-</tbody></table></div>
-<div class="form-actions">
-<?php if($validPreview>0): ?><form method="post" action="questions.php#docx-import" onsubmit="return confirm('শুধু valid ও duplicate নয় এমন প্রশ্নগুলো ডেটাবেজে যোগ করবেন?');"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_import"><button class="btn orange" type="submit">Import <?= $validPreview ?>টি প্রশ্ন</button></form><?php endif; ?>
-<form method="post" action="questions.php#docx-import"><input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="clear_preview"><button class="btn light" type="submit">Preview বাতিল</button></form>
-</div>
-<?php endif; ?>
 </div></details>
 
 <?php if($categories): ?><section class="panel"><div class="panel-head"><h2 class="panel-title">ক্যাটাগরি অনুযায়ী প্রশ্ন</h2><span class="panel-note">প্রতিটি ক্যাটাগরিতে প্রশ্নের সংখ্যা</span></div><div class="category-list"><?php foreach($categories as $r): ?><a class="category-chip" href="<?= qh(question_page_url(1,'',(string)$r['category'],'','','')) ?>"><?= qh((string)$r['category']) ?> <strong><?= number_format((int)$r['question_count']) ?></strong></a><?php endforeach; ?></div></section><?php endif; ?>
