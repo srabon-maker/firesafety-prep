@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/study_note.dart';
@@ -480,13 +481,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 ],
                 if (note.content != null) ...[
                   const SizedBox(height: 18),
-                  SelectableText(
-                    note.content!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.8,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                  Html(
+                    data: note.content!,
+                    onLinkTap: (url, attributes, element) {
+                      if (url != null) _openFile(url);
+                    },
                   ),
                 ],
                 if (note.fileUrl != null) ...[
