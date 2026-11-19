@@ -9,7 +9,7 @@ This release connects the Flutter Model Test screen to server-managed exams.
 4. Run `backend/migrations/20261119_model_test_policies.sql` once after the attempts migration.
 5. Verify both attempt tables exist and `model_tests` contains `max_attempts` and `results_released`.
 
-The migration adds new tables only; it does not alter existing user, question, or model-test rows.
+The attempts migration creates two new tables. The policy migration adds two settings columns to `model_tests`; existing tests keep safe defaults (unlimited attempts and immediate result release). Neither migration rewrites existing users, questions, or saved test-question relationships.
 
 ## Deploy files
 Deploy together:
