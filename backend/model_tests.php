@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $duration = (int)($_POST['duration_minutes'] ?? 30);
             $questionCount = (int)($_POST['question_count'] ?? 20);
             if ($duration < 1 || $duration > 1440) throw new RuntimeException('পরীক্ষার সময় ১ থেকে ১৪৪০ মিনিটের মধ্যে হতে হবে।');
-            if ($questionCount < 1 || $questionCount > 500) throw new RuntimeException('Random প্রশ্নের সংখ্যা ১ থেকে ৫০০-এর মধ্যে হতে হবে।')
+            if ($questionCount < 1 || $questionCount > 500) throw new RuntimeException('Random প্রশ্নের সংখ্যা ১ থেকে ৫০০-এর মধ্যে হতে হবে।');
             $passInput = trim((string)($_POST['pass_marks'] ?? ''));
             $status = (string)($_POST['status'] ?? 'draft');
             $random = (int)($_POST['randomize_questions'] ?? 0) === 1;
