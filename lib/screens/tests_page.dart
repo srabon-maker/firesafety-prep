@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_guard.dart';
 import '../services/model_test_service.dart';
@@ -69,11 +71,15 @@ class _ExamRunner extends StatefulWidget {
   @override
   State<_ExamRunner> createState()=>_ExamRunnerState();
 }
-class _ExamRunnerState extends State<_ExamRunner>{
+class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
   late final List<Map<String,dynamic>> _questions;
   late final int _attemptId,_testId;
   late int _remaining,_index=0;
+  late DateTime _expiresAt;
   Timer? _timer;
+  bool _cacheReady = false;
+  bool _networkUnavailable = false;
+  String get _answerCacheKey => 'model_test_answers_$_attemptId';
   bool _submitting=false;
   String? _saveError;
   Future<void> _saveQueue=Future<void>.value();
@@ -85,23 +91,97 @@ class _ExamRunnerState extends State<_ExamRunner>{
     _testId=(widget.attempt['test_id'] as num).toInt();
     _questions=(widget.attempt['questions'] as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
     for(final q in _questions){final a=q['selected_answer'];if(a!=null)_answers[(q['id'] as num).toInt()]=a.toString();}
-    _remaining=(widget.attempt['remaining_seconds'] as num?)?.toInt()??0;
-    _timer=Timer.periodic(const Duration(seconds:1),(_){
-      if(!mounted||_submitting)return;
-      if(_remaining<=1){setState(()=>_remaining=0);_finish(auto:true);return;}
-      setState(()=>_remaining--);
-    });
+    final expiresRaw = widget.attempt['expires_at']?.toString();
+    _expiresAt = expiresRaw != null
+        ? DateTime.tryParse(expiresRaw.replaceFirst(' ', 'T'))?.toLocal() ??
+            DateTime.now().add(Duration(seconds: (widget.attempt['remaining_seconds'] as num?)?.toInt() ?? 0))
+        : DateTime.now().add(Duration(seconds: (widget.attempt['remaining_seconds'] as num?)?.toInt() ?? 0));
+    _remaining = _expiresAt.difference(DateTime.now()).inSeconds.clamp(0, 86400);
+    WidgetsBinding.instance.addObserver(this);
+    _restoreLocalAnswers();
+    _startClock();
   }
   @override
-  void dispose(){_timer?.cancel();super.dispose();}
+  void dispose(){_timer?.cancel();WidgetsBinding.instance.removeObserver(this);super.dispose();}
+
+  Future<void> _restoreLocalAnswers() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_answerCacheKey);
+      if (raw != null) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          for (final entry in decoded.entries) {
+            final id = int.tryParse(entry.key.toString());
+            final answer = entry.value.toString().toUpperCase();
+            if (id != null && ['A','B','C','D'].contains(answer) &&
+                _questions.any((q) => (q['id'] as num).toInt() == id)) {
+              _answers.putIfAbsent(id, () => answer);
+            }
+          }
+        }
+      }
+    } catch (_) {
+      // A corrupt local cache must never prevent the student from taking the test.
+    }
+    _cacheReady = true;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _persistLocalAnswers() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_answerCacheKey, jsonEncode(
+      _answers.map((key, value) => MapEntry(key.toString(), value)),
+    ));
+  }
+
+  Future<void> _clearLocalAnswers() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_answerCacheKey);
+  }
+
+  void _startClock() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _submitting) return;
+      final seconds = _expiresAt.difference(DateTime.now()).inSeconds;
+      if (seconds <= 0) {
+        setState(() => _remaining = 0);
+        _finish(auto: true);
+      } else {
+        setState(() => _remaining = seconds);
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted && !_submitting) {
+      final seconds = _expiresAt.difference(DateTime.now()).inSeconds;
+      setState(() => _remaining = seconds.clamp(0, 86400));
+      if (seconds <= 0) _finish(auto: true);
+    }
+  }
   String get _clock=>'${(_remaining~/60).toString().padLeft(2,'0')}:${(_remaining%60).toString().padLeft(2,'0')}';
   Future<void> _choose(String answer) async {
     final q=_questions[_index];final id=(q['id'] as num).toInt();
     setState(()=>_answers[id]=answer);
+    try {
+      await _persistLocalAnswers();
+    } catch (_) {
+      if (mounted) setState(() => _saveError = 'এই ডিভাইসে উত্তর সংরক্ষণ করা যায়নি। ইন্টারনেট চালু রেখে পরীক্ষা চালিয়ে যান।');
+    }
     final pending=_saveQueue.catchError((_){}).then((_)=>ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:id,answer:answer));
     _saveQueue=pending;
-    try{await pending;if(mounted)setState(()=>_saveError=null);}
-    catch(e){if(mounted)setState(()=>_saveError='উত্তর সার্ভারে সংরক্ষণ হয়নি। Submit করার আগে আবার সংরক্ষণ চেষ্টা করা হবে।');}
+    try {
+      await pending;
+      if (mounted) setState(() {_saveError=null;_networkUnavailable=false;});
+    } catch (_) {
+      if (mounted) setState(() {
+        _networkUnavailable = true;
+        _saveError = 'ইন্টারনেট সংযোগ নেই বা উত্তর সার্ভারে পৌঁছায়নি। উত্তর এই ডিভাইসে রাখা হয়েছে; সংযোগ ফিরলে আবার সংরক্ষণ করুন।';
+      });
+    }
   }
   Future<void> _finish({bool auto=false}) async {
     if(_submitting)return;
@@ -142,22 +222,26 @@ class _ExamRunnerState extends State<_ExamRunner>{
     setState(()=>_submitting=true);_timer?.cancel();
     try{
       await _saveQueue.catchError((_) {});
-      // While time remains, flush the latest selected answers in order.
-      // Once the server deadline has passed, answer writes are correctly
-      // rejected; submit the answers already saved before expiry instead.
-      if(_remaining>0){
-        for(final entry in _answers.entries){
-          await ModelTestService.instance.saveAnswer(attemptId:_attemptId,testId:_testId,questionId:entry.key,answer:entry.value);
+      // Flush the locally cached answers before submitting while the server
+      // deadline is still open. If the deadline passed offline, the server
+      // remains authoritative and accepts only answers saved before expiry.
+      if (_expiresAt.isAfter(DateTime.now())) {
+        for (final entry in _answers.entries) {
+          await ModelTestService.instance.saveAnswer(
+            attemptId: _attemptId, testId: _testId,
+            questionId: entry.key, answer: entry.value,
+          );
         }
       }
       final response=await ModelTestService.instance.submit(attemptId:_attemptId,testId:_testId);
+      await _clearLocalAnswers();
       if(!mounted)return;
       if(response['result_released']==true && response['result'] is Map){
         await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:Map<String,dynamic>.from(response['result'] as Map))));
       }else{
         await Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const _ResultPending()));
       }
-    }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));if(auto)_timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted||_submitting)return;if(_remaining<=1){_remaining=0;_finish(auto:true);}else{setState(()=>_remaining--);}});}}
+    }catch(e){if(mounted){setState(()=>_submitting=false);ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('জমা দেওয়া যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।')));if(auto){setState(()=>_networkUnavailable=true);}else{_startClock();}}}
   }
   @override
   Widget build(BuildContext context){
@@ -192,7 +276,32 @@ class _ExamRunnerState extends State<_ExamRunner>{
           Text(q['question']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),
           const SizedBox(height:18),
           for(final letter in ['A','B','C','D'])Card(child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
+          if(!_cacheReady)
+            const Padding(padding:EdgeInsets.all(8),child:LinearProgressIndicator()),
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),
+          if(_networkUnavailable && _remaining > 0)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _submitting ? null : () async {
+                  try {
+                    for (final entry in _answers.entries) {
+                      await ModelTestService.instance.saveAnswer(
+                        attemptId: _attemptId, testId: _testId,
+                        questionId: entry.key, answer: entry.value,
+                      );
+                    }
+                    if (mounted) setState(() {_networkUnavailable=false;_saveError=null;});
+                  } catch (_) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('সংরক্ষণ হয়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.sync),
+                label: const Text('উত্তর আবার সংরক্ষণ করুন'),
+              ),
+            ),
           const SizedBox(height: 16),
           Row(
             children: [
