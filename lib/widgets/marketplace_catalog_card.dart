@@ -52,7 +52,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 130,
+              height: 120,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
