@@ -444,7 +444,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   IconData _categoryIcon(String name) {
     final value = name.toLowerCase();
     if (value.contains('নির্বাপক') || value.contains('extinguisher')) {
-      return Icons.fire_extinguisher_rounded;
+      return Icons.fire_extinguisher;
     }
     if (value.contains('ডিটেকশন') || value.contains('detector')) {
       return Icons.sensors_rounded;
@@ -547,7 +547,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   right: 8,
                   bottom: -12,
                   child: Icon(
-                    Icons.fire_extinguisher_rounded,
+                    Icons.fire_extinguisher,
                     size: 154,
                     color: Colors.white.withValues(alpha: 0.16),
                   ),
@@ -572,7 +572,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 14),
                             const Text(
-                              'ফায়ার সেফটি\\nমার্কেটপ্লেস',
+                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -607,7 +607,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                                 right: 0,
                                 bottom: 3,
                                 child: Icon(
-                                  Icons.fire_extinguisher_rounded,
+                                  Icons.fire_extinguisher,
                                   color: Color(0xFFFFE9EC),
                                   size: 116,
                                 ),
