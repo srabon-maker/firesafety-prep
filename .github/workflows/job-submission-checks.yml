@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/structured-job-circular-details
+      - fix/tests-page-state-types
   pull_request:
     paths:
       - 'backend/api/jobs/**'
@@ -18,7 +19,9 @@ on:
       - 'lib/models/community_post.dart'
       - 'lib/services/community_service.dart'
       - 'pubspec.yaml'
-      - 'lib/screens/profile_page.dart lib/screens/community_page.dart lib/widgets/post_card.dart lib/models/community_post.dart lib/services/community_service.dart'
+      - 'lib/screens/tests_page.dart'
+      - 'lib/services/model_test_service.dart'
+      - 'lib/screens/profile_page.dart'
       - 'lib/screens/submit_job_page.dart'
       - 'lib/models/job_circular.dart'
       - 'lib/utils/job_notice_sections.dart'
@@ -52,6 +55,10 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Analyze complete Flutter project (warnings and infos are non-blocking)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Verify Android debug compilation
+        run: flutter build apk --debug
       - name: Analyze changed Flutter code
         run: |
           flutter analyze --no-fatal-infos --no-fatal-warnings lib/models/job_circular.dart lib/utils/job_notice_sections.dart lib/services/job_submission_service.dart lib/screens/submit_job_page.dart lib/screens/jobs_page.dart lib/screens/home_page.dart lib/screens/profile_page.dart

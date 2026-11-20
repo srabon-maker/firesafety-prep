@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/study_note.dart';
@@ -528,62 +528,45 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 ],
                 if (note.content != null) ...[
                   const SizedBox(height: 18),
-                  Html(
-                    data: note.content!,
-                    onLinkTap: (url, attributes, element) {
-                      if (url != null) _openFile(url);
+                  HtmlWidget(
+                    note.content!,
+                    onTapUrl: (url) async {
+                      await _openFile(url);
+                      return true;
                     },
-                    style: {
-                      'body': Style(
-                        margin: Margins.zero,
-                        padding: HtmlPaddings.zero,
-                        fontSize: FontSize(16),
-                        lineHeight: const LineHeight(1.7),
-                      ),
-                      'p': Style(margin: Margins.only(bottom: 12)),
-                      'h1': Style(
-                        fontSize: FontSize(24),
-                        fontWeight: FontWeight.w800,
-                        color: notesMaroon,
-                      ),
-                      'h2': Style(
-                        fontSize: FontSize(21),
-                        fontWeight: FontWeight.w800,
-                        color: notesMaroon,
-                      ),
-                      'h3': Style(
-                        fontSize: FontSize(18),
-                        fontWeight: FontWeight.w700,
-                      ),
-                      'img': Style(
-                        width: Width(100, Unit.percent),
-                        alignment: Alignment.center,
-                      ),
-                      'table': Style(
-                        width: Width(100, Unit.percent),
-                        border: Border.all(color: const Color(0xFFD8DDE5)),
-                      ),
-                      'th': Style(
-                        backgroundColor: const Color(0xFFFFE8E8),
-                        padding: HtmlPaddings.all(8),
-                        fontWeight: FontWeight.w700,
-                        border: Border.all(color: const Color(0xFFD8DDE5)),
-                      ),
-                      'td': Style(
-                        padding: HtmlPaddings.all(8),
-                        border: Border.all(color: const Color(0xFFD8DDE5)),
-                      ),
-                      'blockquote': Style(
-                        backgroundColor: const Color(0xFFFFF5F3),
-                        padding: HtmlPaddings.only(left: 12, top: 8, bottom: 8),
-                        border: Border(
-                          left: BorderSide(color: notesMaroon, width: 3),
-                        ),
-                      ),
-                      'a': Style(
-                        color: notesMaroon,
-                        textDecoration: TextDecoration.underline,
-                      ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      height: 1.7,
+                    ),
+                    customStylesBuilder: (element) {
+                      switch (element.localName) {
+                        case 'h1':
+                        case 'h2':
+                          return {
+                            'color': '#650D18',
+                            'font-weight': '800',
+                          };
+                        case 'h3':
+                          return {'font-weight': '700'};
+                        case 'a':
+                          return {
+                            'color': '#650D18',
+                            'text-decoration': 'underline',
+                          };
+                        case 'th':
+                          return {
+                            'background-color': '#FFFFE8E8',
+                            'font-weight': '700',
+                          };
+                        case 'blockquote':
+                          return {
+                            'background-color': '#FFFFF5F3',
+                            'border-left': '3px solid #650D18',
+                            'padding': '8px 12px',
+                          };
+                        default:
+                          return null;
+                      }
                     },
                   ),
                 ],
