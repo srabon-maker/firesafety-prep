@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/structured-job-circular-details
+      - fix/tests-page-state-types
   pull_request:
     paths:
       - 'backend/api/jobs/**'
