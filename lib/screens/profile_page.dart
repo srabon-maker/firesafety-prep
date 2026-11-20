@@ -2,11 +2,14 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/model_test_service.dart';
 import '../settings/app_settings.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
+import 'saved_notes_page.dart';
+import 'notification_preferences_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -341,6 +344,22 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _learningMetric(String value, String label, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Icon(icon, color: scheme.primary, size: 19),
+        const SizedBox(height: 5),
+        Text(value, style: TextStyle(
+          fontSize: 18, fontWeight: FontWeight.w900, color: scheme.primary)),
+        const SizedBox(height: 3),
+        Text(label, textAlign: TextAlign.center, maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
+      ],
+    );
+  }
+
   Widget _profileBody() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _profileFuture,
@@ -542,6 +561,70 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 18),
+              FutureBuilder<List<dynamic>>(
+                future: Future.wait([
+                  ModelTestService.instance.myResults(),
+                  ModelTestService.instance.practiceDashboard(),
+                ]),
+                builder: (context, stats) {
+                  if (stats.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(18),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (stats.hasError || stats.data == null) {
+                    return const SizedBox.shrink();
+                  }
+                  final results = stats.data![0] as List<Map<String, dynamic>>;
+                  final practice = Map<String, dynamic>.from(stats.data![1] as Map);
+                  final overall = Map<String, dynamic>.from(
+                    practice['overall'] as Map? ?? {},
+                  );
+                  final questions = (overall['questions'] as num?)?.toInt() ?? 0;
+                  final correct = (overall['correct'] as num?)?.toInt() ?? 0;
+                  final accuracy = questions == 0 ? 0.0 : correct / questions * 100;
+                  return Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: BorderSide(color: scheme.outlineVariant),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_tr(context, 'আপনার শেখার অগ্রগতি',
+                              'Your learning progress'),
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: _learningMetric(
+                              results.length.toString(),
+                              _tr(context, 'মডেল টেস্ট', 'Model tests'),
+                              Icons.fact_check_outlined)),
+                            Expanded(child: _learningMetric(
+                              questions.toString(),
+                              _tr(context, 'অনুশীলন প্রশ্ন', 'Practice questions'),
+                              Icons.quiz_outlined)),
+                            Expanded(child: _learningMetric(
+                              '${accuracy.toStringAsFixed(0)}%',
+                              _tr(context, 'সঠিক উত্তর', 'Accuracy'),
+                              Icons.track_changes_outlined)),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text(_tr(context,
+                            'প্রকাশিত পরীক্ষার ফলাফল ও সংরক্ষিত অনুশীলন সেশনের ভিত্তিতে।',
+                            'Based on released test results and saved practice sessions.'),
+                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 22),
               _sectionHeading(
                 _tr(context, 'আপনার কার্যক্রম', 'Your activity'),
@@ -580,6 +663,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+              _menuTile(
+                icon: Icons.bookmark_rounded,
+                title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
+                subtitle: _tr(context, 'আপনার বুকমার্ক করা নোট',
+                    'Your bookmarked notes'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SavedNotesPage(),
+                  ),
+                ),
+              ),
               const SizedBox(height: 11),
               _sectionHeading(
                 _tr(context, 'অ্যাপ ও অ্যাকাউন্ট', 'App & account'),
@@ -599,6 +693,13 @@ class _ProfilePageState extends State<ProfilePage> {
               _menuTile(
                 icon: Icons.notifications_none_rounded,
                 title: _tr(context, 'নোটিফিকেশন', 'Notifications'),
+                subtitle: _tr(context, 'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',
+                    'Manage your notification preferences'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationPreferencesPage(),
+                  ),
+                ),
               ),
               _menuTile(
                 icon: Icons.info_outline_rounded,

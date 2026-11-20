@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/study_note.dart';
 import '../services/notes_service.dart';
+import '../services/saved_notes_service.dart';
 
 const Color notesMaroon = Color(0xFF650D18);
 
@@ -275,7 +276,7 @@ class _NotesPageState extends State<NotesPage> {
   }
 }
 
-class _NoteCard extends StatelessWidget {
+class _NoteCard extends StatefulWidget {
   const _NoteCard({
     required this.note,
     required this.index,
@@ -285,6 +286,40 @@ class _NoteCard extends StatelessWidget {
   final StudyNote note;
   final int index;
   final VoidCallback onTap;
+
+  @override
+  State<_NoteCard> createState() => _NoteCardState();
+}
+
+class _NoteCardState extends State<_NoteCard> {
+  bool _saved = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final saved = await SavedNotesService.instance.isSaved(widget.note.id);
+    if (mounted) setState(() { _saved = saved; _loading = false; });
+  }
+
+  Future<void> _toggleSaved() async {
+    final next = !_saved;
+    setState(() => _saved = next);
+    try {
+      await SavedNotesService.instance.setSaved(widget.note.id, next);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(next ? 'নোটটি সংরক্ষণ করা হয়েছে।' : 'সংরক্ষিত নোট থেকে সরানো হয়েছে।'),
+        duration: const Duration(seconds: 1),
+      ));
+    } catch (_) {
+      if (mounted) setState(() => _saved = !next);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,29 +343,40 @@ class _NoteCard extends StatelessWidget {
           width: 46,
           height: 46,
           decoration: BoxDecoration(
-            color: colors[index % colors.length],
+            color: colors[widget.index % colors.length],
             borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(
-            note.fileUrl == null ? Icons.menu_book_outlined : Icons.description_outlined,
-            color: iconColors[index % iconColors.length],
+            widget.note.fileUrl == null ? Icons.menu_book_outlined : Icons.description_outlined,
+            color: iconColors[widget.index % iconColors.length],
           ),
         ),
-        title: Text(note.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(widget.note.title, style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 5),
           child: Text(
             [
-              if (note.categoryName != null) note.categoryName!,
-              if (note.summary != null) note.summary!,
+              if (widget.note.categoryName != null) widget.note.categoryName!,
+              if (widget.note.summary != null) widget.note.summary!,
               'বিস্তারিত পড়তে ট্যাপ করুন',
             ].join(' • '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: _saved ? 'সংরক্ষণ থেকে সরান' : 'নোট সংরক্ষণ করুন',
+              onPressed: _loading ? null : _toggleSaved,
+              icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
+                  color: _saved ? notesMaroon : null),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: widget.onTap,
       ),
     );
   }
