@@ -426,9 +426,13 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ListView(
             controller: _profileScrollController,
             primary: false,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: ClampingScrollPhysics(),
+            // Keep touch dragging responsive in both directions. Bouncing
+            // physics lets a downward swipe return from the bottom smoothly,
+            // while AlwaysScrollable keeps pull-to-refresh available.
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
+            dragStartBehavior: DragStartBehavior.down,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
