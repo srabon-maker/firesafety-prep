@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/marketplace_item.dart';
 
-const _maroon = Color(0xFF650D18);
-const _softMaroon = Color(0xFFF7ECEE);
-const _ink = Color(0xFF231A1C);
+const _maroon = Color(0xFFAD1028);
+const _card = Color(0xFF282326);
+const _border = Color(0xFF51484B);
+const _muted = Color(0xFFBDB4B7);
 
-/// A responsive, image-first card for the public Marketplace catalog.
-/// Prices, discounts, inventory and featured status all come from the API.
+/// Compact dark product tile matching the Fire Safety BD marketplace reference.
 class MarketplaceCatalogCard extends StatelessWidget {
   const MarketplaceCatalogCard({
     super.key,
@@ -22,28 +22,27 @@ class MarketplaceCatalogCard extends StatelessWidget {
   final VoidCallback onAction;
   final bool actionBusy;
 
-  String get _actionLabel {
-    if (item.isService) return 'বুকিং করুন';
-    return item.canAddToCart ? 'কার্টে যোগ করুন' : 'বিস্তারিত দেখুন';
-  }
+  String get _actionLabel => item.isService
+      ? 'সার্ভিস বুকিং করুন'
+      : item.canAddToCart
+          ? 'কার্টে যোগ করুন'
+          : 'বিস্তারিত দেখুন';
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final unavailable = !item.isService && !item.canAddToCart;
     final discount = item.discountPercent;
-    final isUnavailable = !item.isService && !item.canAddToCart;
     final original = item.comparePrice;
     final hasOriginal = discount != null && original != null;
 
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 2,
-      shadowColor: _maroon.withValues(alpha: 0.10),
-      color: scheme.surface,
+      elevation: 0,
+      color: _card,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(19),
+        side: const BorderSide(color: _border, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -52,42 +51,37 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 130,
+              height: 112,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   MarketplaceCatalogImage(item: item),
                   if (discount != null || item.isFeatured)
                     Positioned(
-                      left: 8,
-                      right: 8,
-                      top: 8,
+                      left: 7,
+                      right: 7,
+                      top: 7,
                       child: Row(
                         children: [
-                          if (discount != null)
-                            _imageTag('-$discount%', const Color(0xFFB32635)),
+                          if (discount != null) _tag('-$discount%'),
                           const Spacer(),
-                          if (item.isFeatured)
-                            _imageTag('ফিচার্ড', _maroon),
+                          if (item.isFeatured) _tag('ফিচার্ড'),
                         ],
                       ),
                     ),
-                  if (isUnavailable)
+                  if (unavailable)
                     Positioned(
                       left: 0,
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        color: _ink.withValues(alpha: 0.76),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        color: Colors.black.withValues(alpha: 0.72),
                         child: const Text(
                           'স্টকে নেই',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -96,141 +90,90 @@ class MarketplaceCatalogCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsets.fromLTRB(11, 6, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.category.isNotEmpty
-                          ? item.category
-                          : (item.isService ? 'ফায়ার সেফটি সার্ভিস' : 'ফায়ার সেফটি পণ্য'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
                       item.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: scheme.onSurface,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 14,
-                        height: 1.3,
-                        fontWeight: FontWeight.w700,
+                        height: 1.18,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    if (item.description.trim().isNotEmpty)
+                    if (item.description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 3),
                       Text(
                         item.description.trim(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          fontSize: 10,
-                          height: 1.25,
-                        ),
+                        style: const TextStyle(color: _muted, fontSize: 10,
+                            height: 1.15),
                       ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.priceLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _maroon,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (hasOriginal)
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'সাশ্রয়ী মূল্য',
-                            style: TextStyle(
-                              color: Color(0xFF27815A),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                    ],
                     const Spacer(),
-                    if (!item.isService && item.canAddToCart)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Wrap(
-                          spacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Icon(Icons.check_circle_outline,
-                                color: Color(0xFF27815A), size: 13),
-                            Text(
-                              item.stock != null && item.stock! <= 5
-                                  ? 'সীমিত স্টক · ${item.stock}টি'
-                                  : 'স্টকে আছে',
-                              style: const TextStyle(
-                                color: Color(0xFF27815A), fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                item.priceLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              if (hasOriginal)
+                                Text(
+                                  '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
+                                  style: const TextStyle(
+                                    color: _muted,
+                                    fontSize: 10,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: IconButton(
+                            tooltip: _actionLabel,
+                            onPressed: actionBusy
+                                ? null
+                                : (unavailable ? onDetails : onAction),
+                            padding: EdgeInsets.zero,
+                            style: IconButton.styleFrom(
+                              backgroundColor: _maroon,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: _maroon.withValues(alpha: 0.45),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 38,
-                      child: FilledButton.icon(
-                        onPressed: actionBusy
-                            ? null
-                            : (isUnavailable ? onDetails : onAction),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: isUnavailable
-                              ? scheme.surfaceContainerHighest
-                              : _maroon,
-                          foregroundColor: isUnavailable
-                              ? scheme.onSurface
-                              : Colors.white,
-                          disabledBackgroundColor: _softMaroon,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            icon: Icon(
+                              item.isService
+                                  ? Icons.engineering_outlined
+                                  : unavailable
+                                      ? Icons.visibility_outlined
+                                      : Icons.shopping_cart_outlined,
+                              size: 21,
+                            ),
                           ),
-                          textStyle: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w700),
                         ),
-                        icon: Icon(
-                          item.isService
-                              ? Icons.calendar_month_outlined
-                              : item.canAddToCart
-                                  ? Icons.add_shopping_cart_outlined
-                                  : Icons.visibility_outlined,
-                          size: 15,
-                        ),
-                        label: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(_actionLabel, maxLines: 1),
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -242,27 +185,18 @@ class MarketplaceCatalogCard extends StatelessWidget {
     );
   }
 
-  Widget _imageTag(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 10,
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
+  Widget _tag(String text) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+    decoration: BoxDecoration(
+      color: _maroon,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(text, style: const TextStyle(color: Colors.white,
+        fontSize: 9, fontWeight: FontWeight.w800)),
+  );
 }
 
-/// Uses only secure absolute HTTPS image URLs. Missing/broken images display
-/// a deliberate brand placeholder rather than a broken-image glyph.
+/// Uses only secure absolute HTTPS image URLs and a dark branded fallback.
 class MarketplaceCatalogImage extends StatelessWidget {
   const MarketplaceCatalogImage({super.key, required this.item});
 
@@ -272,15 +206,12 @@ class MarketplaceCatalogImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = item.imageUrl;
     final uri = Uri.tryParse(url ?? '');
-    final isValid = uri != null &&
-        uri.scheme == 'https' &&
-        uri.host.isNotEmpty;
-
-    if (!isValid) return _placeholder();
+    final valid = uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+    if (!valid) return _placeholder();
 
     return Image.network(
       url!,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       width: double.infinity,
       height: double.infinity,
       loadingBuilder: (context, child, progress) =>
@@ -289,30 +220,20 @@ class MarketplaceCatalogImage extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF30272A), Color(0xFF211A1D)],
-        ),
+  Widget _placeholder() => DecoratedBox(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF30272A), Color(0xFF211A1D)],
       ),
-      child: Center(
-        child: Container(
-          width: 74,
-          height: 74,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Icon(
-            item.isService ? Icons.engineering_outlined : Icons.fire_extinguisher,
-            color: const Color(0xFFFFB4BD),
-            size: 42,
-          ),
-        ),
+    ),
+    child: Center(
+      child: Icon(
+        item.isService ? Icons.engineering_outlined : Icons.fire_extinguisher,
+        color: const Color(0xFFFFB4BD),
+        size: 42,
       ),
-    );
-  }
+    ),
+  );
 }
