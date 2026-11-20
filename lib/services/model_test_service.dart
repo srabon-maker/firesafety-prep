@@ -36,6 +36,22 @@ class ModelTestService {
     final data = await _request('list');
     return (data['data'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
   }
+  Future<List<Map<String,dynamic>>> practiceQuestions({
+    required String category,
+    String difficulty = 'all',
+    int limit = 15,
+  }) async {
+    final query = Uri(queryParameters: {
+      'category': category,
+      'difficulty': difficulty,
+      'limit': limit.toString(),
+    }).query;
+    final data = await _request('practice_questions&$query', auth: true);
+    return (data['data'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
   Future<List<Map<String,dynamic>>> activeAttempts() async {
     final data = await _request('active_attempts', auth: true);
     return (data['data'] as List? ?? [])
