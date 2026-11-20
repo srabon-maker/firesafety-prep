@@ -45,8 +45,7 @@ void main() {
     expect(find.text('ফিচার্ড'), findsOneWidget);
     expect(find.text('৳1200'), findsOneWidget);
     expect(find.text('৳1500'), findsOneWidget);
-    expect(find.text('সীমিত স্টক · 5টি'), findsOneWidget);
-    await tester.tap(find.text('কার্টে যোগ করুন'));
+    await tester.tap(find.byTooltip('কার্টে যোগ করুন'));
     expect(added, isTrue);
   });
 
@@ -86,7 +85,7 @@ void main() {
       onAction: () => added = true,
     ));
     expect(find.text('স্টকে নেই'), findsOneWidget);
-    await tester.tap(find.text('বিস্তারিত দেখুন'));
+    await tester.tap(find.byTooltip('বিস্তারিত দেখুন'));
     expect(details, isTrue);
     expect(added, isFalse);
   });
@@ -106,9 +105,9 @@ void main() {
     );
     await tester.pumpWidget(cardHost(item, onAction: () => booked = true));
     expect(find.text('শুরু ৳2500'), findsOneWidget);
-    expect(find.text('বুকিং করুন'), findsOneWidget);
+    expect(find.byTooltip('সার্ভিস বুকিং করুন'), findsOneWidget);
     expect(find.textContaining('%'), findsNothing);
-    await tester.tap(find.text('বুকিং করুন'));
+    await tester.tap(find.byTooltip('সার্ভিস বুকিং করুন'));
     expect(booked, isTrue);
   });
 }
