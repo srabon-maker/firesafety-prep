@@ -13,6 +13,27 @@ const Color marketMaroon = Color(0xFF650D18);
 const Color marketDeepMaroon = Color(0xFF36060D);
 const Color marketBackground = Color(0xFFF8F5F5);
 
+Widget _marketplaceHeaderPill(IconData icon, String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(30),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: const Color(0xFFFFD9DF), size: 15),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(
+          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600,
+        )),
+      ],
+    ),
+  );
+}
+
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
 
@@ -426,24 +447,136 @@ class _MarketplacePageState extends State<MarketplacePage> {
         padding: const EdgeInsets.all(16),
         children: [
           Container(
-            padding: const EdgeInsets.all(22),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [marketMaroon, marketDeepMaroon],
+                colors: [Color(0xFF8F182A), marketMaroon, marketDeepMaroon],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: marketMaroon.withValues(alpha: 0.22),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Icon(Icons.local_fire_department, color: Colors.white, size: 32),
-                SizedBox(height: 10),
-                Text('ফায়ার সেফটি মার্কেটপ্লেস',
-                    style: TextStyle(color: Colors.white,
-                        fontWeight: FontWeight.bold, fontSize: 20)),
-                SizedBox(height: 5),
-                Text('ফায়ার সেফটি পণ্য ও সার্ভিস এক জায়গায়',
-                    style: TextStyle(color: Colors.white70)),
+                Positioned(
+                  right: -34,
+                  top: -42,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 28,
+                  bottom: -55,
+                  child: Icon(
+                    Icons.shield_outlined,
+                    size: 150,
+                    color: Colors.white.withValues(alpha: 0.055),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(21, 22, 21, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(17),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.20),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11, vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.13),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.18),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified_user_outlined,
+                                  color: Color(0xFFFFD9DF), size: 15),
+                                SizedBox(width: 6),
+                                Text('সেফটি ফার্স্ট',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  )),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'ফায়ার সেফটি\nমার্কেটপ্লেস',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 25,
+                          height: 1.16,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস—সব এক জায়গায়',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _marketplaceHeaderPill(
+                            Icons.shopping_bag_outlined, 'মানসম্মত পণ্য',
+                          ),
+                          _marketplaceHeaderPill(
+                            Icons.engineering_outlined, 'প্রফেশনাল সার্ভিস',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -456,13 +589,35 @@ class _MarketplacePageState extends State<MarketplacePage> {
               hintText: 'পণ্য বা সার্ভিস খুঁজুন',
               filled: true,
               fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 17,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(17),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(17),
+                borderSide: const BorderSide(color: marketMaroon, width: 1.6),
               ),
             ),
           ),
           const SizedBox(height: 18),
           SegmentedButton<int>(
+            showSelectedIcon: true,
+            style: SegmentedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              selectedBackgroundColor: marketMaroon,
+              selectedForegroundColor: Colors.white,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
+            ),
             segments: const [
               ButtonSegment(value: 0, label: Text('পণ্য'),
                   icon: Icon(Icons.shopping_bag_outlined)),
@@ -512,12 +667,33 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   itemBuilder: (context, i) {
                     final category = i == 0 ? null : categories[i - 1];
                     final id = category?.id;
+                    final selected = _categoryId == id;
                     return ChoiceChip(
+                      avatar: selected
+                          ? const Icon(Icons.check_rounded, size: 16)
+                          : null,
                       label: Text(category?.name ??
                           (_tab == 0 ? 'সব পণ্য' : 'সব সেবা')),
-                      selected: _categoryId == id,
-                      onSelected: (_) =>
-                          setState(() => _categoryId = id),
+                      selected: selected,
+                      showCheckmark: false,
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: selected
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      selectedColor: marketMaroon,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      side: BorderSide(
+                        color: selected
+                            ? marketMaroon
+                            : Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      onSelected: (_) => setState(() => _categoryId = id),
                     );
                   },
                 ),
