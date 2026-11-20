@@ -13,27 +13,6 @@ const Color marketMaroon = Color(0xFF650D18);
 const Color marketDeepMaroon = Color(0xFF36060D);
 const Color marketBackground = Color(0xFFF8F5F5);
 
-Widget _marketplaceHeaderPill(IconData icon, String label) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.10),
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: const Color(0xFFFFD9DF), size: 15),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(
-          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600,
-        )),
-      ],
-    ),
-  );
-}
-
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
 
@@ -372,7 +351,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                         color: marketMaroon, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      _tab == 0 ? 'আমাদের পণ্যসমূহ' : 'আমাদের সার্ভিসসমূহ',
+                      _tab == 0 ? 'জনপ্রিয় পণ্য' : 'জনপ্রিয় সার্ভিস',
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
@@ -462,13 +441,43 @@ class _MarketplacePageState extends State<MarketplacePage> {
     );
   }
 
+  IconData _categoryIcon(String name) {
+    final value = name.toLowerCase();
+    if (value.contains('নির্বাপক') || value.contains('extinguisher')) {
+      return Icons.fire_extinguisher;
+    }
+    if (value.contains('ডিটেকশন') || value.contains('detector')) {
+      return Icons.sensors_rounded;
+    }
+    if (value.contains('অ্যালার্ম') || value.contains('alarm')) {
+      return Icons.notifications_active_rounded;
+    }
+    if (value.contains('স্প্রিংকলার') || value.contains('sprinkler')) {
+      return Icons.water_drop_rounded;
+    }
+    if (value.contains('সার্ভিস') || value.contains('service')) {
+      return Icons.engineering_rounded;
+    }
+    return Icons.grid_view_rounded;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     appBar: AppBar(
+      toolbarHeight: 60,
       backgroundColor: marketDeepMaroon,
       foregroundColor: Colors.white,
-      title: const Text('মার্কেটপ্লেস'),
+      leadingWidth: 64,
+      leading: const Padding(
+        padding: EdgeInsets.all(13),
+        child: Icon(
+          Icons.local_fire_department_rounded,
+          color: Colors.white,
+          size: 32,
+        ),
+      ),
+      title: null,
       actions: [
         IconButton(
           tooltip: 'অর্ডার ও বুকিং ইতিহাস',
@@ -500,6 +509,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         padding: const EdgeInsets.all(16),
         children: [
           Container(
+            height: 214,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -507,12 +517,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
                   color: marketMaroon.withValues(alpha: 0.22),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
+                  blurRadius: 20,
+                  offset: const Offset(0, 9),
                 ),
               ],
             ),
@@ -520,112 +530,110 @@ class _MarketplacePageState extends State<MarketplacePage> {
               children: [
                 Positioned(
                   right: -34,
-                  top: -42,
+                  top: -46,
                   child: Container(
-                    width: 160,
-                    height: 160,
+                    width: 170,
+                    height: 170,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: Colors.white.withValues(alpha: 0.07),
                         width: 22,
                       ),
                     ),
                   ),
                 ),
                 Positioned(
-                  right: 28,
-                  bottom: -55,
+                  right: 8,
+                  bottom: -12,
                   child: Icon(
-                    Icons.shield_outlined,
-                    size: 150,
-                    color: Colors.white.withValues(alpha: 0.055),
+                    Icons.fire_extinguisher,
+                    size: 154,
+                    color: Colors.white.withValues(alpha: 0.16),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(21, 22, 21, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.fromLTRB(21, 22, 18, 20),
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(17),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.20),
+                      Expanded(
+                        flex: 6,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF4052),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Icon(
-                              Icons.local_fire_department_rounded,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11, vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.13),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.18),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 24,
+                                height: 1.16,
+                                letterSpacing: -0.3,
                               ),
                             ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.verified_user_outlined,
-                                  color: Color(0xFFFFD9DF), size: 15),
-                                SizedBox(width: 6),
-                                Text('সেফটি ফার্স্ট',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  )),
-                              ],
+                            const SizedBox(height: 10),
+                            Text(
+                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.86),
+                                fontSize: 12,
+                                height: 1.45,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'ফায়ার সেফটি\nমার্কেটপ্লেস',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 25,
-                          height: 1.16,
-                          letterSpacing: -0.3,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস—সব এক জায়গায়',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          fontSize: 13,
-                          height: 1.45,
+                      const SizedBox(width: 4),
+                      Expanded(
+                        flex: 4,
+                        child: SizedBox(
+                          height: 160,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Positioned(
+                                right: 0,
+                                bottom: 3,
+                                child: Icon(
+                                  Icons.fire_extinguisher,
+                                  color: Color(0xFFFFE9EC),
+                                  size: 116,
+                                ),
+                              ),
+                              Positioned(
+                                left: 0,
+                                bottom: 12,
+                                child: Icon(
+                                  Icons.sensors_rounded,
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                  size: 43,
+                                ),
+                              ),
+                              Positioned(
+                                left: 4,
+                                top: 19,
+                                child: Icon(
+                                  Icons.notifications_active_rounded,
+                                  color: const Color(0xFFFF6573)
+                                      .withValues(alpha: 0.95),
+                                  size: 34,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _marketplaceHeaderPill(
-                            Icons.shopping_bag_outlined, 'মানসম্মত পণ্য',
-                          ),
-                          _marketplaceHeaderPill(
-                            Icons.engineering_outlined, 'প্রফেশনাল সার্ভিস',
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -695,9 +703,26 @@ class _MarketplacePageState extends State<MarketplacePage> {
             }),
           ),
           const SizedBox(height: 18),
-          const Text('ক্যাটাগরি',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text(
+                'ক্যাটাগরি',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => setState(() => _categoryId = null),
+                child: const Text(
+                  'সব দেখুন  ›',
+                  style: TextStyle(
+                    color: Color(0xFFFF4052),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           FutureBuilder<List<MarketplaceCategory>>(
             future: _categoryOptions,
             builder: (context, snapshot) {
@@ -716,50 +741,89 @@ class _MarketplacePageState extends State<MarketplacePage> {
               }
               if (!snapshot.hasData) {
                 return const SizedBox(
-                  height: 44,
+                  height: 92,
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
               final categories = snapshot.data!;
-              return SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: categories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    final category = i == 0 ? null : categories[i - 1];
-                    final id = category?.id;
-                    final selected = _categoryId == id;
-                    return ChoiceChip(
-                      avatar: selected
-                          ? const Icon(Icons.check_rounded, size: 16)
-                          : null,
-                      label: Text(category?.name ??
-                          (_tab == 0 ? 'সব পণ্য' : 'সব সেবা')),
-                      selected: selected,
-                      showCheckmark: false,
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+              if (categories.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 650 ? 5 : 4;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: categories.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 9,
+                      crossAxisSpacing: 9,
+                      mainAxisExtent: 104,
+                    ),
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+                      final selected = _categoryId == category.id;
+                      return Material(
                         color: selected
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      selectedColor: marketMaroon,
-                      backgroundColor: Theme.of(context).colorScheme.surface,
-                      side: BorderSide(
-                        color: selected
-                            ? marketMaroon
-                            : Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      onSelected: (_) => setState(() => _categoryId = id),
-                    );
-                  },
-                ),
+                            ? marketMaroon.withValues(alpha: 0.24)
+                            : Theme.of(context)
+                                .colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(17),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(17),
+                          onTap: () => setState(() {
+                            _categoryId = selected ? null : category.id;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(17),
+                              border: Border.all(
+                                color: selected
+                                    ? const Color(0xFFFF4052)
+                                    : Theme.of(context)
+                                        .colorScheme.outlineVariant
+                                        .withValues(alpha: 0.65),
+                                width: selected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _categoryIcon(category.name),
+                                  color: selected
+                                      ? const Color(0xFFFF6573)
+                                      : const Color(0xFFFFB4BD),
+                                  size: 30,
+                                ),
+                                const SizedBox(height: 7),
+                                Text(
+                                  category.name,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(context)
+                                        .colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               );
             },
           ),
