@@ -30,38 +30,18 @@ class _ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>?> _profileFuture;
   late final ScrollController _profileScrollController;
   bool _deleting = false;
-  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
     // Keep this tab's scroll position independent from the other pages
     // retained inside MainShell's IndexedStack.
-    _profileScrollController = ScrollController()
-      ..addListener(_handleProfileScroll);
+    _profileScrollController = ScrollController();
     _profileFuture = _loadProfile();
-  }
-
-  void _handleProfileScroll() {
-    if (!_profileScrollController.hasClients) return;
-    final shouldShow = _profileScrollController.offset > 320;
-    if (shouldShow != _showScrollToTop && mounted) {
-      setState(() => _showScrollToTop = shouldShow);
-    }
-  }
-
-  void _scrollProfileToTop() {
-    if (!_profileScrollController.hasClients) return;
-    _profileScrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
-    );
   }
 
   @override
   void dispose() {
-    _profileScrollController.removeListener(_handleProfileScroll);
     _profileScrollController.dispose();
     super.dispose();
   }
@@ -815,14 +795,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: _profileBody(),
-      floatingActionButton: _showScrollToTop
-          ? FloatingActionButton.small(
-              heroTag: 'profile_scroll_to_top',
-              tooltip: _tr(context, 'উপরে যান', 'Scroll to top'),
-              onPressed: _scrollProfileToTop,
-              child: const Icon(Icons.keyboard_arrow_up_rounded),
-            )
-          : null,
     );
   }
 }
