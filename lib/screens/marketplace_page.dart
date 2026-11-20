@@ -560,7 +560,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 14),
                             const Text(
-                              'ফায়ার সেফটি\\nমার্কেটপ্লেস',
+                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -571,7 +571,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য\\nসার্ভিস এক জায়গায়',
+                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য\nসার্ভিস এক জায়গায়',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
