@@ -56,6 +56,29 @@ try {
     $method=$_SERVER['REQUEST_METHOD']??'GET';
     $action=(string)($_GET['action']??'list');
 
+    if($method==='GET' && $action==='practice_questions'){
+        $userId=exam_user($pdo);
+        $category=trim((string)($_GET['category']??''));
+        $difficulty=strtolower(trim((string)($_GET['difficulty']??'all')));
+        $limit=(int)($_GET['limit']??15);
+        $limit=max(5,min(20,$limit));
+        if($category==='' || mb_strlen($category)>100)exam_reply(422,['success'=>false,'message'=>'সঠিক বিষয় নির্বাচন করুন।']);
+        if(!in_array($difficulty,['all','easy','medium','hard'],true))exam_reply(422,['success'=>false,'message'=>'সঠিক Difficulty নির্বাচন করুন।']);
+        $where="status='published' AND category=? AND correct_answer IN ('A','B','C','D')";
+        $params=[$category];
+        if($difficulty!=='all'){$where.=' AND difficulty=?';$params[]=$difficulty;}
+        $q=$pdo->prepare("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty FROM questions WHERE ".$where." ORDER BY RAND() LIMIT ".$limit);
+        $q->execute($params);
+        $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row){
+            $row['id']=(int)$row['id'];
+            $row['options']=['A'=>$row['option_a'],'B'=>$row['option_b'],'C'=>$row['option_c'],'D'=>$row['option_d']];
+            unset($row['option_a'],$row['option_b'],$row['option_c'],$row['option_d']);
+        }
+        unset($row);
+        exam_reply(200,['success'=>true,'data'=>$rows,'count'=>count($rows),'category'=>$category,'difficulty'=>$difficulty]);
+    }
+
     if($method==='GET' && $action==='active_attempts'){
         $userId=exam_user($pdo);
         $q=$pdo->prepare("SELECT a.id AS attempt_id,a.test_id,t.title,a.started_at,a.expires_at,a.question_count,a.total_marks,a.negative_marks_per_question FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.user_id=? AND a.status='in_progress' AND a.expires_at>NOW() AND t.status='published' ORDER BY a.expires_at ASC");
