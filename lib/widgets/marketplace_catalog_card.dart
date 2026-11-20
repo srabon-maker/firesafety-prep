@@ -51,7 +51,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 112,
+              height: 96,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -90,7 +90,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 6, 10, 8),
+                padding: const EdgeInsets.fromLTRB(9, 4, 8, 5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -100,13 +100,13 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
-                        height: 1.18,
+                        fontSize: 13,
+                        height: 1.12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     if (item.description.trim().isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         item.description.trim(),
                         maxLines: 1,
@@ -115,7 +115,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                             height: 1.15),
                       ),
                     ],
-                    const Spacer(),
+                    const SizedBox(height: 5),
                     Row(
                       children: [
                         Expanded(
@@ -129,7 +129,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 17,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -147,8 +147,8 @@ class MarketplaceCatalogCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 5),
                         SizedBox(
-                          width: 36,
-                          height: 36,
+                          width: 32,
+                          height: 32,
                           child: IconButton(
                             tooltip: _actionLabel,
                             onPressed: actionBusy
@@ -169,7 +169,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                                   : unavailable
                                       ? Icons.visibility_outlined
                                       : Icons.shopping_cart_outlined,
-                              size: 21,
+                              size: 19,
                             ),
                           ),
                         ),
