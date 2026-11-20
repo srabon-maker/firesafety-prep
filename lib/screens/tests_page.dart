@@ -576,6 +576,27 @@ class _ExamResult extends StatelessWidget{
                   const SizedBox(height: 5),
                   Text('স্কোর: ${((item['score'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)} / ${((item['total_marks'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)}',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final subject = item['subject']?.toString() ?? 'অন্যান্য';
+                        final subjectQuestions = questions.where((q) =>
+                          (q['category']?.toString().trim().isNotEmpty == true
+                              ? q['category'].toString().trim() : 'অন্যান্য') == subject
+                        ).toList();
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => _SmartSubjectPracticePage(
+                            subject: subject,
+                            questions: subjectQuestions,
+                          ),
+                        ));
+                      },
+                      icon: const Icon(Icons.school_outlined),
+                      label: const Text('এই বিষয়ে অনুশীলন'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -596,6 +617,135 @@ class _ExamResult extends StatelessWidget{
   }
 }
 
+
+class _SmartSubjectPracticePage extends StatefulWidget {
+  final String subject;
+  final List<Map<String, dynamic>> questions;
+  const _SmartSubjectPracticePage({required this.subject, required this.questions});
+
+  @override
+  State<_SmartSubjectPracticePage> createState() => _SmartSubjectPracticePageState();
+}
+
+class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
+  int _index = 0;
+  String? _selected;
+  bool _checked = false;
+  int _correct = 0;
+  final Set<int> _answered = {};
+
+  void _checkAnswer(String correct) {
+    if (_selected == null || _checked) return;
+    setState(() {
+      _checked = true;
+      _answered.add(_index);
+      if (_selected == correct) _correct++;
+    });
+  }
+
+  void _next() {
+    if (_index >= widget.questions.length - 1) return;
+    setState(() {
+      _index++;
+      _selected = null;
+      _checked = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        body: const Center(child: Text('এই বিষয়ে অনুশীলনের প্রশ্ন পাওয়া যায়নি।')),
+      );
+    }
+    final q = widget.questions[_index];
+    final options = Map<String, dynamic>.from(q['options'] as Map? ?? {});
+    final correct = q['correct_answer']?.toString().toUpperCase() ?? '';
+    final explanation = q['explanation']?.toString() ?? '';
+    final isLast = _index == widget.questions.length - 1;
+    return Scaffold(
+      appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          LinearProgressIndicator(value: (_index + 1) / widget.questions.length),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: Text('প্রশ্ন ${_index + 1} / ${widget.questions.length}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon))),
+            Text('সঠিক: $_correct',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+          ]),
+          const SizedBox(height: 16),
+          Text(q['question']?.toString() ?? '',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
+          for (final letter in ['A', 'B', 'C', 'D'])
+            Card(
+              color: _checked && letter == correct
+                  ? Colors.green.shade50
+                  : _checked && letter == _selected && _selected != correct
+                      ? Colors.red.shade50 : null,
+              child: RadioListTile<String>(
+                value: letter,
+                groupValue: _selected,
+                onChanged: _checked ? null : (value) => setState(() => _selected = value),
+                title: Text('$letter. ${options[letter] ?? ''}'),
+              ),
+            ),
+          if (!_checked)
+            FilledButton(
+              onPressed: _selected == null ? null : () => _checkAnswer(correct),
+              style: FilledButton.styleFrom(backgroundColor: _maroon),
+              child: const Text('উত্তর যাচাই করুন'),
+            )
+          else ...[
+            Card(
+              color: _selected == correct ? Colors.green.shade50 : Colors.orange.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_selected == correct ? 'সঠিক উত্তর! ভালো করেছেন।' : 'সঠিক উত্তর: $correct',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _selected == correct ? Colors.green.shade800 : Colors.deepOrange,
+                    )),
+                  if (explanation.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('ব্যাখ্যা: $explanation'),
+                  ],
+                ]),
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: isLast
+                  ? () => showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('অনুশীলন সম্পন্ন'),
+                        content: Text('${widget.questions.length}টি প্রশ্নের মধ্যে $_correctটি সঠিক উত্তর দিয়েছেন।'),
+                        actions: [TextButton(
+                          onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
+                          child: const Text('শেষ করুন'),
+                        )],
+                      ),
+                    )
+                  : _next,
+              style: FilledButton.styleFrom(backgroundColor: _maroon),
+              icon: Icon(isLast ? Icons.done : Icons.arrow_forward),
+              label: Text(isLast ? 'ফলাফল দেখুন' : 'পরের প্রশ্ন'),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text('এটি অনুশীলন মোড; আপনার অফিসিয়াল পরীক্ষার ফলাফল পরিবর্তন হবে না।',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+        ],
+      ),
+    );
+  }
+}
 
 class _WrongAnswerPracticePage extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
