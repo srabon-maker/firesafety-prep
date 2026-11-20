@@ -28,12 +28,22 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>?> _profileFuture;
+  late final ScrollController _profileScrollController;
   bool _deleting = false;
 
   @override
   void initState() {
     super.initState();
+    // Keep this tab's scroll position independent from the other pages
+    // retained inside MainShell's IndexedStack.
+    _profileScrollController = ScrollController();
     _profileFuture = _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _profileScrollController.dispose();
+    super.dispose();
   }
 
   Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
@@ -414,6 +424,12 @@ class _ProfilePageState extends State<ProfilePage> {
         return RefreshIndicator(
           onRefresh: _refreshProfile,
           child: ListView(
+            controller: _profileScrollController,
+            primary: false,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
               Container(
