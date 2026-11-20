@@ -35,6 +35,19 @@ void main() {
     expect(item.imageUrl, isNull);
     expect(item.canAddToCart, isTrue);
     expect(item.priceLabel, '৳1222');
+    expect(item.discountPercent, isNull,
+        reason: 'A 99% compare-price discrepancy is likely a data-entry error');
+  });
+
+  test('valid compare price produces a reasonable discount percentage', () {
+    final item = MarketplaceItem.fromJson({
+      'id': 4,
+      'name': 'Extinguisher',
+      'price': '800',
+      'compare_price': '1000',
+      'stock_quantity': 2,
+    }, isService: false);
+    expect(item.discountPercent, 20);
   });
 
   test('out-of-stock or unknown-stock products cannot be added to cart', () {
