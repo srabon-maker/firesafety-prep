@@ -468,14 +468,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
       toolbarHeight: 60,
       backgroundColor: marketDeepMaroon,
       foregroundColor: Colors.white,
-      leadingWidth: 64,
-      leading: const Padding(
-        padding: EdgeInsets.all(13),
-        child: Icon(
-          Icons.local_fire_department_rounded,
-          color: Colors.white,
-          size: 32,
-        ),
+      leadingWidth: 56,
+      leading: IconButton(
+        tooltip: 'ফিরে যান',
+        onPressed: () => Navigator.of(context).maybePop(),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
       ),
       title: null,
       actions: [
@@ -513,47 +510,38 @@ class _MarketplacePageState extends State<MarketplacePage> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF8F182A), marketMaroon, marketDeepMaroon],
+                colors: [Color(0xFF9D152B), Color(0xFF650D18), Color(0xFF36060D)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: marketMaroon.withValues(alpha: 0.22),
-                  blurRadius: 20,
-                  offset: const Offset(0, 9),
+                  color: marketMaroon.withValues(alpha: 0.24),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Stack(
               children: [
                 Positioned(
-                  right: -34,
-                  top: -46,
+                  right: -42,
+                  top: -48,
                   child: Container(
-                    width: 170,
-                    height: 170,
+                    width: 190,
+                    height: 190,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.07),
-                        width: 22,
+                        width: 24,
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  right: 8,
-                  bottom: -12,
-                  child: Icon(
-                    Icons.fire_extinguisher,
-                    size: 154,
-                    color: Colors.white.withValues(alpha: 0.16),
-                  ),
-                ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(21, 22, 18, 20),
+                  padding: const EdgeInsets.fromLTRB(22, 18, 12, 18),
                   child: Row(
                     children: [
                       Expanded(
@@ -572,7 +560,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 14),
                             const Text(
-                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
+                              'ফায়ার সেফটি\\nমার্কেটপ্লেস',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -583,11 +571,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
-                              maxLines: 3,
+                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য\\nসার্ভিস এক জায়গায়',
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.86),
+                                color: Colors.white.withValues(alpha: 0.90),
                                 fontSize: 12,
                                 height: 1.45,
                               ),
@@ -597,42 +585,51 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        flex: 4,
-                        child: SizedBox(
-                          height: 160,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              const Positioned(
-                                right: 0,
-                                bottom: 3,
-                                child: Icon(
-                                  Icons.fire_extinguisher,
-                                  color: Color(0xFFFFE9EC),
-                                  size: 116,
-                                ),
+                        flex: 5,
+                        child: FutureBuilder<List<MarketplaceItem>>(
+                          future: _catalog,
+                          builder: (context, snapshot) {
+                            final products = snapshot.data ?? const <MarketplaceItem>[];
+                            MarketplaceItem? artwork;
+                            for (final item in products) {
+                              final text = '${item.name} ${item.category}'.toLowerCase();
+                              final uri = Uri.tryParse(item.imageUrl ?? '');
+                              if (!item.isService && uri != null &&
+                                  uri.scheme == 'https' && uri.host.isNotEmpty &&
+                                  (text.contains('extinguisher') ||
+                                   text.contains('নির্বাপক') ||
+                                   text.contains('ফায়ার'))) {
+                                artwork = item;
+                                break;
+                              }
+                            }
+                            if (artwork == null) {
+                              for (final item in products) {
+                                final uri = Uri.tryParse(item.imageUrl ?? '');
+                                if (!item.isService && uri != null &&
+                                    uri.scheme == 'https' && uri.host.isNotEmpty) {
+                                  artwork = item;
+                                  break;
+                                }
+                              }
+                            }
+                            if (artwork?.imageUrl == null) {
+                              return const Icon(
+                                Icons.fire_extinguisher_rounded,
+                                size: 118,
+                                color: Color(0xFFFFE9EC),
+                              );
+                            }
+                            return Image.network(
+                              artwork!.imageUrl!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.fire_extinguisher_rounded,
+                                size: 118,
+                                color: Color(0xFFFFE9EC),
                               ),
-                              Positioned(
-                                left: 0,
-                                bottom: 12,
-                                child: Icon(
-                                  Icons.sensors_rounded,
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                  size: 43,
-                                ),
-                              ),
-                              Positioned(
-                                left: 4,
-                                top: 19,
-                                child: Icon(
-                                  Icons.notifications_active_rounded,
-                                  color: const Color(0xFFFF6573)
-                                      .withValues(alpha: 0.95),
-                                  size: 34,
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -795,12 +792,43 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  _categoryIcon(category.name),
-                                  color: selected
-                                      ? const Color(0xFFFF6573)
-                                      : const Color(0xFFFFB4BD),
-                                  size: 30,
+                                SizedBox(
+                                  height: 43,
+                                  width: 62,
+                                  child: FutureBuilder<List<MarketplaceItem>>(
+                                    future: _catalog,
+                                    builder: (context, itemSnapshot) {
+                                      MarketplaceItem? match;
+                                      for (final item in itemSnapshot.data ?? const <MarketplaceItem>[]) {
+                                        final sameCategory = item.categoryId == category.id ||
+                                            item.category.toLowerCase() == category.name.toLowerCase();
+                                        final uri = Uri.tryParse(item.imageUrl ?? '');
+                                        if (sameCategory && uri != null &&
+                                            uri.scheme == 'https' && uri.host.isNotEmpty) {
+                                          match = item;
+                                          break;
+                                        }
+                                      }
+                                      if (match == null) {
+                                        return Icon(
+                                          _categoryIcon(category.name),
+                                          color: selected
+                                              ? const Color(0xFFFF6573)
+                                              : const Color(0xFFFFB4BD),
+                                          size: 32,
+                                        );
+                                      }
+                                      return Image.network(
+                                        match.imageUrl!,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          _categoryIcon(category.name),
+                                          color: const Color(0xFFFFB4BD),
+                                          size: 32,
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                                 const SizedBox(height: 7),
                                 Text(
