@@ -147,7 +147,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               Text(
                 item.category,
                 style: const TextStyle(
-                  color: marketMaroon,
+                  color: const Color(0xFFFF6878),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -171,7 +171,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 Text(
                   item.priceLabel,
                   style: const TextStyle(
-                    color: marketMaroon,
+                    color: const Color(0xFFFF6878),
                     fontSize: 25,
                     fontWeight: FontWeight.w800,
                   ),
