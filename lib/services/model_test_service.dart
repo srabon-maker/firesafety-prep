@@ -52,6 +52,29 @@ class ModelTestService {
         .toList();
   }
 
+  Future<Map<String, dynamic>> practiceDashboard() async {
+    final data = await _request('practice_dashboard', auth: true);
+    return Map<String, dynamic>.from(data['data'] as Map);
+  }
+
+  Future<void> updatePracticeTarget(int dailyTarget) async {
+    await _request('practice_target', body: {'daily_target': dailyTarget}, auth: true);
+  }
+
+  Future<void> savePracticeSession({
+    required String category,
+    required String difficulty,
+    required int totalQuestions,
+    required int correctCount,
+  }) async {
+    await _request('practice_complete', body: {
+      'category': category,
+      'difficulty': difficulty,
+      'total_questions': totalQuestions,
+      'correct_count': correctCount,
+    }, auth: true);
+  }
+
   Future<List<Map<String,dynamic>>> activeAttempts() async {
     final data = await _request('active_attempts', auth: true);
     return (data['data'] as List? ?? [])
