@@ -47,6 +47,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   final TextEditingController _search = TextEditingController();
   int _tab = 0;
   String? _categoryId;
+  String _sort = 'featured';
   late Future<List<MarketplaceItem>> _catalog;
   late Future<List<MarketplaceCategory>> _categoryOptions;
 
@@ -140,9 +141,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   }
 
   void _showDetails(MarketplaceItem item) {
-    final hasDiscount = item.price != null &&
-        item.comparePrice != null &&
-        item.comparePrice! > item.price!;
+    final hasDiscount = item.discountPercent != null;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => Scaffold(
         backgroundColor: marketBackground,
@@ -328,11 +327,28 @@ class _MarketplacePageState extends State<MarketplacePage> {
         final filtered = (snapshot.data ?? []).where((item) {
           final categoryMatches =
               _categoryId == null || item.categoryId == _categoryId;
-          final queryMatches = query.isEmpty ||
-              item.name.toLowerCase().contains(query) ||
-              item.description.toLowerCase().contains(query);
+          final searchable = [
+            item.name, item.description, item.category,
+          ].join(' ').toLowerCase();
+          final queryMatches = query.isEmpty || searchable.contains(query);
           return categoryMatches && queryMatches;
-        }).toList();
+        }).toList()
+          ..sort((a, b) {
+            switch (_sort) {
+              case 'price_low':
+                return (a.price ?? double.infinity)
+                    .compareTo(b.price ?? double.infinity);
+              case 'price_high':
+                return (b.price ?? -1).compareTo(a.price ?? -1);
+              case 'name':
+                return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+              default:
+                final featured = (b.isFeatured ? 1 : 0)
+                    .compareTo(a.isFeatured ? 1 : 0);
+                return featured != 0 ? featured : a.name.toLowerCase()
+                    .compareTo(b.name.toLowerCase());
+            }
+          });
         if (filtered.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(40),
@@ -373,7 +389,44 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      'ফলাফল সাজান',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _sort,
+                        borderRadius: BorderRadius.circular(14),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'featured', child: Text('প্রস্তাবিত'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'price_low', child: Text('কম দাম আগে'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'price_high', child: Text('বেশি দাম আগে'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'name', child: Text('নাম অনুযায়ী'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setState(() => _sort = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -382,7 +435,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     crossAxisCount: columns,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    mainAxisExtent: 346,
+                    mainAxisExtent: 372,
                   ),
                   itemBuilder: (context, index) {
                     final item = filtered[index];
@@ -602,6 +655,16 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 borderRadius: BorderRadius.circular(17),
                 borderSide: const BorderSide(color: marketMaroon, width: 1.6),
               ),
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'সার্চ মুছুন',
+                      onPressed: () {
+                        _search.clear();
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
             ),
           ),
           const SizedBox(height: 18),
