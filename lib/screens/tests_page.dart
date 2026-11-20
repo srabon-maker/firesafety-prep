@@ -60,6 +60,7 @@ class _TestsPageState extends State<TestsPage> {
   Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[
       IconButton(tooltip:'আমার ফলাফল',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const _MyTestResultsPage()));},icon:const Icon(Icons.history)),
+      IconButton(tooltip:'প্র্যাকটিস ড্যাশবোর্ড',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const _PracticeDashboardPage()));},icon:const Icon(Icons.insights)),
       IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))
     ]),
     body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
@@ -626,7 +627,6 @@ class _SmartSubjectPracticePage extends StatefulWidget {
 }
 
 class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
-  late Future<List<Map<String, dynamic>>> _questionsFuture;
   List<Map<String, dynamic>> _questions = [];
   String _difficulty = 'all';
   bool _loading = true;
@@ -676,8 +676,40 @@ class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
     });
   }
 
+  Future<void> _completePractice() async {
+    try {
+      await ModelTestService.instance.savePracticeSession(
+        category: widget.subject,
+        difficulty: _difficulty,
+        totalQuestions: _questions.length,
+        correctCount: _correct,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('প্র্যাকটিসের ফলাফল সংরক্ষণ হয়নি: ${e.toString().replaceFirst('Exception: ', '')}'),
+        ));
+      }
+      return;
+    }
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('অনুশীলন সম্পন্ন'),
+        content: Text('${_questions.length}টি প্রশ্নের মধ্যে $_correctটি সঠিক উত্তর দিয়েছেন।'),
+        actions: [
+          TextButton(
+            onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
+            child: const Text('শেষ করুন'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _next() {
-    if (_index >= widget.questions.length - 1) return;
+    if (_index >= _questions.length - 1) return;
     setState(() {
       _index++;
       _selected = null;
@@ -788,19 +820,7 @@ class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
               ),
             ),
             FilledButton.icon(
-              onPressed: isLast
-                  ? () => showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('অনুশীলন সম্পন্ন'),
-                        content: Text('${widget.questions.length}টি প্রশ্নের মধ্যে $_correctটি সঠিক উত্তর দিয়েছেন।'),
-                        actions: [TextButton(
-                          onPressed: () { Navigator.pop(ctx); Navigator.pop(context); },
-                          child: const Text('শেষ করুন'),
-                        )],
-                      ),
-                    )
-                  : _next,
+              onPressed: isLast ? _completePractice : _next,
               style: FilledButton.styleFrom(backgroundColor: _maroon),
               icon: Icon(isLast ? Icons.done : Icons.arrow_forward),
               label: Text(isLast ? 'ফলাফল দেখুন' : 'পরের প্রশ্ন'),
@@ -813,6 +833,205 @@ class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
       ),
     );
   }
+}
+
+class _PracticeDashboardPage extends StatefulWidget {
+  const _PracticeDashboardPage();
+  @override
+  State<_PracticeDashboardPage> createState() => _PracticeDashboardPageState();
+}
+
+class _PracticeDashboardPageState extends State<_PracticeDashboardPage> {
+  late Future<Map<String, dynamic>> _data;
+  bool _savingTarget = false;
+  @override
+  void initState() {
+    super.initState();
+    _data = ModelTestService.instance.practiceDashboard();
+  }
+
+  Future<void> _refresh() async {
+    final next = ModelTestService.instance.practiceDashboard();
+    setState(() => _data = next);
+    await next;
+  }
+
+  Future<void> _chooseTarget(int current) async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('দৈনিক অনুশীলনের লক্ষ্য', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+          ),
+          for (final value in [5, 10, 15, 20, 30, 50])
+            ListTile(
+              title: Text('$valueটি প্রশ্ন'),
+              trailing: value == current ? const Icon(Icons.check, color: _maroon) : null,
+              onTap: () => Navigator.pop(ctx, value),
+            ),
+        ]),
+      ),
+    );
+    if (selected == null) return;
+    setState(() => _savingTarget = true);
+    try {
+      await ModelTestService.instance.updatePracticeTarget(selected);
+      await _refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _savingTarget = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('প্র্যাকটিস ড্যাশবোর্ড')),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _data,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('প্র্যাকটিস রিপোর্ট লোড হয়নি।'),
+            TextButton(onPressed: _refresh, child: const Text('আবার চেষ্টা করুন')),
+          ]));
+        }
+        final data = snapshot.data ?? {};
+        final today = Map<String, dynamic>.from(data['today'] as Map? ?? {});
+        final overall = Map<String, dynamic>.from(data['overall'] as Map? ?? {});
+        final target = (data['daily_target'] as num?)?.toInt() ?? 10;
+        final done = (today['questions'] as num?)?.toInt() ?? 0;
+        final weekly = (data['weekly'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final weak = (data['weak_subjects'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final maxDaily = weekly.fold<int>(1, (m, e) =>
+            m > ((e['questions'] as num?)?.toInt() ?? 0) ? m : ((e['questions'] as num?)?.toInt() ?? 0));
+        final totalQuestions = (overall['questions'] as num?)?.toInt() ?? 0;
+        final totalCorrect = (overall['correct'] as num?)?.toInt() ?? 0;
+        final overallAccuracy = totalQuestions == 0 ? 0.0 : totalCorrect / totalQuestions * 100;
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            Card(
+              color: const Color(0xFFFFF5E8),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    const Expanded(child: Text('আজকের অনুশীলন',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
+                    TextButton(
+                      onPressed: _savingTarget ? null : () => _chooseTarget(target),
+                      child: const Text('লক্ষ্য পরিবর্তন'),
+                    ),
+                  ]),
+                  Text('$done / $target প্রশ্ন সম্পন্ন',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _maroon)),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: (done / target).clamp(0.0, 1.0), minHeight: 10,
+                      color: _maroon, backgroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(done >= target ? 'দারুণ! আজকের লক্ষ্য পূরণ হয়েছে।' : 'আর ${target - done}টি প্রশ্ন অনুশীলন করুন।'),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: _dashboardMetric('মোট প্রশ্ন', '$totalQuestions')),
+              const SizedBox(width: 8),
+              Expanded(child: _dashboardMetric('সঠিকের হার', '${overallAccuracy.toStringAsFixed(1)}%')),
+              const SizedBox(width: 8),
+              Expanded(child: _dashboardMetric('স্ট্রিক', '${(overall['streak'] as num?)?.toInt() ?? 0} দিন')),
+            ]),
+            const SizedBox(height: 14),
+            Card(child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('গত ৭ দিনের অগ্রগতি', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                for (final day in weekly) ...[
+                  Row(children: [
+                    SizedBox(width: 82, child: Text(day['date']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
+                    Expanded(child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: LinearProgressIndicator(
+                        value: (((day['questions'] as num?)?.toDouble() ?? 0) / maxDaily).clamp(0.0, 1.0),
+                        minHeight: 8, color: _maroon, backgroundColor: Colors.grey.shade200,
+                      ),
+                    )),
+                    const SizedBox(width: 8),
+                    Text('${day['questions'] ?? 0}', style: const TextStyle(fontSize: 12)),
+                  ]),
+                  const SizedBox(height: 8),
+                ],
+                if (weekly.isEmpty) const Text('এখনো কোনো অনুশীলনের রেকর্ড নেই।'),
+              ]),
+            )),
+            const SizedBox(height: 10),
+            Card(child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('যে বিষয়গুলোতে আরও অনুশীলন দরকার',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                for (final subject in weak)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(subject['category']?.toString() ?? 'অন্যান্য'),
+                    subtitle: Text('${subject['questions']} প্রশ্ন • ${subject['sessions']} সেশন'),
+                    trailing: Text('${subject['accuracy']}%',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon)),
+                  ),
+                if (weak.isEmpty) const Text('বিষয়ভিত্তিক পরামর্শ পেতে অনুশীলন সম্পন্ন করুন।'),
+              ]),
+            )),
+            const SizedBox(height: 10),
+            Card(child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('আপনার অর্জন', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  _achievementChip('প্রথম পদক্ষেপ', totalQuestions >= 1, Icons.flag),
+                  _achievementChip('৫০ প্রশ্ন', totalQuestions >= 50, Icons.school),
+                  _achievementChip('১০০ প্রশ্ন', totalQuestions >= 100, Icons.workspace_premium),
+                  _achievementChip('৭ দিনের ধারাবাহিকতা', ((overall['streak'] as num?)?.toInt() ?? 0) >= 7, Icons.local_fire_department),
+                  _achievementChip('লক্ষ্য পূরণ', done >= target, Icons.check_circle),
+                ]),
+              ]),
+            )),
+          ]),
+        );
+      },
+    ),
+  );
+
+  Widget _dashboardMetric(String label, String value) => Card(
+    child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
+      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _maroon)),
+      const SizedBox(height: 4), Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+    ])),
+  );
+
+  Widget _achievementChip(String label, bool unlocked, IconData icon) => Chip(
+    avatar: Icon(icon, size: 16, color: unlocked ? Colors.green : Colors.grey),
+    label: Text(label),
+    backgroundColor: unlocked ? Colors.green.shade50 : Colors.grey.shade100,
+    side: BorderSide(color: unlocked ? Colors.green.shade200 : Colors.grey.shade300),
+  );
 }
 
 class _WrongAnswerPracticePage extends StatefulWidget {
