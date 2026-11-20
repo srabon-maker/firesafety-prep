@@ -22,19 +22,6 @@ class MarketplaceCatalogCard extends StatelessWidget {
   final VoidCallback onAction;
   final bool actionBusy;
 
-  int? get _discountPercent {
-    final price = item.price;
-    final original = item.comparePrice;
-    if (item.isService || price == null || original == null ||
-        original <= price || original <= 0) {
-      return null;
-    }
-    final percent = ((original - price) / original * 100).round();
-    // Extremely large discounts are commonly caused by an incorrectly entered
-    // compare-at price. Avoid publishing a misleading percentage in the app.
-    return percent > 0 && percent <= 90 ? percent : null;
-  }
-
   String get _actionLabel {
     if (item.isService) return 'বুকিং করুন';
     return item.canAddToCart ? 'কার্টে যোগ করুন' : 'বিস্তারিত দেখুন';
@@ -43,7 +30,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final discount = _discountPercent;
+    final discount = item.discountPercent;
     final isUnavailable = !item.isService && !item.canAddToCart;
     final original = item.comparePrice;
     final hasOriginal = discount != null && original != null;
