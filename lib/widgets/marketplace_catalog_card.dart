@@ -22,19 +22,6 @@ class MarketplaceCatalogCard extends StatelessWidget {
   final VoidCallback onAction;
   final bool actionBusy;
 
-  int? get _discountPercent {
-    final price = item.price;
-    final original = item.comparePrice;
-    if (item.isService || price == null || original == null ||
-        original <= price || original <= 0) {
-      return null;
-    }
-    final percent = ((original - price) / original * 100).round();
-    // Extremely large discounts are commonly caused by an incorrectly entered
-    // compare-at price. Avoid publishing a misleading percentage in the app.
-    return percent > 0 && percent <= 90 ? percent : null;
-  }
-
   String get _actionLabel {
     if (item.isService) return 'বুকিং করুন';
     return item.canAddToCart ? 'কার্টে যোগ করুন' : 'বিস্তারিত দেখুন';
@@ -43,7 +30,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final discount = _discountPercent;
+    final discount = item.discountPercent;
     final isUnavailable = !item.isService && !item.canAddToCart;
     final original = item.comparePrice;
     final hasOriginal = discount != null && original != null;
@@ -65,7 +52,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 150,
+              height: 125,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -141,7 +128,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                     if (item.description.trim().isNotEmpty)
                       Text(
                         item.description.trim(),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
@@ -161,7 +148,10 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       ),
                     ),
                     if (hasOriginal)
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
@@ -188,17 +178,18 @@ class MarketplaceCatalogCard extends StatelessWidget {
                     if (!item.isService && item.canAddToCart)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
+                        child: Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             const Icon(Icons.check_circle_outline,
                                 color: Color(0xFF27815A), size: 13),
-                            const SizedBox(width: 4),
                             Text(
                               item.stock != null && item.stock! <= 5
                                   ? 'সীমিত স্টক · ${item.stock}টি'
                                   : 'স্টকে আছে',
                               style: const TextStyle(
-                                color: Color(0xFF27815A), fontSize: 11,
+                                color: Color(0xFF27815A), fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
