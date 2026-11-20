@@ -148,7 +148,10 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       ),
                     ),
                     if (hasOriginal)
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
