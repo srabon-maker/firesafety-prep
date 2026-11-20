@@ -310,6 +310,37 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _profileInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    dynamic value,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 19, color: scheme.primary),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(
+                  fontSize: 11, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 3),
+                Text(_value(value), style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _profileBody() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _profileFuture,
@@ -463,33 +494,53 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 17),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      number: '০',
-                      label: _tr(context, 'মডেল টেস্ট', 'Model tests'),
-                      icon: Icons.fact_check_outlined,
+              const SizedBox(height: 18),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    leading: Icon(Icons.badge_outlined, color: scheme.primary),
+                    title: Text(
+                      _tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
+                    subtitle: Text(_tr(context, 'আপনার প্রোফাইলের বিস্তারিত',
+                        'Your profile details')),
+                    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    children: [
+                      _profileInfoRow(context, Icons.person_outline,
+                          _tr(context, 'পূর্ণ নাম', 'Full name'), user['full_name']),
+                      _profileInfoRow(context, Icons.email_outlined,
+                          _tr(context, 'ইমেইল', 'Email'), user['email']),
+                      _profileInfoRow(context, Icons.phone_outlined,
+                          _tr(context, 'মোবাইল', 'Mobile'), user['mobile_number']),
+                      _profileInfoRow(context, Icons.work_outline,
+                          _tr(context, 'বর্তমান অবস্থা', 'Current status'), user['current_status']),
+                      _profileInfoRow(context, Icons.business_outlined,
+                          _tr(context, 'প্রতিষ্ঠান', 'Company'), user['company_name']),
+                      _profileInfoRow(context, Icons.badge_outlined,
+                          _tr(context, 'পদবি', 'Designation'), user['designation']),
+                      _profileInfoRow(context, Icons.location_on_outlined,
+                          _tr(context, 'কর্মস্থল', 'Job location'), user['job_location']),
+                      _profileInfoRow(context, Icons.home_outlined,
+                          _tr(context, 'বর্তমান ঠিকানা', 'Current address'), user['current_address']),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _editProfile(user),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: Text(_tr(context, 'তথ্য পরিবর্তন করুন', 'Edit information')),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _StatCard(
-                      number: '০',
-                      label: _tr(context, 'পোস্ট', 'Posts'),
-                      icon: Icons.article_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _StatCard(
-                      number: '০%',
-                      label: _tr(context, 'অগ্রগতি', 'Progress'),
-                      icon: Icons.trending_up_rounded,
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 22),
               _sectionHeading(
@@ -552,6 +603,18 @@ class _ProfilePageState extends State<ProfilePage> {
               _menuTile(
                 icon: Icons.info_outline_rounded,
                 title: _tr(context, 'অ্যাপ সম্পর্কে', 'About app'),
+                subtitle: _tr(context, 'Fire Safety BD সম্পর্কে জানুন',
+                    'Learn about Fire Safety BD'),
+                onTap: () => showAboutDialog(
+                  context: context,
+                  applicationName: 'Fire Safety BD',
+                  applicationVersion: '1.0.0',
+                  applicationLegalese: _tr(
+                    context,
+                    'ফায়ার সেফটি শেখা ও প্রস্তুতির ডিজিটাল প্ল্যাটফর্ম।',
+                    'A digital platform for fire safety learning and preparation.',
+                  ),
+                ),
               ),
               _menuTile(
                 icon: Icons.manage_accounts_outlined,
@@ -752,51 +815,3 @@ class _AccountManagementPage extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.number,
-    required this.label,
-    required this.icon,
-  });
-
-  final String number;
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 18, color: scheme.primary),
-          const SizedBox(height: 6),
-          Text(
-            number,
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-              color: scheme.primary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
