@@ -18,6 +18,7 @@ class _TestsPageState extends State<TestsPage> {
   late Future<List<Map<String,dynamic>>> _tests;
   Map<int, Map<String, dynamic>> _activeAttempts = {};
   bool _loadingActiveAttempts = false;
+  final Set<int> _startingTestIds = <int>{};
   @override
   void initState(){
     super.initState();
@@ -48,13 +49,33 @@ class _TestsPageState extends State<TestsPage> {
     await Future.wait([next, _loadActiveAttempts()]);
   }
   Future<void> _start(Map<String,dynamic> test) async {
-    if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
+    final testId = (test['id'] as num).toInt();
+    if (_startingTestIds.contains(testId)) return;
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    setState(() => _startingTestIds.add(testId));
     try {
-      final attempt=await ModelTestService.instance.start((test['id'] as num).toInt());
-      if(!mounted)return;
-      await Navigator.push(context,MaterialPageRoute(builder:(_)=>_ExamRunner(attempt:attempt)));
-      if(mounted) _refresh();
-    } catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
+      final attempt = await ModelTestService.instance.start(testId);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => _ExamRunner(attempt: attempt)),
+      );
+      if (mounted) await _refresh();
+    } catch (e) {
+      if (mounted) {
+        final message = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: const Color(0xFF8B1726),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _startingTestIds.remove(testId));
+    }
   }
   @override
   Widget build(BuildContext context)=>Scaffold(
@@ -107,7 +128,7 @@ class _TestsPageState extends State<TestsPage> {
             ),
           ],
           const SizedBox(height:16),
-          for(final t in tests) Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          for(final t in tests) Card(color:const Color(0xFF241D20),surfaceTintColor:Colors.transparent,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20),side:BorderSide(color:Colors.white.withValues(alpha:0.16))),margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
             if((t['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(t['description'].toString())),
             const SizedBox(height:10),Wrap(spacing:14,runSpacing:8,children:[
@@ -124,14 +145,36 @@ class _TestsPageState extends State<TestsPage> {
             const SizedBox(height:12),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                onPressed: () => _start(t),
-                icon: Icon(_activeAttempts.containsKey((t['id'] as num).toInt())
-                    ? Icons.play_circle_outline : Icons.play_arrow),
-                label: Text(_activeAttempts.containsKey((t['id'] as num).toInt())
-                    ? 'পরীক্ষা চালিয়ে যান' : 'পরীক্ষা শুরু করুন'),
-                style: FilledButton.styleFrom(backgroundColor: _maroon),
-              ),
+              child: Builder(builder: (context) {
+                final testId = (t['id'] as num).toInt();
+                final starting = _startingTestIds.contains(testId);
+                final active = _activeAttempts.containsKey(testId);
+                return FilledButton.icon(
+                  onPressed: starting ? null : () => _start(t),
+                  icon: starting
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white,
+                          ),
+                        )
+                      : Icon(active ? Icons.play_circle_outline : Icons.play_arrow),
+                  label: Text(starting
+                      ? 'প্রস্তুত হচ্ছে…'
+                      : active ? 'পরীক্ষা চালিয়ে যান' : 'পরীক্ষা শুরু করুন'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF9D1B30),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF6B2530),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                );
+              }),
             )
           ])))
         ]);
