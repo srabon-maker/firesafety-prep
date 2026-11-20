@@ -32,3 +32,11 @@
 - পোস্ট ও ছবি moderation-এর আগে পাবলিক ফিডে প্রকাশিত হয় না। ছবি URL অনুমান করা কঠিন, তবে uploaded file directory-তে URL জানা থাকলে ফাইল দেখা যেতে পারে। সংবেদনশীল ছবি দেবেন না।
 - Comments বর্তমানে approved পোস্টে সরাসরি প্রকাশিত হয়। রিপোর্টিং/কমেন্ট moderation, image re-encoding, EXIF metadata removal, paginated infinite scroll ও orphan-image cleanup পরবর্তী কাজ।
 - **এই GitHub পরিবর্তন নিজে থেকে cPanel-এ deploy হয় না।** নতুন APK একা ইনস্টল করলে API কাজ করবে না যতক্ষণ না SQL/PHP upload সম্পন্ন হয়।
+
+
+## Community API deployment diagnostic
+নতুন API build-এ নিচের URL খুলে সার্ভার সেটআপ যাচাই করা যাবে:
+
+`https://fire.manobikishwarganj.com/api/community/index.php?action=health`
+
+সফল হলে JSON-এ `ready: true` এবং সব check `true` থাকবে। `posts_table`, `comments_table` বা `likes_table` false হলে সংশ্লিষ্ট database migration/table যাচাই করুন। `upload_directory` বা `upload_writable` false হলে `uploads/community` ফোল্ডার তৈরি করে permission ঠিক করুন। এই endpoint কোনো database credential, path বা SQL error প্রকাশ করে না।

@@ -102,6 +102,37 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $action = (string)($_GET['action'] ?? 'feed');
+    // Public, read-only deployment check. Never expose credentials or SQL errors.
+    if ($method === 'GET' && $action === 'health') {
+        $checks = [
+            'database' => true,
+            'posts_table' => false,
+            'comments_table' => false,
+            'likes_table' => false,
+            'upload_directory' => false,
+            'upload_writable' => false,
+        ];
+        foreach ([
+            'posts_table' => 'SELECT 1 FROM community_posts LIMIT 1',
+            'comments_table' => 'SELECT 1 FROM community_comments LIMIT 1',
+            'likes_table' => 'SELECT 1 FROM community_post_likes LIMIT 1',
+        ] as $key => $sql) {
+            try { $pdo->query($sql); $checks[$key] = true; }
+            catch (Throwable $ignored) { $checks[$key] = false; }
+        }
+        $uploadDir = __DIR__ . '/../../uploads/community';
+        $checks['upload_directory'] = is_dir($uploadDir);
+        $checks['upload_writable'] = is_dir($uploadDir) && is_writable($uploadDir);
+        $ready = !in_array(false, $checks, true);
+        community_reply($ready ? 200 : 503, [
+            'success' => $ready,
+            'ready' => $ready,
+            'checks' => $checks,
+            'message' => $ready
+                ? 'কমিউনিটি API প্রস্তুত।'
+                : 'কমিউনিটি API সেটআপ অসম্পূর্ণ। cPanel deployment checklist দেখুন।',
+        ]);
+    }
     if ($method === 'GET' && $action === 'feed') {
         $userId = community_auth($pdo, false);
         $sort = ($_GET['sort'] ?? '') === 'popular' ? 'popular' : 'latest';
