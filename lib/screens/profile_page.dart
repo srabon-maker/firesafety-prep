@@ -7,6 +7,7 @@ import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
+import 'saved_notes_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -577,6 +578,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const NotesPage(),
+                  ),
+                ),
+              ),
+              _menuTile(
+                icon: Icons.bookmark_rounded,
+                title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
+                subtitle: _tr(context, 'আপনার বুকমার্ক করা নোট',
+                    'Your bookmarked notes'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SavedNotesPage(),
                   ),
                 ),
               ),
