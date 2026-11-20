@@ -59,8 +59,8 @@ class _TestsPageState extends State<TestsPage> {
   @override
   Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[
-      IconButton(tooltip:'আমার ফলাফল',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const _MyTestResultsPage()));},icon:const Icon(Icons.history)),
-      IconButton(tooltip:'প্র্যাকটিস ড্যাশবোর্ড',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const _PracticeDashboardPage()));},icon:const Icon(Icons.insights)),
+      IconButton(tooltip:'আমার ফলাফল',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyTestResultsPage()));},icon:const Icon(Icons.history)),
+      IconButton(tooltip:'প্র্যাকটিস ড্যাশবোর্ড',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const PracticeDashboardPage()));},icon:const Icon(Icons.insights)),
       IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))
     ]),
     body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
@@ -835,10 +835,10 @@ class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
   }
 }
 
-class _PracticeDashboardPage extends StatefulWidget {
-  const _PracticeDashboardPage();
+class PracticeDashboardPage extends StatefulWidget {
+  const PracticeDashboardPage();
   @override
-  State<_PracticeDashboardPage> createState() => _PracticeDashboardPageState();
+  State<PracticeDashboardPage> createState() => _PracticeDashboardPageState();
 }
 
 class _PracticeDashboardPageState extends State<_PracticeDashboardPage> {
@@ -1190,10 +1190,10 @@ Widget _resultMetric(String label, String value) => Column(
   ],
 );
 
-class _MyTestResultsPage extends StatefulWidget{
-  const _MyTestResultsPage();
+class MyTestResultsPage extends StatefulWidget{
+  const MyTestResultsPage();
   @override
-  State<_MyTestResultsPage> createState()=>_MyTestResultsPageState();
+  State<MyTestResultsPage> createState()=>_MyTestResultsPageState();
 }
 class _MyTestResultsPageState extends State<_MyTestResultsPage>{
   late Future<List<Map<String,dynamic>>> _future;
