@@ -28,6 +28,19 @@ class MarketplaceItem {
   final int? stock;
   final bool isFeatured;
 
+  /// Ignore implausible compare-at prices (over 90% off) so a data-entry
+  /// mistake cannot be presented as a genuine promotion in any screen.
+  int? get discountPercent {
+    final current = price;
+    final original = comparePrice;
+    if (isService || current == null || original == null ||
+        current <= 0 || original <= current) {
+      return null;
+    }
+    final percent = ((original - current) / original * 100).round();
+    return percent > 0 && percent <= 90 ? percent : null;
+  }
+
   /// The deployed product API always supplies stock_quantity. Treat missing
   /// inventory as unavailable instead of allowing an unsafe cart action.
   bool get canAddToCart =>
