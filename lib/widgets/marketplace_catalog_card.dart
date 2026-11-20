@@ -30,7 +30,9 @@ class MarketplaceCatalogCard extends StatelessWidget {
       return null;
     }
     final percent = ((original - price) / original * 100).round();
-    return percent > 0 ? percent : null;
+    // Extremely large discounts are commonly caused by an incorrectly entered
+    // compare-at price. Avoid publishing a misleading percentage in the app.
+    return percent > 0 && percent <= 90 ? percent : null;
   }
 
   String get _actionLabel {
@@ -63,7 +65,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 146,
+              height: 150,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -135,7 +137,19 @@ class MarketplaceCatalogCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 5),
+                    if (item.description.trim().isNotEmpty)
+                      Text(
+                        item.description.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 10,
+                          height: 1.25,
+                        ),
+                      ),
+                    const SizedBox(height: 6),
                     Text(
                       item.priceLabel,
                       maxLines: 1,
@@ -147,28 +161,47 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       ),
                     ),
                     if (hasOriginal)
-                      Text(
-                        '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: scheme.onSurfaceVariant,
-                          decoration: TextDecoration.lineThrough,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.onSurfaceVariant,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'সাশ্রয়ী মূল্য',
+                            style: TextStyle(
+                              color: Color(0xFF27815A),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     const Spacer(),
                     if (!item.isService && item.canAddToCart)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
                         child: Row(
                           children: [
-                            Icon(Icons.check_circle_outline,
+                            const Icon(Icons.check_circle_outline,
                                 color: Color(0xFF27815A), size: 13),
-                            SizedBox(width: 4),
-                            Text('স্টকে আছে',
-                                style: TextStyle(
-                                    color: Color(0xFF27815A), fontSize: 11)),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.stock != null && item.stock! <= 5
+                                  ? 'সীমিত স্টক · ${item.stock}টি'
+                                  : 'স্টকে আছে',
+                              style: const TextStyle(
+                                color: Color(0xFF27815A), fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),

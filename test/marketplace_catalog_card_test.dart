@@ -50,6 +50,23 @@ void main() {
     expect(added, isTrue);
   });
 
+  testWidgets('unusually high discount percentage is not advertised', (tester) async {
+    final item = MarketplaceItem(
+      id: '9',
+      name: 'Fire Extinguisher',
+      category: 'Safety Equipment',
+      description: 'Portable fire extinguisher',
+      isService: false,
+      price: 1222,
+      comparePrice: 100000,
+      stock: 10,
+    );
+    await tester.pumpWidget(cardHost(item));
+    expect(find.text('-99%'), findsNothing);
+    expect(find.text('৳1222'), findsOneWidget);
+    expect(find.text('৳100000'), findsNothing);
+  });
+
   testWidgets('out-of-stock card routes to details, not cart',
       (tester) async {
     var details = false;
