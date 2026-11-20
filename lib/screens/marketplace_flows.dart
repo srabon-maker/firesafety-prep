@@ -33,6 +33,51 @@ String? _phone(String? value) {
   return null;
 }
 
+Widget _cartThumbnail(String? imageUrl) {
+  final uri = Uri.tryParse(imageUrl ?? '');
+  final valid = uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: SizedBox(
+      width: 76,
+      height: 76,
+      child: valid
+          ? Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _cartImageFallback(),
+            )
+          : _cartImageFallback(),
+    ),
+  );
+}
+
+Widget _cartImageFallback() => DecoratedBox(
+  decoration: const BoxDecoration(
+    gradient: LinearGradient(
+      colors: [Color(0xFFF9F0F1), Color(0xFFEAD7DA)],
+    ),
+  ),
+  child: const Center(
+    child: Icon(Icons.fire_extinguisher, color: _maroon, size: 34),
+  ),
+);
+
+String _statusText(String value) {
+  switch (value.toLowerCase()) {
+    case 'pending': return 'অপেক্ষমাণ';
+    case 'processing': return 'প্রক্রিয়াধীন';
+    case 'confirmed': return 'নিশ্চিত';
+    case 'completed': return 'সম্পন্ন';
+    case 'cancelled': return 'বাতিল';
+    case 'shipped': return 'পাঠানো হয়েছে';
+    case 'delivered': return 'ডেলিভারি সম্পন্ন';
+    case 'paid': return 'পরিশোধিত';
+    case 'failed': return 'ব্যর্থ';
+    default: return value;
+  }
+}
+
 class MarketplaceCartPage extends StatefulWidget {
   const MarketplaceCartPage({super.key});
   @override
@@ -123,14 +168,40 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.name, style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 5),
-                      Text('৳${item.price.toStringAsFixed(2)} × ${item.quantity}'
-                          ' = ৳${item.lineTotal.toStringAsFixed(2)}'),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _cartThumbnail(item.imageUrl),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.name, maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 15,
+                                  )),
+                                const SizedBox(height: 5),
+                                Text('৳${item.price.toStringAsFixed(2)} × ${item.quantity}',
+                                  style: const TextStyle(fontSize: 12)),
+                                const SizedBox(height: 3),
+                                Text('৳${item.lineTotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: _maroon, fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  )),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                       if (item.quantity > item.stock)
-                        const Text('স্টক পরিবর্তন হয়েছে। পরিমাণ কমান।',
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('স্টক পরিবর্তন হয়েছে। পরিমাণ কমান।',
                             style: TextStyle(color: Colors.red)),
+                        ),
                       Row(children: [
                         IconButton(
                           tooltip: 'একটি কমান',
@@ -158,9 +229,58 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
                   ),
                 )),
               const SizedBox(height: 12),
-              Text('পণ্যের মোট: ৳${cart.subtotal.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const Text('ডেলিভারি চার্জ: ৳০.০০ (বর্তমান সার্ভার নিয়ম অনুযায়ী)'),
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('অর্ডার সারাংশ',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('পণ্যের মোট'),
+                          Text('৳${cart.subtotal.toStringAsFixed(2)}'),
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('ডেলিভারি চার্জ'),
+                          Text('৳০.০০*'),
+                        ],
+                      ),
+                      const Divider(height: 22),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('সার্ভার-প্রদত্ত সাবটোটাল',
+                            style: TextStyle(fontWeight: FontWeight.w800)),
+                          Text('৳${cart.subtotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: _maroon, fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            )),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('*বর্তমানে সার্ভারে ডেলিভারি চার্জ শূন্য নির্ধারিত।',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        )),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 14),
               FilledButton.icon(
                 style: FilledButton.styleFrom(backgroundColor: _maroon, foregroundColor: Colors.white),
@@ -328,7 +448,7 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
               for (final order in snapshot.data!)
                 Card(child: ListTile(
                   title: Text(order.number),
-                  subtitle: Text('স্ট্যাটাস: ${order.status} • '
+                  subtitle: Text('স্ট্যাটাস: ${_statusText(order.status)} • '
                       'পেমেন্ট: ${order.paymentStatus}\n${order.createdAt}'),
                   trailing: Text('৳${order.total.toStringAsFixed(2)}'),
                   isThreeLine: true,
@@ -359,7 +479,7 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
                   title: Text(request.serviceName.isEmpty
                       ? request.number : request.serviceName),
                   subtitle: Text('${request.number}\n'
-                      'স্ট্যাটাস: ${request.status} • ${request.location}'
+                      'স্ট্যাটাস: ${_statusText(request.status)} • ${request.location}'
                       '${request.preferredDate == null ? '' : ' • ${request.preferredDate}'}'),
                   isThreeLine: true,
                 )),
