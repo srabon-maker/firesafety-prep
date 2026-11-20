@@ -540,8 +540,52 @@ class _ExamResult extends StatelessWidget{
             style: FilledButton.styleFrom(backgroundColor: _maroon),
           ),
         ),
+      if ((result['subject_performance'] as List? ?? []).isNotEmpty) ...[
+        const SizedBox(height: 14),
+        const Text('বিষয়ভিত্তিক পারফরম্যান্স',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        for (final item in (result['subject_performance'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map)))
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item['subject']?.toString() ?? 'অন্যান্য',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: Text('সঠিক ${item['correct_count']}')),
+                    Expanded(child: Text('ভুল ${item['incorrect_count']}')),
+                    Expanded(child: Text('ফাঁকা ${item['unanswered_count']}')),
+                    Text('${((item['accuracy'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon)),
+                  ]),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: (((item['accuracy'] as num?)?.toDouble() ?? 0) / 100).clamp(0.0, 1.0),
+                      minHeight: 8,
+                      color: _maroon,
+                      backgroundColor: Colors.grey.shade200,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text('স্কোর: ${((item['score'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)} / ${((item['total_marks'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                ],
+              ),
+            ),
+          ),
+      ],
       const SizedBox(height:12),const Text('প্রশ্নভিত্তিক পর্যালোচনা',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
       for(final q in questions)Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('বিষয়: ${q['category'] ?? 'অন্যান্য'}',
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+        const SizedBox(height: 4),
         Text('${q['order']}. ${q['question']}',style:const TextStyle(fontWeight:FontWeight.bold)),
         for(final letter in ['A','B','C','D'])Padding(padding:const EdgeInsets.only(top:4),child:Text('$letter. ${(q['options'] as Map)[letter]}')),
         const SizedBox(height:6),Text('তোমার উত্তর: ${q['selected_answer']??'উত্তর দাওনি'}'),Text('সঠিক উত্তর: ${q['correct_answer']}',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.bold)),

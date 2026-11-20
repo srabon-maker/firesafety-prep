@@ -44,6 +44,7 @@ function exam_test(PDO $pdo,int $id): array {
 }
 function exam_public_question(array $r,bool $reveal=false): array {
     $item=['id'=>(int)$r['id'],'order'=>(int)$r['question_order'],'question'=>$r['question_text'],
+      'category'=>(string)($r['category'] ?? 'অন্যান্য'),
       'options'=>['A'=>$r['option_a'],'B'=>$r['option_b'],'C'=>$r['option_c'],'D'=>$r['option_d']],
       'selected_answer'=>$r['selected_answer']];
     if($reveal){$item['correct_answer']=$r['correct_answer'];$item['explanation']=$r['explanation'];}
@@ -202,6 +203,23 @@ function exam_result_payload(PDO $pdo,int $attemptId,int $userId): array {
     $q=$pdo->prepare("SELECT a.*,t.title,t.results_released FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.id=? AND a.user_id=? AND a.status IN ('submitted','expired') AND t.results_released=1 LIMIT 1");
     $q->execute([$attemptId,$userId]);$a=$q->fetch(PDO::FETCH_ASSOC);
     if(!$a)exam_reply(409,['success'=>false,'message'=>'ফলাফল এখনো প্রস্তুত নয়।']);
-    $rows=$pdo->prepare('SELECT question_id AS id,question_order,question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,selected_answer FROM model_test_attempt_questions WHERE attempt_id=? ORDER BY question_order');$rows->execute([$attemptId]);
-    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'status'=>$a['status'],'score'=>(float)$a['score'],'total_marks'=>(float)$a['total_marks'],'passed'=>$a['passed']===null?null:(bool)$a['passed'],'pass_marks'=>$a['pass_marks']===null?null:(float)$a['pass_marks'],'correct_count'=>(int)$a['correct_count'],'incorrect_count'=>(int)$a['incorrect_count'],'unanswered_count'=>(int)$a['unanswered_count'],'questions'=>array_map(static fn($r)=>exam_public_question($r,true),$rows->fetchAll(PDO::FETCH_ASSOC))];
+    // Subject/category is sourced from the Question Bank's existing questions.category field.
+    // Attempts retain question IDs; category edits in the Question Bank can therefore affect older reports.
+    $rows=$pdo->prepare("SELECT aq.question_id AS id,aq.question_order,aq.question_text,aq.option_a,aq.option_b,aq.option_c,aq.option_d,aq.correct_answer,aq.explanation,aq.selected_answer,COALESCE(NULLIF(TRIM(q.category),''),'অন্যান্য') AS category,aq.marks FROM model_test_attempt_questions aq LEFT JOIN questions q ON q.id=aq.question_id WHERE aq.attempt_id=? ORDER BY aq.question_order");
+    $rows->execute([$attemptId]);$questionRows=$rows->fetchAll(PDO::FETCH_ASSOC);
+    $subjectMap=[];
+    foreach($questionRows as $row){
+        $name=trim((string)($row['category']??'')) ?: 'অন্যান্য';
+        if(!isset($subjectMap[$name]))$subjectMap[$name]=['subject'=>$name,'total_questions'=>0,'correct_count'=>0,'incorrect_count'=>0,'unanswered_count'=>0,'score'=>0.0,'total_marks'=>0.0];
+        $subjectMap[$name]['total_questions']++;
+        $subjectMap[$name]['total_marks']+=(float)$row['marks'];
+        $selected=strtoupper(trim((string)($row['selected_answer']??'')));
+        if($selected===''){$subjectMap[$name]['unanswered_count']++;}
+        elseif($selected===strtoupper((string)$row['correct_answer'])){$subjectMap[$name]['correct_count']++;$subjectMap[$name]['score']+=(float)$row['marks'];}
+        else{$subjectMap[$name]['incorrect_count']++;$subjectMap[$name]['score']-=(float)$a['negative_marks_per_question'];}
+    }
+    foreach($subjectMap as &$subjectRow){$subjectRow['score']=max(0.0,$subjectRow['score']);$subjectRow['accuracy']=$subjectRow['total_questions']>0?round($subjectRow['correct_count']/$subjectRow['total_questions']*100,1):0.0;}
+    unset($subjectRow);
+    $subjects=array_values($subjectMap);
+    return ['attempt_id'=>(int)$a['id'],'test_id'=>(int)$a['test_id'],'title'=>$a['title'],'status'=>$a['status'],'score'=>(float)$a['score'],'total_marks'=>(float)$a['total_marks'],'passed'=>$a['passed']===null?null:(bool)$a['passed'],'pass_marks'=>$a['pass_marks']===null?null:(float)$a['pass_marks'],'correct_count'=>(int)$a['correct_count'],'incorrect_count'=>(int)$a['incorrect_count'],'unanswered_count'=>(int)$a['unanswered_count'],'subject_performance'=>$subjects,'questions'=>array_map(static fn($r)=>exam_public_question($r,true),$questionRows)];
 }
