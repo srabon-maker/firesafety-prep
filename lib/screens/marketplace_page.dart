@@ -362,53 +362,22 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      '${filtered.length}টি',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: marketMutedText,
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _categoryId = null;
+                        _search.clear();
+                      }),
+                      child: const Text(
+                        'সব দেখুন  ›',
+                        style: TextStyle(
+                          color: Color(0xFFFF4052),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text(
-                      'ফলাফল সাজান',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: marketMutedText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _sort,
-                        borderRadius: BorderRadius.circular(14),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'featured', child: Text('প্রস্তাবিত'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'price_low', child: Text('কম দাম আগে'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'price_high', child: Text('বেশি দাম আগে'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'name', child: Text('নাম অনুযায়ী'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) setState(() => _sort = value);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -417,7 +386,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     crossAxisCount: columns,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    mainAxisExtent: 244,
+                    mainAxisExtent: 210,
                   ),
                   itemBuilder: (context, index) {
                     final item = filtered[index];
