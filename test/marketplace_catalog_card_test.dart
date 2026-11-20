@@ -45,7 +45,7 @@ void main() {
     expect(find.text('ফিচার্ড'), findsOneWidget);
     expect(find.text('৳1200'), findsOneWidget);
     expect(find.text('৳1500'), findsOneWidget);
-    expect(find.text('স্টকে আছে'), findsOneWidget);
+    expect(find.text('সীমিত স্টক · 5টি'), findsOneWidget);
     await tester.tap(find.text('কার্টে যোগ করুন'));
     expect(added, isTrue);
   });
