@@ -52,7 +52,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 150,
+              height: 125,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -128,7 +128,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                     if (item.description.trim().isNotEmpty)
                       Text(
                         item.description.trim(),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
