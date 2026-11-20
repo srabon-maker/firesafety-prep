@@ -178,17 +178,18 @@ class MarketplaceCatalogCard extends StatelessWidget {
                     if (!item.isService && item.canAddToCart)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
+                        child: Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             const Icon(Icons.check_circle_outline,
                                 color: Color(0xFF27815A), size: 13),
-                            const SizedBox(width: 4),
                             Text(
                               item.stock != null && item.stock! <= 5
                                   ? 'সীমিত স্টক · ${item.stock}টি'
                                   : 'স্টকে আছে',
                               style: const TextStyle(
-                                color: Color(0xFF27815A), fontSize: 11,
+                                color: Color(0xFF27815A), fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
