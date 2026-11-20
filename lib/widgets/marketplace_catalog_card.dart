@@ -52,7 +52,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 130,
+              height: 120,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -96,7 +96,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsets.fromLTRB(11, 8, 11, 9),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -112,20 +112,20 @@ class MarketplaceCatalogCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       item.name,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: scheme.onSurface,
                         fontSize: 14,
-                        height: 1.3,
-                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    if (item.description.trim().isNotEmpty)
+                    if (item.description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
                         item.description.trim(),
                         maxLines: 1,
@@ -133,104 +133,56 @@ class MarketplaceCatalogCard extends StatelessWidget {
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
                           fontSize: 10,
-                          height: 1.25,
+                          height: 1.2,
                         ),
                       ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.priceLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _maroon,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (hasOriginal)
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            '৳${original.toStringAsFixed(original % 1 == 0 ? 0 : 2)}',
+                    ],
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.priceLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant,
-                              decoration: TextDecoration.lineThrough,
+                            style: const TextStyle(
+                              color: _maroon,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'সাশ্রয়ী মূল্য',
-                            style: TextStyle(
-                              color: Color(0xFF27815A),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    const Spacer(),
-                    if (!item.isService && item.canAddToCart)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Wrap(
-                          spacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Icon(Icons.check_circle_outline,
-                                color: Color(0xFF27815A), size: 13),
-                            Text(
-                              item.stock != null && item.stock! <= 5
-                                  ? 'সীমিত স্টক · ${item.stock}টি'
-                                  : 'স্টকে আছে',
-                              style: const TextStyle(
-                                color: Color(0xFF27815A), fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          width: 38,
+                          height: 38,
+                          child: FilledButton(
+                            onPressed: actionBusy
+                                ? null
+                                : (isUnavailable ? onDetails : onAction),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isUnavailable
+                                  ? scheme.surfaceContainerHighest
+                                  : _maroon,
+                              foregroundColor: isUnavailable
+                                  ? scheme.onSurface
+                                  : Colors.white,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 38,
-                      child: FilledButton.icon(
-                        onPressed: actionBusy
-                            ? null
-                            : (isUnavailable ? onDetails : onAction),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: isUnavailable
-                              ? scheme.surfaceContainerHighest
-                              : _maroon,
-                          foregroundColor: isUnavailable
-                              ? scheme.onSurface
-                              : Colors.white,
-                          disabledBackgroundColor: _softMaroon,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            child: Icon(
+                              item.isService
+                                  ? Icons.calendar_month_outlined
+                                  : item.canAddToCart
+                                      ? Icons.shopping_cart_outlined
+                                      : Icons.visibility_outlined,
+                              size: 20,
+                            ),
                           ),
-                          textStyle: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w700),
                         ),
-                        icon: Icon(
-                          item.isService
-                              ? Icons.calendar_month_outlined
-                              : item.canAddToCart
-                                  ? Icons.add_shopping_cart_outlined
-                                  : Icons.visibility_outlined,
-                          size: 15,
-                        ),
-                        label: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(_actionLabel, maxLines: 1),
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
