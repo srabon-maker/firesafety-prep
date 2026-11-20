@@ -841,7 +841,7 @@ class PracticeDashboardPage extends StatefulWidget {
   State<PracticeDashboardPage> createState() => _PracticeDashboardPageState();
 }
 
-class _PracticeDashboardPageState extends State<_PracticeDashboardPage> {
+class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
   late Future<Map<String, dynamic>> _data;
   bool _savingTarget = false;
   @override
@@ -1195,7 +1195,7 @@ class MyTestResultsPage extends StatefulWidget{
   @override
   State<MyTestResultsPage> createState()=>_MyTestResultsPageState();
 }
-class _MyTestResultsPageState extends State<_MyTestResultsPage>{
+class _MyTestResultsPageState extends State<MyTestResultsPage>{
   late Future<List<Map<String,dynamic>>> _future;
   @override
   void initState(){super.initState();_future=ModelTestService.instance.myResults();}
