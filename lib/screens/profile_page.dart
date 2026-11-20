@@ -5,6 +5,8 @@ import '../services/auth_service.dart';
 import '../settings/app_settings.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
+import 'tests_page.dart';
+import 'notes_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -499,12 +501,33 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: _tr(context, 'মডেল টেস্টের ফলাফল', 'Model test results'),
                 subtitle: _tr(context, 'পরীক্ষার ফলাফল ও ইতিহাস',
                     'Your scores and history'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MyTestResultsPage(),
+                  ),
+                ),
               ),
               _menuTile(
-                icon: Icons.bookmark_border_rounded,
-                title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
-                subtitle: _tr(context, 'আপনার বুকমার্ক করা নোট',
-                    'Your bookmarked notes'),
+                icon: Icons.insights_rounded,
+                title: _tr(context, 'অনুশীলন ড্যাশবোর্ড', 'Practice dashboard'),
+                subtitle: _tr(context, 'দৈনিক লক্ষ্য ও শেখার অগ্রগতি',
+                    'Daily target and learning progress'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PracticeDashboardPage(),
+                  ),
+                ),
+              ),
+              _menuTile(
+                icon: Icons.menu_book_outlined,
+                title: _tr(context, 'নোট ও রিসোর্স', 'Notes & resources'),
+                subtitle: _tr(context, 'প্রকাশিত স্টাডি নোট দেখুন',
+                    'Browse published study notes'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotesPage(),
+                  ),
+                ),
               ),
               const SizedBox(height: 11),
               _sectionHeading(
