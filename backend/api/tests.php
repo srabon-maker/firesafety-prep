@@ -42,6 +42,24 @@ function exam_test(PDO $pdo,int $id): array {
     if(!empty($row['ends_at']) && strtotime((string)$row['ends_at'])<=$now) exam_reply(409,['success'=>false,'message'=>'পরীক্ষার সময়সীমা শেষ হয়েছে।']);
     return $row;
 }
+function exam_model_test_schema_ready(PDO $pdo): bool {
+    $requiredTables = ['model_test_attempts', 'model_test_attempt_questions'];
+    $tableCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.tables
+         WHERE table_schema = DATABASE() AND table_name IN (?, ?)"
+    );
+    $tableCheck->execute($requiredTables);
+    if ((int)$tableCheck->fetchColumn() !== count($requiredTables)) return false;
+
+    $columnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = 'model_tests'
+           AND column_name IN ('max_attempts', 'results_released')"
+    );
+    $columnCheck->execute();
+    return (int)$columnCheck->fetchColumn() === 2;
+}
+
 function exam_public_question(array $r,bool $reveal=false): array {
     $item=['id'=>(int)$r['id'],'order'=>(int)$r['question_order'],'question'=>$r['question_text'],
       'category'=>(string)($r['category'] ?? 'অন্যান্য'),
@@ -177,6 +195,15 @@ try {
     if($testId<1) exam_reply(422,['success'=>false,'message'=>'সঠিক পরীক্ষা নির্বাচন করুন।']);
 
     if($action==='start'){
+        // Give a clear deployment instruction instead of a generic HTTP 500
+        // when the required one-time database migrations have not been run.
+        if (!exam_model_test_schema_ready($pdo)) {
+            exam_reply(503, [
+                'success' => false,
+                'code' => 'MODEL_TEST_MIGRATION_REQUIRED',
+                'message' => 'মডেল টেস্ট চালু করার জন্য সার্ভারের ডেটাবেজ আপডেট বাকি। Admin-কে model test migrations দুটি phpMyAdmin-এ চালাতে বলুন।',
+            ]);
+        }
         $existing=$pdo->prepare("SELECT id FROM model_test_attempts WHERE test_id=? AND user_id=? AND status='in_progress' ORDER BY id DESC LIMIT 1");
         $existing->execute([$testId,$userId]);$attemptId=(int)($existing->fetchColumn()?:0);
         if(!$attemptId){
