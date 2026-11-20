@@ -589,7 +589,6 @@ class _ExamResult extends StatelessWidget{
                         Navigator.push(context, MaterialPageRoute(
                           builder: (_) => _SmartSubjectPracticePage(
                             subject: subject,
-                            questions: subjectQuestions,
                           ),
                         ));
                       },
@@ -620,19 +619,53 @@ class _ExamResult extends StatelessWidget{
 
 class _SmartSubjectPracticePage extends StatefulWidget {
   final String subject;
-  final List<Map<String, dynamic>> questions;
-  const _SmartSubjectPracticePage({required this.subject, required this.questions});
+  const _SmartSubjectPracticePage({required this.subject});
 
   @override
   State<_SmartSubjectPracticePage> createState() => _SmartSubjectPracticePageState();
 }
 
 class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
+  late Future<List<Map<String, dynamic>>> _questionsFuture;
+  List<Map<String, dynamic>> _questions = [];
+  String _difficulty = 'all';
+  bool _loading = true;
+  String? _loadError;
   int _index = 0;
   String? _selected;
   bool _checked = false;
   int _correct = 0;
   final Set<int> _answered = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    setState(() {_loading = true; _loadError = null;});
+    try {
+      final rows = await ModelTestService.instance.practiceQuestions(
+        category: widget.subject,
+        difficulty: _difficulty,
+        limit: 15,
+      );
+      if (!mounted) return;
+      setState(() {
+        _questions = rows;
+        _index = 0;
+        _selected = null;
+        _checked = false;
+        _correct = 0;
+        _answered.clear();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {_loadError = e.toString().replaceFirst('Exception: ', ''); _loading = false;});
+    }
+  }
 
   void _checkAnswer(String correct) {
     if (_selected == null || _checked) return;
@@ -654,26 +687,61 @@ class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.questions.isEmpty) {
+    if (_loading) {
       return Scaffold(
         appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
-        body: const Center(child: Text('এই বিষয়ে অনুশীলনের প্রশ্ন পাওয়া যায়নি।')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
-    final q = widget.questions[_index];
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        body: Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(_loadError!, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: _loadQuestions, child: const Text('আবার চেষ্টা করুন')),
+          ]),
+        )),
+      );
+    }
+    if (_questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        body: const Center(child: Text('এই বিষয়ে Question Bank-এ প্রকাশিত প্রশ্ন পাওয়া যায়নি।')),
+      );
+    }
+    final q = _questions[_index];
     final options = Map<String, dynamic>.from(q['options'] as Map? ?? {});
     final correct = q['correct_answer']?.toString().toUpperCase() ?? '';
     final explanation = q['explanation']?.toString() ?? '';
-    final isLast = _index == widget.questions.length - 1;
+    final isLast = _index == _questions.length - 1;
     return Scaffold(
       appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          LinearProgressIndicator(value: (_index + 1) / widget.questions.length),
+          LinearProgressIndicator(value: (_index + 1) / _questions.length),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            value: _difficulty,
+            decoration: const InputDecoration(labelText: 'প্রশ্নের কঠিনতার মাত্রা'),
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('সব স্তর')),
+              DropdownMenuItem(value: 'easy', child: Text('সহজ')),
+              DropdownMenuItem(value: 'medium', child: Text('মাঝারি')),
+              DropdownMenuItem(value: 'hard', child: Text('কঠিন')),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _difficulty = value);
+              _loadQuestions();
+            },
+          ),
           const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: Text('প্রশ্ন ${_index + 1} / ${widget.questions.length}',
+            Expanded(child: Text('প্রশ্ন ${_index + 1} / ${_questions.length}',
               style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon))),
             Text('সঠিক: $_correct',
               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
