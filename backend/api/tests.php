@@ -56,6 +56,33 @@ try {
     $method=$_SERVER['REQUEST_METHOD']??'GET';
     $action=(string)($_GET['action']??'list');
 
+    if($method==='GET' && $action==='practice_dashboard'){
+        $userId=exam_user($pdo);
+        $settings=$pdo->prepare('SELECT daily_target FROM student_practice_settings WHERE user_id=? LIMIT 1');
+        $settings->execute([$userId]);
+        $target=(int)($settings->fetchColumn()?:10);
+        $today=$pdo->prepare("SELECT COALESCE(SUM(total_questions),0) AS questions,COALESCE(SUM(correct_count),0) AS correct,COUNT(*) AS sessions FROM student_practice_sessions WHERE user_id=? AND completed_at>=CURDATE() AND completed_at<CURDATE()+INTERVAL 1 DAY");
+        $today->execute([$userId]);$todayRow=$today->fetch(PDO::FETCH_ASSOC)?:[];
+        $history=$pdo->prepare("SELECT DATE(completed_at) AS practice_date,SUM(total_questions) AS questions,SUM(correct_count) AS correct,COUNT(*) AS sessions FROM student_practice_sessions WHERE user_id=? AND completed_at>=CURDATE()-INTERVAL 6 DAY GROUP BY DATE(completed_at) ORDER BY practice_date ASC");
+        $history->execute([$userId]);$historyRows=$history->fetchAll(PDO::FETCH_ASSOC);
+        $subjects=$pdo->prepare("SELECT category, SUM(total_questions) AS questions, SUM(correct_count) AS correct, COUNT(*) AS sessions, MAX(completed_at) AS last_practiced FROM student_practice_sessions WHERE user_id=? AND completed_at>=CURDATE()-INTERVAL 30 DAY GROUP BY category HAVING SUM(total_questions)>0 ORDER BY (SUM(correct_count)/SUM(total_questions)) ASC, SUM(total_questions) DESC LIMIT 5");
+        $subjects->execute([$userId]);$subjectRows=$subjects->fetchAll(PDO::FETCH_ASSOC);
+        $total=$pdo->prepare('SELECT COALESCE(SUM(total_questions),0) AS questions,COALESCE(SUM(correct_count),0) AS correct,COUNT(*) AS sessions FROM student_practice_sessions WHERE user_id=?');
+        $total->execute([$userId]);$totalRow=$total->fetch(PDO::FETCH_ASSOC)?:[];
+        $dates=$pdo->prepare("SELECT DISTINCT DATE(completed_at) AS practice_date FROM student_practice_sessions WHERE user_id=? AND completed_at>=CURDATE()-INTERVAL 60 DAY ORDER BY practice_date DESC");
+        $dates->execute([$userId]);$dateRows=$dates->fetchAll(PDO::FETCH_COLUMN);
+        $streak=0;$expected=date('Y-m-d');
+        if(!empty($dateRows) && $dateRows[0]===date('Y-m-d',strtotime('-1 day')))$expected=date('Y-m-d',strtotime('-1 day'));
+        foreach($dateRows as $date){if($date!==$expected)break;$streak++;$expected=date('Y-m-d',strtotime($expected.' -1 day'));}
+        exam_reply(200,['success'=>true,'data'=>[
+            'daily_target'=>$target,
+            'today'=>['questions'=>(int)($todayRow['questions']??0),'correct'=>(int)($todayRow['correct']??0),'sessions'=>(int)($todayRow['sessions']??0)],
+            'weekly'=>array_map(static fn($r)=>['date'=>$r['practice_date'],'questions'=>(int)$r['questions'],'correct'=>(int)$r['correct']],$historyRows),
+            'weak_subjects'=>array_map(static fn($r)=>['category'=>$r['category'],'questions'=>(int)$r['questions'],'correct'=>(int)$r['correct'],'accuracy'=>(int)round(((int)$r['correct']/max(1,(int)$r['questions']))*100),'sessions'=>(int)$r['sessions'],'last_practiced'=>$r['last_practiced']],$subjectRows),
+            'overall'=>['questions'=>(int)($totalRow['questions']??0),'correct'=>(int)($totalRow['correct']??0),'sessions'=>(int)($totalRow['sessions']??0),'streak'=>$streak]
+        ]]);
+    }
+
     if($method==='GET' && $action==='practice_questions'){
         $userId=exam_user($pdo);
         $category=trim((string)($_GET['category']??''));
@@ -127,7 +154,26 @@ try {
     }
 
     if($method!=='POST') exam_reply(405,['success'=>false,'message'=>'Unsupported method.']);
-    $userId=exam_user($pdo);$data=exam_input();$testId=(int)($data['test_id']??0);
+    $userId=exam_user($pdo);$data=exam_input();
+    if($action==='practice_target'){
+        $target=(int)($data['daily_target']??0);
+        if(!in_array($target,[5,10,15,20,30,50],true))exam_reply(422,['success'=>false,'message'=>'দৈনিক লক্ষ্য ৫, ১০, ১৫, ২০, ৩০ বা ৫০ নির্বাচন করুন।']);
+        $save=$pdo->prepare('INSERT INTO student_practice_settings (user_id,daily_target) VALUES (?,?) ON DUPLICATE KEY UPDATE daily_target=VALUES(daily_target),updated_at=CURRENT_TIMESTAMP');
+        $save->execute([$userId,$target]);
+        exam_reply(200,['success'=>true,'daily_target'=>$target]);
+    }
+    if($action==='practice_complete'){
+        $category=trim((string)($data['category']??''));
+        $difficulty=strtolower(trim((string)($data['difficulty']??'all')));
+        $total=(int)($data['total_questions']??0);$correct=(int)($data['correct_count']??-1);
+        if($category===''||mb_strlen($category)>100)exam_reply(422,['success'=>false,'message'=>'সঠিক বিষয় নির্বাচন করুন।']);
+        if(!in_array($difficulty,['all','easy','medium','hard'],true))exam_reply(422,['success'=>false,'message'=>'সঠিক Difficulty নির্বাচন করুন।']);
+        if($total<1||$total>20||$correct<0||$correct>$total)exam_reply(422,['success'=>false,'message'=>'অনুশীলনের ফলাফল সঠিক নয়।']);
+        $save=$pdo->prepare('INSERT INTO student_practice_sessions (user_id,category,difficulty,total_questions,correct_count) VALUES (?,?,?,?,?)');
+        $save->execute([$userId,$category,$difficulty,$total,$correct]);
+        exam_reply(201,['success'=>true,'session_id'=>(int)$pdo->lastInsertId()]);
+    }
+    $testId=(int)($data['test_id']??0);
     if($testId<1) exam_reply(422,['success'=>false,'message'=>'সঠিক পরীক্ষা নির্বাচন করুন।']);
 
     if($action==='start'){
