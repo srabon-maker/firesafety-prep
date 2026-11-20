@@ -42,7 +42,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
       color: scheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -52,7 +52,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 125,
+              height: 188,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -96,7 +96,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -119,7 +119,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: scheme.onSurface,
-                        fontSize: 13,
+                        fontSize: 14,
                         height: 1.3,
                         fontWeight: FontWeight.w700,
                       ),
@@ -143,7 +143,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _maroon,
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -213,7 +213,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                           disabledBackgroundColor: _softMaroon,
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(11),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           textStyle: const TextStyle(
                               fontSize: 11, fontWeight: FontWeight.w700),
@@ -295,7 +295,7 @@ class MarketplaceCatalogImage extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF9F0F1), Color(0xFFEAD7DA)],
+          colors: [Color(0xFF30272A), Color(0xFF211A1D)],
         ),
       ),
       child: Center(
@@ -303,12 +303,12 @@ class MarketplaceCatalogImage extends StatelessWidget {
           width: 74,
           height: 74,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.70),
+            color: Colors.white.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Icon(
             item.isService ? Icons.engineering_outlined : Icons.fire_extinguisher,
-            color: _maroon,
+            color: const Color(0xFFFFB4BD),
             size: 42,
           ),
         ),
