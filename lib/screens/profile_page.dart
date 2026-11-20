@@ -8,6 +8,7 @@ import 'edit_profile_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
 import 'saved_notes_page.dart';
+import 'notification_preferences_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -611,6 +612,13 @@ class _ProfilePageState extends State<ProfilePage> {
               _menuTile(
                 icon: Icons.notifications_none_rounded,
                 title: _tr(context, 'নোটিফিকেশন', 'Notifications'),
+                subtitle: _tr(context, 'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',
+                    'Manage your notification preferences'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationPreferencesPage(),
+                  ),
+                ),
               ),
               _menuTile(
                 icon: Icons.info_outline_rounded,
