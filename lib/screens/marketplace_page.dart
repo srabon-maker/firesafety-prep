@@ -413,6 +413,126 @@ class _MarketplacePageState extends State<MarketplacePage> {
     );
   }
 
+  Widget _categorySection() {
+    return FutureBuilder<List<MarketplaceCategory>>(
+      future: _categoryOptions,
+      builder: (context, snapshot) {
+        // No category section or artificial blank space until categories exist.
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+        final categories = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text(
+                  'ক্যাটাগরি',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => setState(() => _categoryId = null),
+                  child: const Text(
+                    'সব দেখুন  ›',
+                    style: TextStyle(
+                      color: Color(0xFFFF4052),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 650 ? 5 : 4;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: categories.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 9,
+                    crossAxisSpacing: 9,
+                    mainAxisExtent: 90,
+                  ),
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final selected = _categoryId == category.id;
+                    return Material(
+                      color: selected
+                          ? const Color(0xFF4A1821)
+                          : marketCardSurface,
+                      borderRadius: BorderRadius.circular(17),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(17),
+                        onTap: () => setState(() {
+                          _categoryId = selected ? null : category.id;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(17),
+                            border: Border.all(
+                              color: selected
+                                  ? const Color(0xFFFF4052)
+                                  : marketCardBorder,
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                height: 43,
+                                width: 62,
+                                child: Icon(
+                                  _categoryIcon(category.name),
+                                  color: const Color(0xFFFFB4BD),
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 7),
+                              Text(
+                                category.name,
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   IconData _categoryIcon(String name) {
     final value = name.toLowerCase();
     if (value.contains('নির্বাপক') || value.contains('extinguisher')) {
@@ -437,7 +557,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: marketBackground,
     appBar: AppBar(
-      toolbarHeight: 64,
+      toolbarHeight: 56,
       backgroundColor: marketDeepMaroon,
       foregroundColor: Colors.white,
       leadingWidth: 56,
@@ -478,7 +598,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         padding: const EdgeInsets.all(16),
         children: [
           Container(
-            height: 198,
+            height: 184,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -533,7 +653,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
-                                fontSize: 27,
+                                fontSize: 25,
                                 height: 1.04,
                                 letterSpacing: -0.5,
                               ),
@@ -669,154 +789,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               _reload();
             }),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Text(
-                'ক্যাটাগরি',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => setState(() => _categoryId = null),
-                child: const Text(
-                  'সব দেখুন  ›',
-                  style: TextStyle(
-                    color: Color(0xFFFF4052),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FutureBuilder<List<MarketplaceCategory>>(
-            future: _categoryOptions,
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Row(
-                  children: [
-                    const Expanded(
-                      child: Text('ক্যাটাগরি লোড করা যায়নি।'),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(_reload),
-                      child: const Text('আবার চেষ্টা'),
-                    ),
-                  ],
-                );
-              }
-              if (!snapshot.hasData) {
-                return const SizedBox(
-                  height: 92,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              final categories = snapshot.data!;
-              if (categories.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 650 ? 5 : 4;
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: categories.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisSpacing: 9,
-                      crossAxisSpacing: 9,
-                      mainAxisExtent: 90,
-                    ),
-                    itemBuilder: (context, index) {
-                      final category = categories[index];
-                      final selected = _categoryId == category.id;
-                      return Material(
-                        color: selected ? const Color(0xFF4A1821) : marketCardSurface,
-                        borderRadius: BorderRadius.circular(17),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(17),
-                          onTap: () => setState(() {
-                            _categoryId = selected ? null : category.id;
-                          }),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(17),
-                              border: Border.all(
-                                color: selected ? const Color(0xFFFF4052) : marketCardBorder,
-                                width: selected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  height: 43,
-                                  width: 62,
-                                  child: FutureBuilder<List<MarketplaceItem>>(
-                                    future: _catalog,
-                                    builder: (context, itemSnapshot) {
-                                      MarketplaceItem? match;
-                                      for (final item in itemSnapshot.data ?? const <MarketplaceItem>[]) {
-                                        final sameCategory = item.categoryId == category.id ||
-                                            item.category.toLowerCase() == category.name.toLowerCase();
-                                        final uri = Uri.tryParse(item.imageUrl ?? '');
-                                        if (sameCategory && uri != null &&
-                                            uri.scheme == 'https' && uri.host.isNotEmpty) {
-                                          match = item;
-                                          break;
-                                        }
-                                      }
-                                      if (match == null) {
-                                        return Icon(
-                                          _categoryIcon(category.name),
-                                          color: selected
-                                              ? const Color(0xFFFF6573)
-                                              : const Color(0xFFFFB4BD),
-                                          size: 32,
-                                        );
-                                      }
-                                      return Image.network(
-                                        match.imageUrl!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Icon(
-                                          _categoryIcon(category.name),
-                                          color: const Color(0xFFFFB4BD),
-                                          size: 32,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                Text(
-                                  category.name,
-                                  maxLines: 2,
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    height: 1.2,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              );
-            },
-          ),
+          _categorySection(),
           const SizedBox(height: 18),
           _catalogView(),
         ],
