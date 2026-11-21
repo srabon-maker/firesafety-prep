@@ -83,7 +83,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       await _profileFuture;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Profile refresh failed: $e');
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -206,7 +208,13 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _deleting = true);
     try {
       await AuthService.instance.deleteAccount(email: email);
+
+      try {
+        await AuthService.instance.logout();
+      } catch (_) {}
+
       if (!mounted) return;
+
       widget.onLogout();
     } catch (error) {
       if (!mounted) return;
@@ -493,7 +501,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: CircleAvatar(
                             radius: 34,
                             backgroundColor: const Color(0xFFFFEDF0),
-                            backgroundImage: photo != null && photo.isNotEmpty
+                            backgroundImage: photo != null &&
+                                photo.isNotEmpty &&
+                                Uri.tryParse(photo)?.hasAbsolutePath == true
                                 ? NetworkImage(photo)
                                 : null,
                             child: photo == null || photo.isEmpty
@@ -618,17 +628,48 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (stats.hasError || stats.data == null) {
+                  if (stats.hasError ||
+                      stats.data == null ||
+                      stats.data!.length < 2) {
                     return const SizedBox.shrink();
                   }
-                  final results = stats.data![0] as List<Map<String, dynamic>>;
-                  final practice = Map<String, dynamic>.from(stats.data![1] as Map);
-                  final overall = Map<String, dynamic>.from(
-                    practice['overall'] as Map? ?? {},
-                  );
-                  final questions = (overall['questions'] as num?)?.toInt() ?? 0;
-                  final correct = (overall['correct'] as num?)?.toInt() ?? 0;
-                  final accuracy = questions == 0 ? 0.0 : correct / questions * 100;
+
+                  final rawResults = stats.data![0];
+
+                  final List<Map<String, dynamic>> results =
+                      rawResults is List
+                          ? rawResults
+                              .whereType<Map>()
+                              .map<Map<String, dynamic>>(
+                                (item) => Map<String, dynamic>.from(item),
+                              )
+                              .toList()
+                          : <Map<String, dynamic>>[];
+
+                  final rawPractice = stats.data![1];
+
+                  final Map<String, dynamic> practice =
+                      rawPractice is Map
+                          ? Map<String, dynamic>.from(rawPractice)
+                          : <String, dynamic>{};
+
+                  final Map<String, dynamic> overall =
+                      practice['overall'] is Map
+                          ? Map<String, dynamic>.from(
+                              practice['overall'] as Map,
+                            )
+                          : <String, dynamic>{};
+
+                  final int questions =
+                      (overall['questions'] as num?)?.toInt() ?? 0;
+
+                  final int correct =
+                      (overall['correct'] as num?)?.toInt() ?? 0;
+
+                  final double accuracy =
+                      questions == 0
+                          ? 0.0
+                          : (correct / questions) * 100;
                   return Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
