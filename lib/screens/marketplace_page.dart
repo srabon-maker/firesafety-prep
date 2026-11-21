@@ -26,6 +26,8 @@ class MarketplacePage extends StatefulWidget {
 class _MarketplacePageState extends State<MarketplacePage> {
   int _cartCount = 0;
   bool _adding = false;
+  // বিস্তারিত পেজের বাটনও যেন "যোগ হচ্ছে" অবস্থা জানতে পারে, তাই আলাদা নোটিফায়ার।
+  final ValueNotifier<bool> _addingNotifier = ValueNotifier<bool>(false);
   final TextEditingController _search = TextEditingController();
   int _tab = 0;
   String? _categoryId;
@@ -52,7 +54,21 @@ class _MarketplacePageState extends State<MarketplacePage> {
   @override
   void dispose() {
     _search.dispose();
+    _addingNotifier.dispose();
     super.dispose();
+  }
+
+  void _setAdding(bool value) {
+    if (!mounted) return;
+    setState(() => _adding = value);
+    _addingNotifier.value = value;
+  }
+
+  // বাংলা বার্তা থাকলে সেটাই দেখাবে, না থাকলে সাধারণ বাংলা বার্তা।
+  String _friendlyError(Object e) {
+    final message = e.toString().replaceFirst('Exception: ', '');
+    final hasBengali = RegExp(r'[\u0980-\u09FF]').hasMatch(message);
+    return hasBengali ? message : 'কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।';
   }
 
   Future<void> _loadCartCount() async {
@@ -75,7 +91,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
     final id = int.tryParse(item.id);
     if (id == null || id < 1) return;
-    setState(() => _adding = true);
+    _setAdding(true);
     try {
       final service = MarketplaceTransactionService.instance;
       final cart = await service.getCart();
@@ -88,15 +104,15 @@ class _MarketplacePageState extends State<MarketplacePage> {
       if (!mounted) return;
       setState(() => _cartCount = updated.count);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('কার্টে যোগ হয়েছে।')),
+        const SnackBar(content: Text('কার্টে যোগ হয়েছে।')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(_friendlyError(e))),
       );
     } finally {
-      if (mounted) setState(() => _adding = false);
+      _setAdding(false);
     }
   }
 
@@ -147,7 +163,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               Text(
                 item.category,
                 style: const TextStyle(
-                  color: const Color(0xFFFF6878),
+                  color: Color(0xFFFF6878),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -156,7 +172,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             Text(
               item.name,
               style: const TextStyle(
-                color: marketDeepMaroon,
+                color: Colors.white,
                 fontWeight: FontWeight.w800,
                 fontSize: 23,
                 height: 1.25,
@@ -171,7 +187,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 Text(
                   item.priceLabel,
                   style: const TextStyle(
-                    color: const Color(0xFFFF6878),
+                    color: Color(0xFFFF6878),
                     fontSize: 25,
                     fontWeight: FontWeight.w800,
                   ),
@@ -196,8 +212,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
                         ? Icons.check_circle_outline
                         : Icons.info_outline,
                     color: item.canAddToCart
-                        ? const Color(0xFF27815A)
-                        : marketMaroon,
+                        ? const Color(0xFF3DBE84)
+                        : const Color(0xFFFF6878),
                     size: 18,
                   ),
                   const SizedBox(width: 7),
@@ -205,7 +221,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     item.canAddToCart
                         ? 'স্টকে আছে · ${item.stock}টি'
                         : 'বর্তমানে স্টকে নেই',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -231,9 +250,13 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   const SizedBox(height: 10),
                   Text(
                     item.description.isEmpty
-                        ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
+                        ? 'বিস্তারিত তথ্য এখনো যোগ করা হয়নি।'
                         : item.description,
-                    style: const TextStyle(height: 1.55, fontSize: 14),
+                    style: const TextStyle(
+                      height: 1.55,
+                      fontSize: 14,
+                      color: marketMutedText,
+                    ),
                   ),
                 ],
               ),
@@ -256,18 +279,32 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       icon: const Icon(Icons.calendar_month_outlined),
                       label: const Text('সার্ভিস বুকিং করুন'),
                     )
-                  : FilledButton.icon(
-                      onPressed: item.canAddToCart && !_adding
-                          ? () => _add(item)
-                          : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: marketMaroon,
-                        foregroundColor: Colors.white,
+                  : ValueListenableBuilder<bool>(
+                      valueListenable: _addingNotifier,
+                      builder: (context, busy, _) => FilledButton.icon(
+                        onPressed: item.canAddToCart && !busy
+                            ? () => _add(item)
+                            : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: marketMaroon,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFF3A3236),
+                          disabledForegroundColor: marketMutedText,
+                        ),
+                        icon: busy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.add_shopping_cart_outlined),
+                        label: Text(item.canAddToCart
+                            ? 'কার্টে যোগ করুন'
+                            : 'স্টকে নেই'),
                       ),
-                      icon: const Icon(Icons.add_shopping_cart_outlined),
-                      label: Text(item.canAddToCart
-                          ? 'কার্টে যোগ করুন'
-                          : 'স্টকে নেই'),
                     ),
             ),
           ),
@@ -287,22 +324,30 @@ class _MarketplacePageState extends State<MarketplacePage> {
           );
         }
         if (snapshot.hasError) {
-          return Column(
-            children: [
-              const Icon(Icons.wifi_off, size: 44, color: marketMaroon),
-              const SizedBox(height: 12),
-              const Text('পণ্য বা সার্ভিস লোড করা যায়নি।'),
-              const SizedBox(height: 6),
-              Text('${snapshot.error}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12)),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => setState(_reload),
-                icon: const Icon(Icons.refresh),
-                label: const Text('আবার চেষ্টা করুন'),
-              ),
-            ],
+          // ব্যবহারকারীকে কারিগরি ত্রুটির লেখা না দেখিয়ে শুধু বাংলা বার্তা দেখানো হচ্ছে।
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Column(
+              children: [
+                const Icon(Icons.wifi_off, size: 44, color: marketMaroon),
+                const SizedBox(height: 12),
+                const Text(
+                  'পণ্য বা সার্ভিস লোড করা যায়নি।',
+                  style: TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+                  style: TextStyle(color: marketMutedText, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => setState(_reload),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('আবার চেষ্টা করুন'),
+                ),
+              ],
+            ),
           );
         }
         final query = _search.text.trim().toLowerCase();
@@ -335,9 +380,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
           return Padding(
             padding: const EdgeInsets.all(40),
             child: Center(
-              child: Text(query.isNotEmpty || _categoryId != null
-                  ? 'এই অনুসন্ধানে কিছু পাওয়া যায়নি।'
-                  : 'এখনো কোনো ${_tab == 0 ? 'পণ্য' : 'সার্ভিস'} প্রকাশ করা হয়নি।'),
+              child: Text(
+                query.isNotEmpty || _categoryId != null
+                    ? 'এই অনুসন্ধানে কিছু পাওয়া যায়নি।'
+                    : 'এখনো কোনো ${_tab == 0 ? 'পণ্য' : 'সার্ভিস'} প্রকাশ করা হয়নি।',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           );
         }
@@ -345,6 +393,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final columns = width >= 950 ? 4 : width >= 650 ? 3 : 2;
+            // ফোনে বড় ফন্ট চালু থাকলে কার্ডের উচ্চতা সেই অনুপাতে বাড়বে।
+            final textScale =
+                (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 1.5);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -354,7 +405,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                         color: marketMaroon, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      _tab == 0 ? 'জনপ্রিয় পণ্য' : 'জনপ্রিয় সার্ভিস',
+                      _tab == 0 ? 'জনপ্রিয় পণ্য' : 'জনপ্রিয় সার্ভিস',
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
@@ -386,7 +437,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     crossAxisCount: columns,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    mainAxisExtent: 210,
+                    mainAxisExtent: 210 * textScale,
                   ),
                   itemBuilder: (context, index) {
                     final item = filtered[index];
@@ -417,11 +468,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return FutureBuilder<List<MarketplaceCategory>>(
       future: _categoryOptions,
       builder: (context, snapshot) {
-        // No category section or artificial blank space until categories exist.
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        if (snapshot.hasError) {
+        // ত্রুটি হলে বা ক্যাটাগরি না থাকলে এই অংশ দেখানো হবে না।
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();
         }
         final categories = snapshot.data!;
@@ -649,7 +697,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
+                              'ফায়ার সেফটি\nমার্কেটপ্লেস',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -669,7 +717,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য\nসার্ভিস এক জায়গায়',
+                              'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য\nসার্ভিস এক জায়গায়',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -689,21 +737,23 @@ class _MarketplacePageState extends State<MarketplacePage> {
                           builder: (context, snapshot) {
                             final products = snapshot.data ?? const <MarketplaceItem>[];
                             MarketplaceItem? artwork;
+                            // প্রথমে অগ্নি নির্বাপক সংক্রান্ত ছবি খোঁজা হয়।
                             for (final item in products) {
                               final text = '${item.name} ${item.category}'.toLowerCase();
                               final uri = Uri.tryParse(item.imageUrl ?? '');
-                              if (!item.isService && uri != null &&
+                              if (uri != null &&
                                   uri.scheme == 'https' && uri.host.isNotEmpty &&
                                   (text.contains('extinguisher') ||
-                                   text.contains('নির্বাপক') || text.contains('ফায়ার'))) {
+                                   text.contains('নির্বাপক') || text.contains('ফায়ার'))) {
                                 artwork = item;
                                 break;
                               }
                             }
+                            // না পেলে যেকোনো ছবি (সার্ভিস ট্যাবেও কাজ করবে)।
                             if (artwork == null) {
                               for (final item in products) {
                                 final uri = Uri.tryParse(item.imageUrl ?? '');
-                                if (!item.isService && uri != null &&
+                                if (uri != null &&
                                     uri.scheme == 'https' && uri.host.isNotEmpty) {
                                   artwork = item;
                                   break;
