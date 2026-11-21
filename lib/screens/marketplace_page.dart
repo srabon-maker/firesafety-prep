@@ -22,8 +22,6 @@ const Color marketMutedText = Color(0xFFBDB4B7);
 
 // Same maroon family as the profile page.
 const Color _maroon = Color(0xFF650D18);
-const Color _deepMaroon = Color(0xFF36060D);
-const Color _midMaroon = Color(0xFF891C32);
 
 /// All colours of this page in one place, for light and dark mode.
 class _MarketPalette {
@@ -738,150 +736,65 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return Icons.grid_view_rounded;
   }
 
-  Widget _heroBanner() {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 184),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_deepMaroon, _maroon, _midMaroon],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _midMaroon.withOpacity(0.55)),
-      ),
-      child: Stack(
+  /// Compact marketplace identity header; intentionally no hero banner.
+  Widget _marketplaceHeader() {
+    final p = _pal(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
         children: [
-          Positioned(
-            right: -34,
-            top: -56,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.055),
-                  width: 28,
-                ),
-              ),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: p.selectedTile,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: p.border),
+            ),
+            child: Icon(
+              Icons.local_fire_department_rounded,
+              color: p.accent,
+              size: 31,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 18, 10, 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(13),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.22)),
-                        ),
-                        child: const Icon(Icons.local_fire_department_rounded,
-                            color: Colors.white, size: 31),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _tr(context, 'ফায়ার সেফটি\nমার্কেটপ্লেস',
-                            'Fire Safety\nMarketplace'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 25,
-                          height: 1.1,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3348),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _tr(
-                            context,
-                            'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
-                            'Fire safety products and trusted services in one place'),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.92),
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _tr(context, 'ফায়ার সেইফটি মার্কেপ্লেস',
+                        'Fire Safety Marketplace'),
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: p.text,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      height: 1.15,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 2),
-                Expanded(
-                  flex: 5,
-                  child: SizedBox(
-                    height: 130,
-                    child: Center(
-                      child: FutureBuilder<List<MarketplaceItem>>(
-                        future: _catalog,
-                        builder: (context, snapshot) {
-                          final products = snapshot.data ??
-                              _catalogCache[_tab] ??
-                              const <MarketplaceItem>[];
-                          MarketplaceItem? artwork;
-                          // প্রথমে অগ্নি নির্বাপক সংক্রান্ত ছবি খোঁজা হয়।
-                          for (final item in products) {
-                            final text =
-                                '${item.name} ${item.category}'.toLowerCase();
-                            final uri = Uri.tryParse(item.imageUrl ?? '');
-                            if (uri != null &&
-                                uri.scheme == 'https' &&
-                                uri.host.isNotEmpty &&
-                                (text.contains('extinguisher') ||
-                                    text.contains('নির্বাপক') ||
-                                    text.contains('ফায়ার'))) {
-                              artwork = item;
-                              break;
-                            }
-                          }
-                          // না পেলে যেকোনো ছবি (সার্ভিস ট্যাবেও কাজ করবে)।
-                          if (artwork == null) {
-                            for (final item in products) {
-                              final uri = Uri.tryParse(item.imageUrl ?? '');
-                              if (uri != null &&
-                                  uri.scheme == 'https' &&
-                                  uri.host.isNotEmpty) {
-                                artwork = item;
-                                break;
-                              }
-                            }
-                          }
-                          if (artwork?.imageUrl == null) {
-                            return const Icon(Icons.fire_extinguisher_rounded,
-                                size: 112, color: Color(0xFFFFE9EC));
-                          }
-                          return Image.network(
-                            artwork!.imageUrl!,
-                            height: 130,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.fire_extinguisher_rounded,
-                              size: 112,
-                              color: Color(0xFFFFE9EC),
-                            ),
-                          );
-                        },
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _tr(
+                        context,
+                        'ফায়ার সেইফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
+                        'Fire safety products and reliable services in one place',
+                      ),
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: p.muted,
+                        fontSize: 11,
+                        height: 1.2,
                       ),
                     ),
                   ),
@@ -949,8 +862,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _heroBanner(),
-            const SizedBox(height: 14),
+            _marketplaceHeader(),
+            const SizedBox(height: 12),
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
