@@ -28,8 +28,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>?> _profileFuture;
+  // FIX: learning stats are loaded once here, not inside build().
+  late Future<List<dynamic>> _statsFuture;
   late final ScrollController _profileScrollController;
   bool _deleting = false;
+
+  // FIX: keep the last loaded profile so a refresh does not replace the
+  // whole list with a spinner (which caused the scroll jerk).
+  Map<String, dynamic>? _lastUser;
 
   @override
   void initState() {
@@ -38,6 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
     // retained inside MainShell's IndexedStack.
     _profileScrollController = ScrollController();
     _profileFuture = _loadProfile();
+    _statsFuture = _loadStats();
   }
 
   @override
@@ -61,9 +68,17 @@ class _ProfilePageState extends State<ProfilePage> {
     return null;
   }
 
+  Future<List<dynamic>> _loadStats() {
+    return Future.wait([
+      ModelTestService.instance.myResults(),
+      ModelTestService.instance.practiceDashboard(),
+    ]);
+  }
+
   Future<void> _refreshProfile() async {
     setState(() {
       _profileFuture = _loadProfile(forceRefresh: true);
+      _statsFuture = _loadStats();
     });
 
     try {
@@ -107,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_tr(context, 'সফলভাবে লগ আউট হয়েছে।', 'Logged out successfully.')),
+          content: Text(_tr(context, 'সফলভাবে লগ আউট হয়েছে।', 'Logged out successfully.')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -116,7 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_tr(context, 'লগ আউট করা যায়নি: $e', 'Could not log out: $e')),
+          content: Text(_tr(context, 'লগ আউট করা যায়নি: $e', 'Could not log out: $e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -133,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
     await _refreshProfile();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_tr(context, 'প্রোফাইল আপডেট হয়েছে।', 'Profile updated.'))),
+      SnackBar(content: Text(_tr(context, 'প্রোফাইল আপডেট হয়েছে।', 'Profile updated.'))),
     );
   }
 
@@ -144,7 +159,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(_tr(context, 'অ্যাকাউন্ট স্থায়ীভাবে মুছবেন?',
+          title: Text(_tr(context, 'অ্যাকাউন্ট স্থায়ীভাবে মুছবেন?',
               'Permanently delete account?')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -152,7 +167,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Text(_tr(
                 context,
-                'এতে আপনার প্রোফাইল, পোস্ট, পরীক্ষার ফলাফল, কার্ট, অর্ডার ও সার্ভিস রিকোয়েস্টের তথ্য স্থায়ীভাবে মুছে যাবে। চলমান অর্ডার বা সার্ভিস রিকোয়েস্ট থাকলে আগে সেগুলো শেষ করতে হবে। এই কাজ ফেরানো যাবে না।',
+                'এতে আপনার প্রোফাইল, পোস্ট, পরীক্ষার ফলাফল, কার্ট, অর্ডার ও সার্ভিস রিকোয়েস্টের তথ্য স্থায়ীভাবে মুছে যাবে। চলমান অর্ডার বা সার্ভিস রিকোয়েস্ট থাকলে আগে সেগুলো শেষ করতে হবে। এই কাজ ফেরানো যাবে না।',
                 'Your profile, posts, test history, cart, orders and service requests will be permanently deleted. Active orders and service requests must be completed or cancelled first. This cannot be undone.',
               )),
               const SizedBox(height: 14),
@@ -180,7 +195,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 backgroundColor: Theme.of(context).colorScheme.error,
                 foregroundColor: Theme.of(context).colorScheme.onError,
               ),
-              child: Text(_tr(context, 'স্থায়ীভাবে মুছুন', 'Delete permanently')),
+              child: Text(_tr(context, 'স্থায়ীভাবে মুছুন', 'Delete permanently')),
             ),
           ],
         ),
@@ -374,14 +389,21 @@ class _ProfilePageState extends State<ProfilePage> {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _profileFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          );
+        // FIX: remember the last good profile. During a refresh we keep
+        // showing it instead of swapping the whole page for a spinner.
+        if (snapshot.hasData && snapshot.data != null) {
+          _lastUser = snapshot.data;
         }
-        if (snapshot.hasError || snapshot.data == null) {
+        final loadedUser = snapshot.data ?? _lastUser;
+
+        if (loadedUser == null) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            );
+          }
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -398,9 +420,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 12),
                   Text(
                     snapshot.hasError
-                        ? _tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।',
+                        ? _tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।',
                             'Could not load profile information.')
-                        : _tr(context, 'প্রোফাইল তথ্য পাওয়া যায়নি।',
+                        : _tr(context, 'প্রোফাইল তথ্য পাওয়া যায়নি।',
                             'Profile information not found.'),
                     textAlign: TextAlign.center,
                   ),
@@ -415,7 +437,7 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         }
 
-        final user = snapshot.data!;
+        final user = loadedUser;
         final name = _value(user['full_name']);
         final email = _value(user['email']);
         final photo = user['profile_photo']?.toString();
@@ -584,15 +606,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 18),
+              // FIX: uses the cached _statsFuture instead of creating a new
+              // request on every rebuild.
               FutureBuilder<List<dynamic>>(
-                future: Future.wait([
-                  ModelTestService.instance.myResults(),
-                  ModelTestService.instance.practiceDashboard(),
-                ]),
+                future: _statsFuture,
                 builder: (context, stats) {
                   if (stats.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.all(18),
+                    // Fixed-height placeholder so the page does not jump.
+                    return const SizedBox(
+                      height: 150,
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
@@ -715,7 +737,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _menuTile(
                 icon: Icons.notifications_none_rounded,
                 title: _tr(context, 'নোটিফিকেশন', 'Notifications'),
-                subtitle: _tr(context, 'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',
+                subtitle: _tr(context, 'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',
                     'Manage your notification preferences'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -734,7 +756,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   applicationVersion: '1.0.0',
                   applicationLegalese: _tr(
                     context,
-                    'ফায়ার সেফটি শেখা ও প্রস্তুতির ডিজিটাল প্ল্যাটফর্ম।',
+                    'ফায়ার সেফটি শেখা ও প্রস্তুতির ডিজিটাল প্ল্যাটফর্ম।',
                     'A digital platform for fire safety learning and preparation.',
                   ),
                 ),
@@ -911,7 +933,7 @@ class _AccountManagementPage extends StatelessWidget {
                 ),
               ),
               subtitle: Text(
-                tr('স্থায়ীভাবে মুছে ফেলার আগে নিশ্চিতকরণ প্রয়োজন',
+                tr('স্থায়ীভাবে মুছে ফেলার আগে নিশ্চিতকরণ প্রয়োজন',
                     'Confirmation required before permanent deletion'),
               ),
               trailing: Icon(Icons.chevron_right_rounded,
@@ -937,4 +959,3 @@ class _AccountManagementPage extends StatelessWidget {
     );
   }
 }
-
