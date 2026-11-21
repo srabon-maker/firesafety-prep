@@ -451,14 +451,15 @@ class _ProfilePageState extends State<ProfilePage> {
         final photo = user['profile_photo']?.toString();
         final scheme = Theme.of(context).colorScheme;
 
-        return RefreshIndicator(
-          onRefresh: _refreshProfile,
-          child: ListView(
+        // Use a single native ListView for predictable two-way dragging.
+        // Manual refresh remains available from the AppBar refresh button.
+        // Removing RefreshIndicator avoids competing vertical drag handling
+        // while the user scrolls back toward the top.
+        return ListView(
             controller: _profileScrollController,
             primary: false,
-            // Use the platform's standard clamping physics for predictable
-            // touch dragging in both directions. AlwaysScrollable keeps
-            // pull-to-refresh available even when the content is short.
+            // Use standard clamping physics for stable two-way touch dragging.
+            // Refresh is available from the AppBar button.
             physics: const ClampingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -844,8 +845,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ],
-          ),
-        );
+          );
       },
     );
   }
