@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
@@ -30,7 +29,6 @@ class _ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>?> _profileFuture;
   // FIX: learning stats are loaded once here, not inside build().
   late Future<List<dynamic>> _statsFuture;
-  late final ScrollController _profileScrollController;
   bool _deleting = false;
 
   // FIX: keep the last loaded profile so a refresh does not replace the
@@ -40,17 +38,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Keep this tab's scroll position independent from the other pages
-    // retained inside MainShell's IndexedStack.
-    _profileScrollController = ScrollController();
     _profileFuture = _loadProfile();
     _statsFuture = _loadStats();
-  }
-
-  @override
-  void dispose() {
-    _profileScrollController.dispose();
-    super.dispose();
   }
 
   Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
@@ -451,24 +440,16 @@ class _ProfilePageState extends State<ProfilePage> {
         final photo = user['profile_photo']?.toString();
         final scheme = Theme.of(context).colorScheme;
 
-        // Use a single native ListView for predictable two-way dragging.
-        // Manual refresh remains available from the AppBar refresh button.
-        // Removing RefreshIndicator avoids competing vertical drag handling
-        // while the user scrolls back toward the top.
-        return ListView(
-            controller: _profileScrollController,
-            primary: false,
-            // Use standard clamping physics for stable two-way touch dragging.
-            // Refresh is available from the AppBar button.
-            physics: const ClampingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            // Let Flutter begin the drag after the normal touch slop so
-            // small taps on profile tiles are not mistaken for scrolls.
-            dragStartBehavior: DragStartBehavior.start,
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        // Keep the profile in one straightforward scrollable. This avoids
+        // the page-specific ScrollController/ListView drag interaction.
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               Container(
                 padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
@@ -844,8 +825,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-            ],
-          );
+              ],
+            ),
+          ),
+        );
       },
     );
   }
