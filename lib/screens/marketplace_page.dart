@@ -606,7 +606,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
       future: _categoryOptions,
       builder: (context, snapshot) {
         final categories = snapshot.data ?? _categoryCache[_tab];
-        // ত্রুটি হলে বা ক্যাটাগরি না থাকলে এই অংশ দেখানো হবে না।
         if (categories == null || categories.isEmpty) {
           return const SizedBox.shrink();
         }
@@ -616,101 +615,72 @@ class _MarketplacePageState extends State<MarketplacePage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    _tr(context, 'ক্যাটাগরি', 'Categories'),
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      color: p.text,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _categoryId = null),
-                  child: Text(
-                    _tr(context, 'সব দেখুন  ›', 'View all  ›'),
-                    style: TextStyle(
-                      color: p.accent,
-                      fontWeight: FontWeight.w700,
-                    ),
+                Icon(Icons.category_outlined, color: p.accent, size: 19),
+                const SizedBox(width: 7),
+                Text(
+                  _tr(context, 'ক্যাটাগরি', 'Categories'),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: p.text,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 650 ? 5 : 4;
-                final scale =
-                    (MediaQuery.textScalerOf(context).scale(14) / 14)
-                        .clamp(1.0, 1.5);
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: categories.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: 9,
-                    crossAxisSpacing: 9,
-                    mainAxisExtent: 70 + 26 * scale,
+            const SizedBox(height: 9),
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  ChoiceChip(
+                    label: Text(_tr(context, 'সব', 'All')),
+                    avatar: const Icon(Icons.grid_view_rounded, size: 16),
+                    selected: _categoryId == null,
+                    showCheckmark: false,
+                    onSelected: (_) => setState(() => _categoryId = null),
+                    selectedColor: p.selectedTile,
+                    backgroundColor: p.surface,
+                    side: BorderSide(
+                      color: _categoryId == null ? p.accent : p.border,
+                    ),
+                    labelStyle: TextStyle(
+                      color: _categoryId == null ? p.accent : p.text,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    final selected = _categoryId == category.id;
-                    return Material(
-                      color: selected ? p.selectedTile : p.surface,
-                      borderRadius: BorderRadius.circular(17),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(17),
-                        onTap: () => setState(() {
-                          _categoryId = selected ? null : category.id;
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(17),
-                            border: Border.all(
-                              color: selected ? p.accent : p.border,
-                              width: selected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                height: 43,
-                                width: 62,
-                                child: Icon(
-                                  _categoryIcon(category.name),
-                                  color: p.tileIcon,
-                                  size: 32,
-                                ),
-                              ),
-                              const SizedBox(height: 7),
-                              Text(
-                                category.name,
-                                maxLines: 2,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  height: 1.2,
-                                  fontWeight: FontWeight.w700,
-                                  color: p.text,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  const SizedBox(width: 7),
+                  for (final category in categories) ...[
+                    ChoiceChip(
+                      label: Text(category.name),
+                      avatar: Icon(_categoryIcon(category.name), size: 16),
+                      selected: _categoryId == category.id,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() {
+                        _categoryId = _categoryId == category.id
+                            ? null
+                            : category.id;
+                      }),
+                      selectedColor: p.selectedTile,
+                      backgroundColor: p.surface,
+                      side: BorderSide(
+                        color: _categoryId == category.id
+                            ? p.accent
+                            : p.border,
                       ),
-                    );
-                  },
-                );
-              },
+                      labelStyle: TextStyle(
+                        color: _categoryId == category.id ? p.accent : p.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 7),
+                  ],
+                ],
+              ),
             ),
           ],
         );
@@ -738,162 +708,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return Icons.grid_view_rounded;
   }
 
-  Widget _heroBanner() {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 184),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_deepMaroon, _maroon, _midMaroon],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _midMaroon.withOpacity(0.55)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -34,
-            top: -56,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.055),
-                  width: 28,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 18, 10, 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(13),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.22)),
-                        ),
-                        child: const Icon(Icons.local_fire_department_rounded,
-                            color: Colors.white, size: 31),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _tr(context, 'ফায়ার সেফটি\nমার্কেটপ্লেস',
-                            'Fire Safety\nMarketplace'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 25,
-                          height: 1.1,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3348),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _tr(
-                            context,
-                            'ফায়ার সেফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
-                            'Fire safety products and trusted services in one place'),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.92),
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Expanded(
-                  flex: 5,
-                  child: SizedBox(
-                    height: 130,
-                    child: Center(
-                      child: FutureBuilder<List<MarketplaceItem>>(
-                        future: _catalog,
-                        builder: (context, snapshot) {
-                          final products = snapshot.data ??
-                              _catalogCache[_tab] ??
-                              const <MarketplaceItem>[];
-                          MarketplaceItem? artwork;
-                          // প্রথমে অগ্নি নির্বাপক সংক্রান্ত ছবি খোঁজা হয়।
-                          for (final item in products) {
-                            final text =
-                                '${item.name} ${item.category}'.toLowerCase();
-                            final uri = Uri.tryParse(item.imageUrl ?? '');
-                            if (uri != null &&
-                                uri.scheme == 'https' &&
-                                uri.host.isNotEmpty &&
-                                (text.contains('extinguisher') ||
-                                    text.contains('নির্বাপক') ||
-                                    text.contains('ফায়ার'))) {
-                              artwork = item;
-                              break;
-                            }
-                          }
-                          // না পেলে যেকোনো ছবি (সার্ভিস ট্যাবেও কাজ করবে)।
-                          if (artwork == null) {
-                            for (final item in products) {
-                              final uri = Uri.tryParse(item.imageUrl ?? '');
-                              if (uri != null &&
-                                  uri.scheme == 'https' &&
-                                  uri.host.isNotEmpty) {
-                                artwork = item;
-                                break;
-                              }
-                            }
-                          }
-                          if (artwork?.imageUrl == null) {
-                            return const Icon(Icons.fire_extinguisher_rounded,
-                                size: 112, color: Color(0xFFFFE9EC));
-                          }
-                          return Image.network(
-                            artwork!.imageUrl!,
-                            height: 130,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.fire_extinguisher_rounded,
-                              size: 112,
-                              color: Color(0xFFFFE9EC),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final p = _pal(context);
@@ -903,11 +717,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return Scaffold(
       backgroundColor: p.background,
       appBar: AppBar(
-        toolbarHeight: 56,
+        toolbarHeight: 82,
+        titleSpacing: 8,
         backgroundColor: p.appBar,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
-        leadingWidth: canGoBack ? 56 : 0,
+        leadingWidth: canGoBack ? 48 : 0,
         leading: canGoBack
             ? IconButton(
                 tooltip: _tr(context, 'ফিরে যান', 'Back'),
@@ -915,7 +730,67 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
               )
             : null,
-        title: null,
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.13),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.24)),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                color: Colors.white,
+                size: 29,
+              ),
+            ),
+            const SizedBox(width: 9),
+            Container(
+              width: 1,
+              height: 42,
+              color: Colors.white.withOpacity(0.55),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _tr(context, 'ফায়ার সেইফটি মার্কেটপ্লেস',
+                        'Fire Safety Marketplace'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w900,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _tr(
+                      context,
+                      'ফায়ার সেইফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
+                      'Fire safety products and trusted services in one place',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 9.5,
+                      height: 1.15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: _tr(context, 'অর্ডার ও বুকিং ইতিহাস',
@@ -932,7 +807,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               icon: const Icon(Icons.shopping_cart_outlined),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
@@ -949,8 +824,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _heroBanner(),
-            const SizedBox(height: 14),
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
