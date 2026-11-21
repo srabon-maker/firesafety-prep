@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fire_safety_job_prep/models/marketplace_item.dart';
 import 'package:fire_safety_job_prep/widgets/marketplace_catalog_card.dart';
@@ -10,11 +12,15 @@ void main() {
     VoidCallback? onAction,
   }) {
     return MaterialApp(
-      // Marketplace tests use Bengali labels.
       locale: const Locale('bn'),
       supportedLocales: const [
         Locale('bn'),
         Locale('en'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       home: Scaffold(
         body: Center(
