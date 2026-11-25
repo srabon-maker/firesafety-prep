@@ -4,6 +4,8 @@ import 'tests_page.dart';
 import '../services/premium_service.dart';
 import 'premium_page.dart';
 
+import 'question_browser_page.dart';
+
 class QuestionBankPage extends StatefulWidget {
   const QuestionBankPage({super.key, this.initialSearch = ''});
   final String initialSearch;
@@ -32,13 +34,19 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         return ListView(padding: const EdgeInsets.all(16), children: [
           TextField(controller: _search, onChanged: (_) => setState(() {}), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'প্রশ্নের বিভাগ খুঁজুন')),
           const SizedBox(height: 12),
+          FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(initialSearch:_search.text.trim()))),icon:const Icon(Icons.search),label:const Text('সরাসরি প্রশ্ন খুঁজুন')),
+          OutlinedButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const QuestionBrowserPage(savedOnly:true))),icon:const Icon(Icons.bookmark_outline),label:const Text('বুকমার্ক করা প্রশ্ন')),
           const Text('বিষয় নির্বাচন করে প্রকাশিত MCQ অনুশীলন করুন।'),
           for (final row in filtered)
             Card(child: ListTile(
               leading: const Icon(Icons.quiz_outlined),
               title: Text(HomepageService.text(row, 'category')),
               subtitle: Text('${row['question_count']}টি প্রকাশিত প্রশ্ন'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: IconButton(
+                tooltip:'এই বিভাগের প্রশ্ন দেখুন',
+                icon:const Icon(Icons.list_alt),
+                onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(category:HomepageService.text(row,'category')))),
+              ),
               onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => SubjectPracticePage(subject: HomepageService.text(row, 'category')))),
             )),
           if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('কোনো বিভাগ পাওয়া যায়নি।')),
