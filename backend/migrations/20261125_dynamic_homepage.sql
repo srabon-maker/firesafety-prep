@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS homepage_settings (
  id TINYINT UNSIGNED PRIMARY KEY,
- section_order VARCHAR(180) NOT NULL DEFAULT 'banners,progress,jobs,topics,notes,marketplace,community,tips'
+ section_order VARCHAR(180) NOT NULL DEFAULT 'banners,marketplace,progress,jobs,topics,notes,community,tips'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT IGNORE INTO homepage_settings (id) VALUES (1);
 CREATE TABLE IF NOT EXISTS homepage_content (

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class HomepageService {
   static const defaultSections = <String>[
-    'banners', 'progress', 'jobs', 'topics', 'notes', 'marketplace', 'community', 'tips'
+    'banners', 'marketplace', 'progress', 'jobs', 'topics', 'notes', 'community', 'tips'
   ];
   static const endpoint = 'https://fire.manobikishwarganj.com/api/homepage/index.php';
 
