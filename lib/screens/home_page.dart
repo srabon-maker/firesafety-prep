@@ -157,34 +157,36 @@ class _HomePageState extends State<HomePage> {
         return Column(children:[for(final note in notes.take(3)) Card(child:ListTile(leading:const Icon(Icons.menu_book_outlined),title:Text(note.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(note.categoryName??''),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('notes',search:note.title)))]);
       })]);
       case 'marketplace':return Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 4),
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(20),
           clipBehavior: Clip.antiAlias,
           child: Ink(
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [deepMaroon, maroon, Color(0xFF8D1723)]),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: InkWell(
               onTap: () => _open('shop'),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.all(16),
                 child: Row(children: [
                   Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.storefront, color: Colors.white, size: 24),
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(14)),
+                    child: const Icon(Icons.storefront, color: Colors.white, size: 30),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Fire Safety Marketplace', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                    const SizedBox(height: 3),
-                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Text('Fire Safety Marketplace', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 5),
+                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Text(AppText.of(context, 'শপে প্রবেশ করুন', 'Explore shop'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
                   ])),
                   const SizedBox(width: 8),
-                  const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                  const Icon(Icons.chevron_right, color: Colors.white),
                 ]),
               ),
             ),
