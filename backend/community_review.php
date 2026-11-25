@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/admin_helpers.php';
 start_secure_session();
 require_admin();
+require_once __DIR__ . '/community_admin_delete.php';
 require_once __DIR__ . '/db.php';
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 header('Cache-Control: no-store');
@@ -11,6 +12,8 @@ function community_review_escape(mixed $value): string {
 }
 $error = '';
 $saved = isset($_GET['saved']);
+$deleteFlash=(string)($_SESSION['community_delete_flash']??'');
+unset($_SESSION['community_delete_flash']);
 $csrf = csrf_token();
 $reportsReady = true;
 try { $pdo->query('SELECT 1 FROM community_reports LIMIT 1'); }
@@ -20,6 +23,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $id = filter_var($_POST['post_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
     $decision = (string)($_POST['decision'] ?? '');
     try {
+        if ($decision==='delete_post') {
+            if (!$id || ($_POST['confirm_delete']??'')!=='1') throw new InvalidArgumentException('সঠিক পোস্ট ও মোছার অনুমোদন দিন।');
+            $_SESSION['community_delete_flash']=community_admin_delete_post($pdo,$id);
+            header('Location: community_review.php',true,303); exit;
+        }
         if (in_array($decision, ['hide_comment','resolve_report','dismiss_report','hide_report_target'], true)) {
             if (!$reportsReady) throw new InvalidArgumentException('প্রথমে রিপোর্ট migration চালান।');
             $pdo->beginTransaction();
@@ -113,11 +121,12 @@ main{max-width:950px;margin:22px auto;padding:0 15px}article,section{background:
 h1{margin:0 0 5px;font-size:22px}h2{font-size:20px}.muted{color:#65585c}.error{color:#ae1835}
 .body{white-space:pre-wrap;overflow-wrap:anywhere}.photo{max-width:100%;max-height:350px;object-fit:contain;border-radius:12px}
 button{background:#650d18;color:white;border:0;border-radius:9px;padding:11px 15px;margin:8px 8px 0 0;cursor:pointer}
-button.reject{background:#666}button.hide{background:#a74a24}
+button.reject{background:#666}button.hide{background:#a74a24}button.delete{background:#b42332}
 </style></head><body>
 <header><h1>Fire Safety BD — কমিউনিটি পোস্ট অনুমোদন</h1>
 <a href="job_submission_review.php">← Job Approval</a></header><main>
 <?php if ($error): ?><p class="error"><?= community_review_escape($error) ?></p><?php endif; ?>
+<?php if ($deleteFlash!==''): ?><p role="status"><?=community_review_escape($deleteFlash)?></p><?php endif; ?>
 <?php if ($saved): ?><p>সিদ্ধান্ত সংরক্ষিত হয়েছে।</p><?php endif; ?>
 <h2>Pending পোস্ট (<?= count($pending) ?>)</h2>
 <?php if (!$pending): ?><section>বর্তমানে অনুমোদনের অপেক্ষায় কোনো পোস্ট নেই।</section><?php endif; ?>
@@ -133,7 +142,14 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
 <button type="submit" name="decision" value="approve">✓ Approve & Publish</button>
 <button type="submit" name="decision" value="reject" class="reject">✕ Reject</button>
-</form></article>
+</form>
+<form method="post" onsubmit="return confirm('পোস্ট, মন্তব্য, লাইক ও রিপোর্ট স্থায়ীভাবে মুছে যাবে। ফিরিয়ে আনা যাবে না। নিশ্চিত করবেন?');">
+<input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
+<input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
+<input type="hidden" name="confirm_delete" value="1">
+<button type="submit" name="decision" value="delete_post" class="delete">✕ ডিলিট করুন</button>
+</form>
+</article>
 <?php endforeach; ?>
 <h2>সাম্প্রতিক পোস্ট</h2>
 <?php foreach ($recent as $p): ?>
@@ -144,7 +160,14 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
 <input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
 <button type="submit" name="decision" value="hide" class="hide">Hide post</button></form>
-<?php endif; ?></section>
+<?php endif; ?>
+<form method="post" onsubmit="return confirm('পোস্ট, মন্তব্য, লাইক ও রিপোর্ট স্থায়ীভাবে মুছে যাবে। ফিরিয়ে আনা যাবে না। নিশ্চিত করবেন?');">
+<input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
+<input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
+<input type="hidden" name="confirm_delete" value="1">
+<button type="submit" name="decision" value="delete_post" class="delete">✕ ডিলিট করুন</button>
+</form>
+</section>
 <?php endforeach; ?>
 <h2>Community Reports (<?= count($reports) ?>)</h2>
 <?php if (!$reportsReady): ?><section>নতুন Community Moderation SQL migration চালানোর পর রিপোর্ট দেখা যাবে।</section>

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/homepage_service.dart';
 import 'tests_page.dart';
+import '../services/premium_service.dart';
+import 'premium_page.dart';
+
 import 'question_browser_page.dart';
 
 class QuestionBankPage extends StatefulWidget {
@@ -68,8 +71,9 @@ class _InterviewPageState extends State<InterviewPage> {
   int _page = 1;
   bool _english = false;
   List<String> _roles = [], _industries = [];
+  late final _premiumService=PremiumService();
   late Future<Map<String, dynamic>> _data = _fetch();
-  Future<Map<String, dynamic>> _fetch() => HomepageService.fetch('interviews', filters: {
+  Future<Map<String, dynamic>> _fetch() => _premiumService.interviews({
     'search': _search.text.trim(), 'role': _role, 'industry': _industry, 'page': '$_page'
   });
   void _load({int page = 1}) => setState(() { _page = page; _data = _fetch(); });
@@ -110,7 +114,13 @@ class _InterviewPageState extends State<InterviewPage> {
           else if (rows.isEmpty) const Text('এই বিভাগে প্রকাশিত প্রশ্ন পাওয়া যায়নি।')
           else ...[
             for (final row in rows)
-              Card(child: ExpansionTile(
+              if(row['locked']==true)
+                Card(child:ListTile(leading:const Icon(Icons.lock_outline),title:Text(_english&&HomepageService.text(row,'title_en').isNotEmpty?HomepageService.text(row,'title_en'):HomepageService.text(row,'title')),
+                  subtitle:const Text('Premium উত্তর • সদস্যপদ দেখুন'),trailing:const Icon(Icons.workspace_premium_outlined),onTap:() async {
+                    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));
+                    if(mounted)_load(page:_page);
+                  }))
+              else Card(child: ExpansionTile(
                 key: ValueKey('${row['id']}-$_english'),
                 title: Text(_english && HomepageService.text(row,'title_en').isNotEmpty ? HomepageService.text(row,'title_en') : HomepageService.text(row,'title')),
                 subtitle: Text([row['role_name'],row['industry'],row['difficulty']].where((v)=>v!=null&&v.toString().isNotEmpty).join(' • ')),

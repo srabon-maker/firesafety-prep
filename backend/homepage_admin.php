@@ -153,6 +153,9 @@ $hpNav=[
  ['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি'],
  ['settings_admin.php','☼','সেটিংস'],
  ['analytics_admin.php','▥','অ্যানালিটিক্স'],
+ ['premium_admin.php','♛','প্রিমিয়াম ব্যবস্থাপনা'],
+ ['ads_admin.php','▧','বিজ্ঞাপন ব্যবস্থাপনা'],
+ ['support_admin.php','✉','গ্রাহক সহায়তা'],
  ['logout.php','↪','লগ আউট'],
 ];
 function hp_nav(array $links,string $active): void { ?>

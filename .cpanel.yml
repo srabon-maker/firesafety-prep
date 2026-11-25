@@ -19,14 +19,22 @@ deployment:
     - /bin/test -f backend/job_circulars.php
     - /bin/test -f backend/job_submission_review.php
     - /bin/test -f backend/community_review.php
+    - /bin/test -f backend/community_admin_delete.php
     - /bin/test -f backend/marketplace_admin.php
     - /bin/test -f backend/users.php
     - /bin/test -f backend/admin_operations.php
+    - /bin/test -f backend/premium_access.php
+    - /bin/test -f backend/premium_admin.php
+    - /bin/test -f backend/ads_admin.php
+    - /bin/test -f backend/api/premium/index.php
+    - /bin/test -f backend/support_common.php
+    - /bin/test -f backend/support_admin.php
+    - /bin/test -f backend/api/support/index.php
     - /bin/test -f backend/analytics_admin.php
     - /bin/test -f backend/notifications_admin.php
     - /bin/test -f backend/settings_admin.php
     - /bin/mkdir -p "$RELEASEBACKUP/assets" "$DEPLOYPATH/assets"
-    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php marketplace_admin.php users.php admin_operations.php analytics_admin.php notifications_admin.php settings_admin.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
+    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php community_admin_delete.php marketplace_admin.php users.php admin_operations.php analytics_admin.php notifications_admin.php settings_admin.php premium_access.php premium_admin.php ads_admin.php support_common.php support_admin.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
     - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
     # Marketplace order API: migration must already be applied; back up before copying.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api/marketplace"; /bin/test -f "$DEPLOYPATH/api/marketplace/_common.php"; for f in _orders.php cart.php orders.php; do /bin/test -f "backend/api/marketplace/$f"; done; /bin/test -f "$DEPLOYPATH/api/marketplace/cart.php"; /bin/test -f "$DEPLOYPATH/api/marketplace/orders.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/marketplace"; for f in _orders.php cart.php orders.php; do if /bin/test -f "$DEPLOYPATH/api/marketplace/$f"; then /bin/cp -p "$DEPLOYPATH/api/marketplace/$f" "$RELEASEBACKUP/api/marketplace/$f"; fi; done; for f in _orders.php cart.php orders.php; do /bin/cp -p "backend/api/marketplace/$f" "$DEPLOYPATH/api/marketplace/$f"; done'
@@ -42,9 +50,15 @@ deployment:
     - /bin/cp -p backend/category_management.php "$DEPLOYPATH/category_management.php"
     - /bin/cp -p backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
     - /bin/cp -p backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
+    - /bin/cp -p backend/community_admin_delete.php "$DEPLOYPATH/community_admin_delete.php"
     - /bin/cp -p backend/community_review.php "$DEPLOYPATH/community_review.php"
     - /bin/cp -p backend/marketplace_admin.php "$DEPLOYPATH/marketplace_admin.php"
     - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
+    - /bin/cp -p backend/premium_access.php "$DEPLOYPATH/premium_access.php"
+    - /bin/cp -p backend/premium_admin.php "$DEPLOYPATH/premium_admin.php"
+    - /bin/cp -p backend/ads_admin.php "$DEPLOYPATH/ads_admin.php"
+    - /bin/cp -p backend/support_common.php "$DEPLOYPATH/support_common.php"
+    - /bin/cp -p backend/support_admin.php "$DEPLOYPATH/support_admin.php"
     - /bin/cp -p backend/admin_operations.php "$DEPLOYPATH/admin_operations.php"
     - /bin/cp -p backend/analytics_admin.php "$DEPLOYPATH/analytics_admin.php"
     - /bin/cp -p backend/notifications_admin.php "$DEPLOYPATH/notifications_admin.php"
@@ -54,5 +68,9 @@ deployment:
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/homepage_image_upload.php; /bin/test -f backend/uploads/homepage/.htaccess; /bin/mkdir -p "$DEPLOYPATH/uploads/homepage" "$RELEASEBACKUP/uploads/homepage"; /bin/test ! -L "$DEPLOYPATH/uploads/homepage"; for f in homepage_image_upload.php uploads/homepage/.htaccess; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
     # Dynamic homepage: apply migration before deployment; preserve config and uploads.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/homepage_admin.php; /bin/test -f backend/interview_admin.php; /bin/test -f backend/api/homepage/index.php; /bin/mkdir -p "$DEPLOYPATH/api/homepage"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/homepage"; for f in homepage_admin.php interview_admin.php api/homepage/index.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
+    # Premium status API: apply premium foundation migration first.
+    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/premium"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/premium"; if /bin/test -f "$DEPLOYPATH/api/premium/index.php"; then /bin/cp -p "$DEPLOYPATH/api/premium/index.php" "$RELEASEBACKUP/api/premium/index.php"; fi; /bin/cp -p backend/api/premium/index.php "$DEPLOYPATH/api/premium/index.php"'
+    # Support: apply support migration before deployment.
+    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/support"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/support"; if /bin/test -f "$DEPLOYPATH/api/support/index.php"; then /bin/cp -p "$DEPLOYPATH/api/support/index.php" "$RELEASEBACKUP/api/support/index.php"; fi; /bin/cp -p backend/api/support/index.php "$DEPLOYPATH/api/support/index.php"'
     # Question library API: apply bookmark migration before deploying.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/api/question_library/index.php; /bin/mkdir -p "$DEPLOYPATH/api/question_library"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/question_library"; if /bin/test -f "$DEPLOYPATH/api/question_library/index.php"; then /bin/cp -p "$DEPLOYPATH/api/question_library/index.php" "$RELEASEBACKUP/api/question_library/index.php"; fi; /bin/cp -p backend/api/question_library/index.php "$DEPLOYPATH/api/question_library/index.php"'

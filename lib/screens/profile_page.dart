@@ -10,6 +10,7 @@ import 'notes_page.dart';
 import 'saved_notes_page.dart';
 import 'notification_preferences_page.dart';
 import 'notification_inbox_page.dart';
+import 'premium_page.dart';
 
 // Private colours: other files can not clash with these names.
 const Color _maroon = Color(0xFF650D18);
@@ -891,6 +892,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 _sectionHeading(
                   _tr(context, 'অ্যাপ ও অ্যাকাউন্ট', 'App & account'),
                   Icons.tune_rounded,
+                ),
+                _menuTile(
+                  icon: Icons.workspace_premium_outlined,
+                  title: _tr(context, 'প্রিমিয়াম সদস্যপদ', 'Premium membership'),
+                  subtitle: _tr(context, 'সদস্যপদের অবস্থা ও প্যাকেজ', 'Membership status and plans'),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PremiumPage())),
                 ),
                 _menuTile(
                   icon: Icons.settings_outlined,
