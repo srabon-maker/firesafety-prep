@@ -37,9 +37,12 @@ class MarketCartLine {
 }
 
 class MarketCart {
-  MarketCart({required this.items, required this.subtotal});
+  MarketCart({required this.items, required this.subtotal, this.deliveryCharge = 0, double? total})
+      : total = total ?? subtotal + deliveryCharge;
   final List<MarketCartLine> items;
   final double subtotal;
+  final double deliveryCharge;
+  final double total;
   int get count => items.fold(0, (n, line) => n + line.quantity);
 
   factory MarketCart.fromResponse(Map<String, dynamic> response) {
@@ -49,6 +52,8 @@ class MarketCart {
     return MarketCart(
       items: items.map((e) => MarketCartLine.fromJson(marketObject(e))).toList(),
       subtotal: marketMoney(data['subtotal']),
+      deliveryCharge: marketMoney(data['delivery_charge'] ?? 0),
+      total: data['total_amount'] == null ? null : marketMoney(data['total_amount']),
     );
   }
 }
@@ -58,6 +63,8 @@ class MarketOrder {
       : id = int.parse(json['id'].toString()),
         number = json['order_number'].toString(),
         total = marketMoney(json['total_amount']),
+        subtotal = marketMoney(json['subtotal'] ?? json['total_amount']),
+        deliveryCharge = marketMoney(json['delivery_charge'] ?? 0),
         status = json['order_status'].toString(),
         paymentStatus = json['payment_status'].toString(),
         paymentMethod = json['payment_method'].toString(),
@@ -66,10 +73,63 @@ class MarketOrder {
   final int id;
   final String number;
   final double total;
+  final double subtotal;
+  final double deliveryCharge;
   final String status;
   final String paymentStatus;
   final String paymentMethod;
   final String createdAt;
+}
+
+class MarketOrderLine {
+  MarketOrderLine.fromJson(Map<String, dynamic> json)
+      : name = json['product_name']?.toString() ?? '',
+        sku = json['product_sku']?.toString() ?? '',
+        quantity = int.parse(json['quantity'].toString()),
+        unitPrice = marketMoney(json['unit_price']),
+        total = marketMoney(json['total_price']);
+
+  final String name;
+  final String sku;
+  final int quantity;
+  final double unitPrice;
+  final double total;
+}
+
+class MarketOrderEvent {
+  MarketOrderEvent.fromJson(Map<String, dynamic> json)
+      : status = json['order_status'].toString(),
+        createdAt = json['created_at']?.toString() ?? '',
+        courier = json['courier_name']?.toString() ?? '',
+        trackingNumber = json['tracking_number']?.toString() ?? '';
+
+  final String status;
+  final String createdAt;
+  final String courier;
+  final String trackingNumber;
+}
+
+class MarketOrderDetail {
+  MarketOrderDetail.fromJson(Map<String, dynamic> json)
+      : order = MarketOrder.fromJson(json),
+        customer = json['customer_name']?.toString() ?? '',
+        mobile = json['mobile_number']?.toString() ?? '',
+        address = json['delivery_address']?.toString() ?? '',
+        note = json['customer_note']?.toString() ?? '',
+        canCancel = json['can_cancel'] == true,
+        items = (json['items'] as List)
+            .map((item) => MarketOrderLine.fromJson(marketObject(item))).toList(),
+        events = (json['events'] as List)
+            .map((item) => MarketOrderEvent.fromJson(marketObject(item))).toList();
+
+  final MarketOrder order;
+  final String customer;
+  final String mobile;
+  final String address;
+  final String note;
+  final bool canCancel;
+  final List<MarketOrderLine> items;
+  final List<MarketOrderEvent> events;
 }
 
 class MarketServiceRequest {

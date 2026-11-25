@@ -122,10 +122,8 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
       MaterialPageRoute(builder: (_) => MarketplaceCheckoutPage(cart: cart)),
     );
     if (!mounted) return;
-    if (placed == true) {
-      await _refresh();
-      if (mounted) _message(context, 'অর্ডার সফলভাবে জমা হয়েছে।');
-    }
+    await _refresh();
+    if (placed == true && mounted) _message(context, 'অর্ডার সফলভাবে জমা হয়েছে।');
   }
 
   @override
@@ -251,20 +249,20 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
                         ],
                       ),
                       const SizedBox(height: 7),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('ডেলিভারি চার্জ'),
-                          Text('৳০.০০*'),
+                          const Text('ডেলিভারি চার্জ'),
+                          Text('৳${cart.deliveryCharge.toStringAsFixed(2)}'),
                         ],
                       ),
                       const Divider(height: 22),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('সার্ভার-প্রদত্ত সাবটোটাল',
+                          const Text('সর্বমোট',
                             style: TextStyle(fontWeight: FontWeight.w800)),
-                          Text('৳${cart.subtotal.toStringAsFixed(2)}',
+                          Text('৳${cart.total.toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: _maroon, fontSize: 18,
                               fontWeight: FontWeight.w900,
@@ -272,7 +270,7 @@ class _MarketplaceCartPageState extends State<MarketplaceCartPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('*বর্তমানে সার্ভারে ডেলিভারি চার্জ শূন্য নির্ধারিত।',
+                      Text('ডেলিভারি চার্জ সার্ভার থেকে নির্ধারিত হয়।',
                         style: TextStyle(
                           fontSize: 11,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -325,6 +323,7 @@ class _MarketplaceCheckoutPageState extends State<MarketplaceCheckoutPage> {
       final number = await _market.placeOrder(
         name: _name.text, mobile: _mobile.text,
         address: _address.text, note: _note.text,
+        expectedTotal: widget.cart.total,
       );
       if (!mounted) return;
       await showDialog<void>(
@@ -365,8 +364,11 @@ class _MarketplaceCheckoutPageState extends State<MarketplaceCheckoutPage> {
           ),
         const Divider(),
         Text('পণ্যের মোট: ৳${widget.cart.subtotal.toStringAsFixed(2)}'),
+        Text('ডেলিভারি চার্জ: ৳${widget.cart.deliveryCharge.toStringAsFixed(2)}'),
+        Text('সর্বমোট: ৳${widget.cart.total.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.titleMedium),
         const Text('পেমেন্ট: Cash on Delivery (COD)'),
-        const Text('চূড়ান্ত মূল্য ও স্টক সার্ভার পুনরায় যাচাই করবে।'),
+        const Text('মূল্য বদলালে কার্টে ফিরে আবার যাচাই করুন। চূড়ান্ত মূল্য ও স্টক সার্ভার যাচাই করবে।'),
         const SizedBox(height: 20),
         TextFormField(controller: _name, decoration: _field('আপনার পূর্ণ নাম'),
             validator: _required, maxLength: 150),
@@ -450,7 +452,14 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
                   title: Text(order.number),
                   subtitle: Text('স্ট্যাটাস: ${_statusText(order.status)} • '
                       'পেমেন্ট: ${order.paymentStatus}\n${order.createdAt}'),
-                  trailing: Text('৳${order.total.toStringAsFixed(2)}'),
+                  trailing: Column(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [Text('৳${order.total.toStringAsFixed(2)}'),
+                      const Icon(Icons.chevron_right)]),
+                  onTap: () async {
+                    await Navigator.of(context).push(MaterialPageRoute<void>(
+                      builder: (_) => MarketplaceOrderDetailPage(orderId: order.id)));
+                    if (mounted) await _refresh();
+                  },
                   isThreeLine: true,
                 )),
             ]);
@@ -488,6 +497,146 @@ class _MarketplaceHistoryPageState extends State<MarketplaceHistoryPage> {
         ),
         const SizedBox(height: 80),
       ]),
+    ),
+  );
+}
+
+class MarketplaceOrderDetailPage extends StatefulWidget {
+  const MarketplaceOrderDetailPage({super.key, required this.orderId});
+  final int orderId;
+  @override
+  State<MarketplaceOrderDetailPage> createState() => _MarketplaceOrderDetailPageState();
+}
+
+class _MarketplaceOrderDetailPageState extends State<MarketplaceOrderDetailPage> {
+  late Future<MarketOrderDetail> _future;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _market.getOrderDetail(widget.orderId);
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _future = _market.getOrderDetail(widget.orderId));
+    try { await _future; } catch (_) {}
+  }
+
+  Future<void> _cancel() async {
+    if (_busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('অর্ডার বাতিল করবেন?'),
+        content: const Text('বাতিল হলে অর্ডারটি আর পাঠানো হবে না। আবার চালু করা যাবে না।'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('না')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('বাতিল করুন')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await _market.cancelOrder(widget.orderId);
+      if (mounted) _message(context, 'অর্ডার বাতিল হয়েছে।');
+    } catch (error) {
+      if (mounted) _message(context, _error(error));
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+        await _refresh();
+      }
+    }
+  }
+
+  Widget _amount(String title, double amount) => ListTile(
+    dense: true, contentPadding: EdgeInsets.zero, title: Text(title),
+    trailing: Text('৳${amount.toStringAsFixed(2)}'),
+  );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('অর্ডার বিস্তারিত'), actions: [
+      IconButton(onPressed: _busy ? null : _refresh, icon: const Icon(Icons.refresh),
+        tooltip: 'রিফ্রেশ'),
+    ]),
+    body: FutureBuilder<MarketOrderDetail>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Padding(padding: const EdgeInsets.all(20),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(_error(snapshot.error!)),
+              TextButton(onPressed: _refresh, child: const Text('আবার চেষ্টা করুন')),
+            ])));
+        }
+        final detail = snapshot.data!;
+        final order = detail.order;
+        const steps = ['pending','confirmed','processing','shipped','delivered'];
+        final progress = steps.indexOf(order.status);
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(order.number, style: Theme.of(context).textTheme.titleLarge),
+              Text(order.createdAt),
+              const SizedBox(height: 8),
+              Text('বর্তমান অবস্থা: ${_statusText(order.status)}'),
+              Text('পেমেন্ট: ${order.paymentMethod.toUpperCase()} • ${_statusText(order.paymentStatus)}'),
+              const Divider(),
+              Text('অর্ডার ট্র্যাকিং', style: Theme.of(context).textTheme.titleMedium),
+              if (order.status == 'cancelled')
+                const ListTile(leading: Icon(Icons.cancel_outlined), title: Text('অর্ডার বাতিল হয়েছে'))
+              else
+                for (var i = 0; i < steps.length; i++)
+                  ListTile(dense: true,
+                    leading: Icon(i <= progress ? Icons.check_circle : Icons.radio_button_unchecked),
+                    title: Text(_statusText(steps[i]))),
+              if (detail.events.isEmpty)
+                const Text('পুরোনো অর্ডার: বিস্তারিত স্ট্যাটাস সময় সংরক্ষিত নেই।'),
+              for (final event in detail.events)
+                ListTile(
+                  dense: true,
+                  title: Text(_statusText(event.status)),
+                  subtitle: Text([event.createdAt, event.courier, event.trackingNumber]
+                      .where((value) => value.isNotEmpty).join(' • ')),
+                ),
+              const Divider(),
+              Text('পণ্য', style: Theme.of(context).textTheme.titleMedium),
+              for (final item in detail.items)
+                ListTile(contentPadding: EdgeInsets.zero, title: Text(item.name),
+                  subtitle: Text('${item.quantity} × ৳${item.unitPrice.toStringAsFixed(2)}'
+                      '${item.sku.isEmpty ? '' : ' • ${item.sku}'}'),
+                  trailing: Text('৳${item.total.toStringAsFixed(2)}')),
+              _amount('পণ্যের মোট', order.subtotal),
+              _amount('ডেলিভারি চার্জ', order.deliveryCharge),
+              _amount('সর্বমোট', order.total),
+              const Divider(),
+              Text('ডেলিভারি ঠিকানা', style: Theme.of(context).textTheme.titleMedium),
+              Text(detail.customer), Text(detail.mobile), Text(detail.address),
+              if (detail.note.isNotEmpty) Text(detail.note),
+              const SizedBox(height: 16),
+              if (detail.canCancel)
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _cancel,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: Text(_busy ? 'অনুরোধ চলছে...' : 'অর্ডার বাতিল করুন'),
+                )
+              else if (order.status != 'cancelled' && order.status != 'delivered')
+                const Text('এই অর্ডার অ্যাপ থেকে বাতিল করা যাবে না। প্রয়োজন হলে অ্যাডমিনের সঙ্গে যোগাযোগ করুন।'),
+            ],
+          ),
+        );
+      },
     ),
   );
 }
