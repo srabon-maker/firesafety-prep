@@ -185,6 +185,8 @@ $opsNav = [
  ['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি',''],
  ['settings_admin.php','☼','সেটিংস','settings'],
  ['analytics_admin.php','▥','অ্যানালিটিক্স','analytics'],
+ ['premium_admin.php','♛','প্রিমিয়াম ব্যবস্থাপনা',''],
+ ['ads_admin.php','▧','বিজ্ঞাপন ব্যবস্থাপনা',''],
  ['logout.php','↪','লগ আউট',''],
 ];
 $opsDescriptions = ['analytics'=>'ব্যবহারকারী, শিক্ষা, কমিউনিটি ও মার্কেটপ্লেসের বিস্তারিত পরিসংখ্যান।','notifications'=>'নির্বাচিত ব্যবহারকারীদের জন্য নোটিফিকেশন তৈরি ও প্রকাশের ইতিহাস দেখুন।','settings'=>'নোটিফিকেশন প্রকাশের সীমা এবং অ্যানালিটিক্সের সময়সীমা নিয়ন্ত্রণ করুন।'];
