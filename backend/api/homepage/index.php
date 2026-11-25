@@ -34,19 +34,29 @@ try {
         $page=filter_var($_GET['page']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>10000]]);
         $search=$_GET['search']??''; $role=$_GET['role']??''; $industry=$_GET['industry']??'';
         if ($page===false || !is_string($search)||!is_string($role)||!is_string($industry)||strlen($search)>600||strlen($role)>400||strlen($industry)>400) hp_reply(422,['success'=>false,'message'=>'Invalid filter']);
-        $where="kind='interview' AND is_published=1"; $args=[];
-        if ($role!=='') {$where.=' AND role_name=?'; $args[]=$role;}
-        if ($industry!=='') {$where.=' AND industry=?'; $args[]=$industry;}
-        if (trim($search)!=='') {
-            $where.=" AND (LOCATE(?,title)>0 OR LOCATE(?,title_en)>0 OR LOCATE(?,body)>0 OR LOCATE(?,body_en)>0 OR LOCATE(?,role_name)>0 OR LOCATE(?,industry)>0)";
-            for($i=0;$i<6;$i++) $args[]=trim($search);
+        require_once __DIR__.'/../../premium_access.php';
+        $active=premium_active($pdo,premium_bearer_user($pdo))!==null;
+        $preview=($_GET['premium_preview']??'')==='1';
+        $marked="EXISTS (SELECT 1 FROM premium_interview_items pi WHERE pi.content_id=homepage_content.id)";
+        $locked=$active?'0':$marked;
+        $base="kind='interview' AND is_published=1";
+        // Legacy clients only receive free or entitled rows. Preview clients receive titles, never locked answers.
+        if(!$active&&!$preview)$base.=" AND NOT ($marked)";
+        $where=$base;$args=[];
+        if($role!==''){$where.=' AND role_name=?';$args[]=$role;}
+        if($industry!==''){$where.=' AND industry=?';$args[]=$industry;}
+        if(trim($search)!==''){
+            $term=trim($search);
+            $where.=" AND (LOCATE(?,title)>0 OR LOCATE(?,title_en)>0 OR LOCATE(?,role_name)>0 OR LOCATE(?,industry)>0 OR (NOT ($locked) AND (LOCATE(?,body)>0 OR LOCATE(?,body_en)>0)))";
+            for($i=0;$i<6;$i++)$args[]=$term;
         }
         $offset=($page-1)*25;
-        $q=$pdo->prepare("SELECT id,title,body,title_en,body_en,role_name,industry,difficulty FROM homepage_content WHERE $where ORDER BY sort_order,id DESC LIMIT 26 OFFSET $offset");
-        $q->execute($args); $rows=$q->fetchAll(PDO::FETCH_ASSOC);
-        $more=count($rows)>25; if ($more) array_pop($rows);
-        $roles=$pdo->query("SELECT DISTINCT role_name FROM homepage_content WHERE kind='interview' AND is_published=1 AND role_name<>'' ORDER BY role_name LIMIT 200")->fetchAll(PDO::FETCH_COLUMN);
-        $industries=$pdo->query("SELECT DISTINCT industry FROM homepage_content WHERE kind='interview' AND is_published=1 AND industry<>'' ORDER BY industry LIMIT 200")->fetchAll(PDO::FETCH_COLUMN);
+        $q=$pdo->prepare("SELECT id,title,CASE WHEN $locked THEN '' ELSE body END AS body,title_en,CASE WHEN $locked THEN '' ELSE body_en END AS body_en,role_name,industry,difficulty,$marked AS premium_only,$locked AS locked FROM homepage_content WHERE $where ORDER BY sort_order,id DESC LIMIT 26 OFFSET $offset");
+        $q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        $more=count($rows)>25;if($more)array_pop($rows);
+        foreach($rows as &$row){$row['premium_only']=(bool)$row['premium_only'];$row['locked']=(bool)$row['locked'];}unset($row);
+        $roles=$pdo->query("SELECT DISTINCT role_name FROM homepage_content WHERE $base AND role_name<>'' ORDER BY role_name LIMIT 200")->fetchAll(PDO::FETCH_COLUMN);
+        $industries=$pdo->query("SELECT DISTINCT industry FROM homepage_content WHERE $base AND industry<>'' ORDER BY industry LIMIT 200")->fetchAll(PDO::FETCH_COLUMN);
         hp_reply(200,['success'=>true,'data'=>$rows,'roles'=>$roles,'industries'=>$industries,'has_more'=>$more]);
     }
     hp_reply(404,['success'=>false,'message'=>'Unknown action']);
