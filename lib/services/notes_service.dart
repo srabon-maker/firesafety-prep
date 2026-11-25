@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/study_note.dart';
+import 'auth_service.dart';
 
 class NotesService {
   NotesService._();
@@ -17,15 +18,14 @@ class NotesService {
     int? categoryId,
     int page = 1,
   }) async {
-    final query = <String, String>{'page': page.toString()};
+    final query = <String, String>{'page': page.toString(),'premium_preview':'1'};
     if (search.trim().isNotEmpty) query['search'] = search.trim();
     if (categoryId != null) query['category'] = categoryId.toString();
 
     final uri = Uri.parse(endpoint).replace(queryParameters: query);
-    final response = await http.get(
-      uri,
-      headers: const {'Accept': 'application/json'},
-    ).timeout(timeout);
+    final token=await AuthService.instance.getSessionToken();
+    final response = await http.get(uri,headers:{'Accept':'application/json',if(token!=null&&token.isNotEmpty)'Authorization':'Bearer $token'}).timeout(timeout);
+    if(await AuthService.instance.getSessionToken()!=token)throw const FormatException('সেশন পরিবর্তিত হয়েছে।');
     final decoded = _decode(response);
 
     if (response.statusCode != 200 || decoded['success'] != true) {
@@ -38,12 +38,11 @@ class NotesService {
 
   Future<StudyNote> fetchNote(int id) async {
     final uri = Uri.parse(endpoint).replace(
-      queryParameters: {'action': 'detail', 'id': id.toString()},
+      queryParameters: {'action': 'detail', 'id': id.toString(),'premium_preview':'1'},
     );
-    final response = await http.get(
-      uri,
-      headers: const {'Accept': 'application/json'},
-    ).timeout(timeout);
+    final token=await AuthService.instance.getSessionToken();
+    final response = await http.get(uri,headers:{'Accept':'application/json',if(token!=null&&token.isNotEmpty)'Authorization':'Bearer $token'}).timeout(timeout);
+    if(await AuthService.instance.getSessionToken()!=token)throw const FormatException('সেশন পরিবর্তিত হয়েছে।');
     final decoded = _decode(response);
 
     if (response.statusCode != 200 || decoded['success'] != true) {

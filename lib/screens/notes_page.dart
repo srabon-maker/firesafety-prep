@@ -9,6 +9,7 @@ import '../services/notes_service.dart';
 import '../services/saved_notes_service.dart';
 import '../services/auth_guard.dart';
 import 'question_browser_page.dart';
+import 'premium_page.dart';
 import 'saved_notes_page.dart';
 
 const Color notesMaroon = Color(0xFF650D18);
@@ -367,6 +368,7 @@ class _NoteCardState extends State<_NoteCard> {
           padding: const EdgeInsets.only(top: 5),
           child: Text(
             [
+              if(widget.note.locked) '🔒 Premium',
               if (widget.note.categoryName != null) widget.note.categoryName!,
               if (widget.note.summary != null) widget.note.summary!,
               'বিস্তারিত পড়তে ট্যাপ করুন',
@@ -495,6 +497,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               );
             }
             final note = snapshot.data!;
+            if(note.locked)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.lock_outline,size:48),Text(note.title,textAlign:TextAlign.center),const Text('এই নোটটি Premium সদস্যদের জন্য।'),FilledButton(onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!context.mounted)return;await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));if(mounted)setState(()=>_noteFuture=NotesService.instance.fetchNote(widget.noteId));},child:const Text('Premium সদস্যপদ দেখুন'))])));
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [

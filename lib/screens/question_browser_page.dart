@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/question_library_service.dart';
+import 'premium_page.dart';
 
 class QuestionBrowserPage extends StatefulWidget {
   const QuestionBrowserPage({super.key,this.initialSearch='',this.category='',this.savedOnly=false,this.noteId});
@@ -50,8 +51,12 @@ class _QuestionBrowserPageState extends State<QuestionBrowserPage> {
           OutlinedButton(onPressed:()=>_reload(page:_page),child:const Text('আবার চেষ্টা করুন')),
         ] else if(data['related_match']==false) const Text('এই নোটের ক্যাটাগরির সঙ্গে প্রকাশিত কোনো প্রশ্নের বিভাগ মেলেনি।')
         else if(rows.isEmpty) const Text('কোনো প্রশ্ন পাওয়া যায়নি।')
-        else for(final row in rows) _LibraryQuestionCard(key:ValueKey(row['id']),row:row,service:_service,
-          onRemoved:(){if(_saved)_reload(page:_page);}),
+        else for(final row in rows) if(row['locked']==true)
+          Card(child:ListTile(leading:const Icon(Icons.lock_outline),title:Text(row['question']?.toString()??''),subtitle:const Text('Premium প্রশ্ন'),trailing:const Icon(Icons.workspace_premium_outlined),onTap:() async{
+            await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));
+            if(mounted)_reload(page:_page);
+          }))
+        else _LibraryQuestionCard(key:ValueKey(row['id']),row:row,service:_service,onRemoved:(){if(_saved)_reload(page:_page);}),
         if(!loading&&data!=null) Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
           TextButton(onPressed:_page>1?()=>_reload(page:_page-1):null,child:const Text('আগের পেজ')),
           Text('$_page'),

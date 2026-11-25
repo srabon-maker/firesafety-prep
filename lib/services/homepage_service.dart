@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'auth_service.dart';
 
 class HomepageService {
   static const defaultSections = <String>[
@@ -23,8 +24,11 @@ class HomepageService {
   static Future<Map<String, dynamic>> fetch(String action,
       {Map<String, String> filters = const {}, http.Client? client}) async {
     final uri = Uri.parse(endpoint).replace(queryParameters: {'action': action, ...filters});
-    final response = await (client == null ? http.get(uri) : client.get(uri))
+    final token=action=='question_categories'&&client==null?await AuthService.instance.getSessionToken():null;
+    final headers={'Accept':'application/json',if(token!=null&&token.isNotEmpty)'Authorization':'Bearer $token'};
+    final response = await (client == null ? http.get(uri,headers:headers) : client.get(uri,headers:headers))
         .timeout(const Duration(seconds: 15));
+    if(action=='question_categories'&&client==null&&await AuthService.instance.getSessionToken()!=token)throw const FormatException('Session changed');
     final data = jsonDecode(utf8.decode(response.bodyBytes));
     if (response.statusCode != 200 || data is! Map<String, dynamic> || data['success'] != true) {
       throw const FormatException('Content unavailable');
