@@ -24,6 +24,11 @@ deployment:
     - /bin/test -f backend/users.php
     - /bin/test -f backend/admin_operations.php
     - /bin/test -f backend/premium_access.php
+    - /bin/test -f backend/premium_learning.php
+    - /bin/test -f backend/premium_pdf_storage.php
+    - /bin/test -f backend/api/premium_pdf/index.php
+    - /bin/test -f backend/api/notes.php
+    - /bin/test -f backend/api/tests.php
     - /bin/test -f backend/premium_admin.php
     - /bin/test -f backend/ads_admin.php
     - /bin/test -f backend/api/premium/index.php
@@ -34,7 +39,7 @@ deployment:
     - /bin/test -f backend/notifications_admin.php
     - /bin/test -f backend/settings_admin.php
     - /bin/mkdir -p "$RELEASEBACKUP/assets" "$DEPLOYPATH/assets"
-    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php community_admin_delete.php marketplace_admin.php users.php admin_operations.php analytics_admin.php notifications_admin.php settings_admin.php premium_access.php premium_admin.php ads_admin.php support_common.php support_admin.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
+    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php community_admin_delete.php marketplace_admin.php users.php admin_operations.php analytics_admin.php notifications_admin.php settings_admin.php premium_access.php premium_learning.php premium_pdf_storage.php premium_admin.php ads_admin.php support_common.php support_admin.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
     - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
     # Marketplace order API: migration must already be applied; back up before copying.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api/marketplace"; /bin/test -f "$DEPLOYPATH/api/marketplace/_common.php"; for f in _orders.php cart.php orders.php; do /bin/test -f "backend/api/marketplace/$f"; done; /bin/test -f "$DEPLOYPATH/api/marketplace/cart.php"; /bin/test -f "$DEPLOYPATH/api/marketplace/orders.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/marketplace"; for f in _orders.php cart.php orders.php; do if /bin/test -f "$DEPLOYPATH/api/marketplace/$f"; then /bin/cp -p "$DEPLOYPATH/api/marketplace/$f" "$RELEASEBACKUP/api/marketplace/$f"; fi; done; for f in _orders.php cart.php orders.php; do /bin/cp -p "backend/api/marketplace/$f" "$DEPLOYPATH/api/marketplace/$f"; done'
@@ -55,6 +60,8 @@ deployment:
     - /bin/cp -p backend/marketplace_admin.php "$DEPLOYPATH/marketplace_admin.php"
     - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
     - /bin/cp -p backend/premium_access.php "$DEPLOYPATH/premium_access.php"
+    - /bin/cp -p backend/premium_learning.php "$DEPLOYPATH/premium_learning.php"
+    - /bin/cp -p backend/premium_pdf_storage.php "$DEPLOYPATH/premium_pdf_storage.php"
     - /bin/cp -p backend/premium_admin.php "$DEPLOYPATH/premium_admin.php"
     - /bin/cp -p backend/ads_admin.php "$DEPLOYPATH/ads_admin.php"
     - /bin/cp -p backend/support_common.php "$DEPLOYPATH/support_common.php"
@@ -74,3 +81,7 @@ deployment:
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/support"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/support"; if /bin/test -f "$DEPLOYPATH/api/support/index.php"; then /bin/cp -p "$DEPLOYPATH/api/support/index.php" "$RELEASEBACKUP/api/support/index.php"; fi; /bin/cp -p backend/api/support/index.php "$DEPLOYPATH/api/support/index.php"'
     # Question library API: apply bookmark migration before deploying.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/api/question_library/index.php; /bin/mkdir -p "$DEPLOYPATH/api/question_library"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/question_library"; if /bin/test -f "$DEPLOYPATH/api/question_library/index.php"; then /bin/cp -p "$DEPLOYPATH/api/question_library/index.php" "$RELEASEBACKUP/api/question_library/index.php"; fi; /bin/cp -p backend/api/question_library/index.php "$DEPLOYPATH/api/question_library/index.php"'
+    # Premium access: update both existing learning APIs after migration and shared helpers.
+    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f "$DEPLOYPATH/api/notes.php"; /bin/test -f "$DEPLOYPATH/api/tests.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api"; for f in notes.php tests.php; do /bin/cp -p "$DEPLOYPATH/api/$f" "$RELEASEBACKUP/api/$f"; done; for f in notes.php tests.php; do /bin/cp -p "backend/api/$f" "$DEPLOYPATH/api/$f"; done'
+    # Private PDF downloads (file bytes are never deployed or stored in Git).
+    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/premium_pdf"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/premium_pdf"; if /bin/test -f "$DEPLOYPATH/api/premium_pdf/index.php"; then /bin/cp -p "$DEPLOYPATH/api/premium_pdf/index.php" "$RELEASEBACKUP/api/premium_pdf/index.php"; fi; /bin/cp -p backend/api/premium_pdf/index.php "$DEPLOYPATH/api/premium_pdf/index.php"'

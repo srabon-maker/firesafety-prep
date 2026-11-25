@@ -196,6 +196,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $attachment = $_FILES['attachment'] ?? [];
+            if($noteId>0){
+                $pdo->beginTransaction();
+                $guard=$pdo->prepare('SELECT file_url,file_type FROM notes WHERE id=? FOR UPDATE');$guard->execute([$noteId]);
+                $latest=$guard->fetch(PDO::FETCH_ASSOC);if(!$latest)throw new RuntimeException('নোট পাওয়া যায়নি।');
+                $fileUrl=$latest['file_url']?:null;$fileType=$latest['file_type']?:'none';
+                $guard=$pdo->prepare('SELECT 1 FROM premium_note_items WHERE note_id=?');$guard->execute([$noteId]);
+                if($guard->fetchColumn()&&($fileUrl!==null||($attachment['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE||preg_match('~(?:https?:|uploads/|<\\s*(?:img|iframe|object|embed|video|audio|a)\\b)~i',$content)))throw new RuntimeException('Premium নোটে পাবলিক ফাইল বা মিডিয়া যোগ করবেন না। Premium পেজ থেকে সুরক্ষিত PDF আপলোড করুন।');
+            }
             if (($attachment['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
                 $storedAttachment = notesStoreUpload($attachment, 'attachment');
                 $fileUrl = $storedAttachment['url'];
@@ -290,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
+            if($pdo->inTransaction())$pdo->commit();
             header('Location: notes.php?saved=1');
             exit;
         }
@@ -297,6 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         throw new RuntimeException('Unknown action.');
 
     } catch (Throwable $e) {
+        if($pdo->inTransaction())$pdo->rollBack();
         if (($_POST['action'] ?? '') === 'upload_inline_image') {
             http_response_code(400);
             header('Content-Type: application/json; charset=utf-8');

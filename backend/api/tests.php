@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../premium_learning.php';
 
 function exam_reply(int $status, array $body): never {
     http_response_code($status);
@@ -109,10 +110,11 @@ try {
         $limit=max(5,min(20,$limit));
         if($category==='' || mb_strlen($category)>100)exam_reply(422,['success'=>false,'message'=>'সঠিক বিষয় নির্বাচন করুন।']);
         if(!in_array($difficulty,['all','easy','medium','hard'],true))exam_reply(422,['success'=>false,'message'=>'সঠিক Difficulty নির্বাচন করুন।']);
-        $where="status='published' AND category=? AND correct_answer IN ('A','B','C','D')";
+        $where="q.status='published' AND q.is_archived=0 AND q.category=? AND q.correct_answer IN ('A','B','C','D')";
+        if(premium_active($pdo,premium_bearer_user($pdo))===null)$where.=' AND NOT ('.premium_effective_question(premium_policy($pdo)['effective_mode']).')';
         $params=[$category];
         if($difficulty!=='all'){$where.=' AND difficulty=?';$params[]=$difficulty;}
-        $q=$pdo->prepare("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty FROM questions WHERE ".$where." ORDER BY RAND() LIMIT ".$limit);
+        $q=$pdo->prepare("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty FROM questions q WHERE ".$where." ORDER BY RAND() LIMIT ".$limit);
         $q->execute($params);
         $rows=$q->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$row){
@@ -140,16 +142,18 @@ try {
     }
 
     if($method==='GET' && $action==='list'){
+        $active=premium_has_access($pdo);$marked=premium_effective_test(premium_policy($pdo)['effective_mode']);$locked=$active?'0':$marked;
+        $scope=(!$active&&($_GET['premium_preview']??'')!=='1')?" AND NOT ($marked)":'';
         $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
         $hasNegative=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);
         $randomSelect=$hasRandom?',mt.randomize_questions':'';
         $negativeSelect=$hasNegative?',mt.negative_marks_per_question':'';
         $randomGroup=$hasRandom?',mt.randomize_questions':'';
         $negativeGroup=$hasNegative?',mt.negative_marks_per_question':'';
-        $q=$pdo->query("SELECT mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,COUNT(mq.id) AS question_count,mt.results_released".$randomSelect.$negativeSelect." FROM model_tests mt LEFT JOIN model_test_questions mq ON mq.test_id=mt.id WHERE mt.status='published' AND (mt.starts_at IS NULL OR mt.starts_at<=NOW()) AND (mt.ends_at IS NULL OR mt.ends_at>NOW()) GROUP BY mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,mt.results_released".$randomGroup.$negativeGroup." ORDER BY mt.starts_at IS NULL,mt.starts_at ASC,mt.id DESC LIMIT 100");
+        $q=$pdo->query("SELECT mt.id,mt.title,mt.description,mt.exam_instructions,$marked AS premium_only,$locked AS locked,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,COUNT(mq.id) AS question_count,mt.results_released".$randomSelect.$negativeSelect." FROM model_tests mt LEFT JOIN model_test_questions mq ON mq.test_id=mt.id WHERE mt.status='published' $scope AND (mt.starts_at IS NULL OR mt.starts_at<=NOW()) AND (mt.ends_at IS NULL OR mt.ends_at>NOW()) GROUP BY mt.id,mt.title,mt.description,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,mt.results_released".$randomGroup.$negativeGroup." ORDER BY mt.starts_at IS NULL,mt.starts_at ASC,mt.id DESC LIMIT 100");
         $rows=$q->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$r){
-            $r['id']=(int)$r['id'];$r['duration_minutes']=(int)$r['duration_minutes'];$r['question_count']=(int)$r['question_count'];$r['total_marks']=(float)$r['total_marks'];
+            $r['locked']=(bool)$r['locked'];$r['premium_only']=(bool)$r['premium_only'];$r['id']=(int)$r['id'];$r['duration_minutes']=(int)$r['duration_minutes'];$r['question_count']=(int)$r['question_count'];$r['total_marks']=(float)$r['total_marks'];
             $r['pass_marks']=$r['pass_marks']===null?null:(float)$r['pass_marks'];
             $r['max_attempts']=(int)$r['max_attempts'];
             $r['randomize_questions']=isset($r['randomize_questions'])?(bool)$r['randomize_questions']:false;
@@ -212,6 +216,8 @@ try {
             $policyLock=$pdo->prepare('SELECT max_attempts FROM model_tests WHERE id=? FOR UPDATE');
             $policyLock->execute([$testId]);
             $maxAttempts=(int)($policyLock->fetchColumn()?:0);
+            // Existing owned attempts may finish; new attempts must pass the current policy.
+            if(!premium_new_test_allowed($pdo,$testId,$userId)){$pdo->rollBack();exam_reply(403,['success'=>false,'code'=>'PREMIUM_REQUIRED','message'=>'এই মডেল টেস্টটি Premium সদস্যদের জন্য।']);}
             if($maxAttempts>0){
                 $count=$pdo->prepare("SELECT COUNT(*) FROM model_test_attempts WHERE test_id=? AND user_id=?");
                 $count->execute([$testId,$userId]);

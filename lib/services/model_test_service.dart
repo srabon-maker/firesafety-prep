@@ -44,16 +44,15 @@ class ModelTestService {
     }
 
     // Authentication
+    final token = (auth || action=='list') ? await AuthService.instance.getSessionToken() : null;
     if (auth) {
-      final token =
-          await AuthService.instance.getSessionToken();
 
       if (token == null || token.isEmpty) {
         throw Exception('পরীক্ষা দিতে লগইন করুন।');
       }
 
       headers['Authorization'] = 'Bearer $token';
-    }
+    }else if(token!=null&&token.isNotEmpty){headers['Authorization']='Bearer $token';}
 
     try {
       final response = body == null
@@ -68,6 +67,7 @@ class ModelTestService {
               )
               .timeout(_requestTimeout);
 
+      if((auth||action=='list')&&await AuthService.instance.getSessionToken()!=token)throw const FormatException('সেশন পরিবর্তিত হয়েছে।');
       return _handleResponse(response);
     } on TimeoutException {
       throw Exception(
@@ -148,7 +148,7 @@ class ModelTestService {
   // --------------------------------------------------
 
   Future<List<Map<String, dynamic>>> listTests() async {
-    final data = await _request('list');
+    final data = await _request('list',queryParameters:{'premium_preview':'1'});
 
     return _toList(data['data']);
   }

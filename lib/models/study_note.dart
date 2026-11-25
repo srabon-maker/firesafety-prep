@@ -9,6 +9,9 @@ class StudyNote {
     this.fileUrl,
     this.fileType = 'none',
     this.publishedAt,
+    this.locked=false,
+    this.premiumOnly=false,
+    this.privatePdf=false,
   });
 
   final int id;
@@ -20,6 +23,7 @@ class StudyNote {
   final String? fileUrl;
   final String fileType;
   final String? publishedAt;
+  final bool locked,premiumOnly,privatePdf;
 
   factory StudyNote.fromJson(Map<String, dynamic> json) {
     int? asInt(dynamic value) =>
@@ -39,6 +43,9 @@ class StudyNote {
       fileUrl: asText(json['file_url']),
       fileType: asText(json['file_type']) ?? 'none',
       publishedAt: asText(json['published_at']),
+      locked:json['locked']==true,
+      premiumOnly:json['premium_only']==true,
+      privatePdf:json['private_pdf']==true,
     );
   }
 }

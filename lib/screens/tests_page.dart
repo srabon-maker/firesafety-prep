@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_guard.dart';
 import '../services/model_test_service.dart';
+import 'premium_page.dart';
 
 const Color _maroon = Color(0xFF650D18);
 const Color _deepMaroon = Color(0xFF36060D);
@@ -52,6 +53,11 @@ class _TestsPageState extends State<TestsPage> {
     final testId = (test['id'] as num).toInt();
     if (_startingTestIds.contains(testId)) return;
     if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    if(test['locked']==true&&!_activeAttempts.containsKey(testId)){
+      await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));
+      if(mounted)await _refresh();
+      return;
+    }
     setState(() => _startingTestIds.add(testId));
     try {
       final attempt = await ModelTestService.instance.start(testId);
@@ -132,6 +138,7 @@ class _TestsPageState extends State<TestsPage> {
             Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
             if((t['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(t['description'].toString())),
             const SizedBox(height:10),Wrap(spacing:14,runSpacing:8,children:[
+              if(t['locked']==true)_meta(Icons.lock_outline,'Premium'),
               _meta(Icons.help_outline,'${t['question_count']} প্রশ্ন'),
               _meta(Icons.timer_outlined,'${t['duration_minutes']} মিনিট'),
               _meta(Icons.grade_outlined,'${t['total_marks']} নম্বর'),
@@ -161,7 +168,7 @@ class _TestsPageState extends State<TestsPage> {
                       : Icon(active ? Icons.play_circle_outline : Icons.play_arrow),
                   label: Text(starting
                       ? 'প্রস্তুত হচ্ছে…'
-                      : active ? 'পরীক্ষা চালিয়ে যান' : 'পরীক্ষা শুরু করুন'),
+                      : active ? 'পরীক্ষা চালিয়ে যান' : t['locked']==true?'Premium দেখুন':'পরীক্ষা শুরু করুন'),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF9D1B30),
                     foregroundColor: Colors.white,

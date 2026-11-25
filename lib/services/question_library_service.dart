@@ -35,7 +35,7 @@ class QuestionLibraryService {
   }
   Future<Map<String,dynamic>> fetch({String search='',String category='',String difficulty='all',
       bool saved=false,int page=1,int? noteId}) => _request(query:{
-        'search':search,'category':category,'difficulty':difficulty,
+        'premium_preview':'1','search':search,'category':category,'difficulty':difficulty,
         'saved':saved?'1':'0','page':'$page',if(noteId!=null)'note_id':'$noteId',
       });
   Future<void> bookmark(String id,bool saved) async {

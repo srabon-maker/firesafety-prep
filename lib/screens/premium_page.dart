@@ -25,6 +25,10 @@ class _PremiumPageState extends State<PremiumPage> {
       ])));
       final data=snapshot.data!;
       final active=data['premium']==true;
+      final policy=data['access_policy'];
+      final freeMode=policy is Map&&policy['mode']=='free';
+      final scheduled=policy is Map&&policy['scheduled_mode']!='free'&&freeMode;
+      final start=policy is Map?DateTime.tryParse(policy['starts_at']?.toString()??'')?.toUtc().add(const Duration(hours:6)):null;
       final expiry=DateTime.tryParse(data['expires_at']?.toString()??'')?.toLocal();
       final plans=(data['plans'] as List? ?? []).whereType<Map>();
       return ListView(padding:const EdgeInsets.all(16),children:[
@@ -33,15 +37,17 @@ class _PremiumPageState extends State<PremiumPage> {
           child:Column(children:[
             const Icon(Icons.workspace_premium_outlined,color:Color(0xFFFFD166),size:54),
             const SizedBox(height:10),
-            Text(active?'Premium সদস্যপদ সক্রিয়':'Free Membership',textAlign:TextAlign.center,
+            Text(freeMode?'এখন সব শিক্ষামূলক সুবিধা Free':active?'Premium সদস্যপদ সক্রিয়':'Free Membership',textAlign:TextAlign.center,
               style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.bold)),
             if(active&&expiry!=null)Text('মেয়াদ: ${expiry.toString().split('.').first}',style:const TextStyle(color:Colors.white)),
             const SizedBox(height:8),
             const Text('পেশাগত প্রস্তুতির জন্য উন্নত শেখার সুবিধা',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70)),
           ])),
         const SizedBox(height:18),
+        if(scheduled&&start!=null)Card(child:ListTile(leading:const Icon(Icons.event_outlined),title:const Text('Premium লক চালুর নির্ধারিত সময়'),subtitle:Text('${start.toString().substring(0,16)} (বাংলাদেশ সময়)'))),
         const ListTile(leading:Icon(Icons.check_circle_outline),title:Text('চিহ্নিত Premium ইন্টারভিউ প্রশ্নের সম্পূর্ণ উত্তর')),
-        const ListTile(leading:Icon(Icons.info_outline),title:Text('প্রশ্ন ব্যাংক, স্টাডি নোট ও মডেল টেস্টের অতিরিক্ত Premium সুবিধা পরবর্তী ধাপে আসবে।')),
+        const ListTile(leading:Icon(Icons.check_circle_outline),title:Text('চিহ্নিত Premium প্রশ্ন, স্টাডি নোট, সুরক্ষিত PDF ও মডেল টেস্ট')),
+        const ListTile(leading:Icon(Icons.info_outline),title:Text('বিজ্ঞাপন ও অনলাইন কেনাকাটা বর্তমানে বন্ধ।')),
         const SizedBox(height:12),
         Text('পরিকল্পিত প্যাকেজ',style:Theme.of(context).textTheme.titleLarge),
         for(final p in plans) Card(child:ListTile(

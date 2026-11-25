@@ -14,8 +14,12 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
     $action=$_GET['action']??'home';
     if ($action==='question_categories') {
-        $rows=$pdo->query("SELECT category,COUNT(*) AS question_count FROM questions WHERE status='published' AND correct_answer IN ('A','B','C','D') AND category IS NOT NULL AND TRIM(category)<>'' GROUP BY category ORDER BY category LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-        hp_reply(200,['success'=>true,'data'=>array_map(static fn($r)=>['category'=>$r['category'],'question_count'=>(int)$r['question_count']],$rows)]);
+        require_once __DIR__.'/../../premium_learning.php';
+        $mode=premium_policy($pdo)['effective_mode'];
+        $hasAccess=premium_has_access($pdo);$locked=$hasAccess?'0':premium_effective_question($mode);
+        $scope=($_GET['premium_preview']??'')==='1'?'':' AND NOT ('.$locked.')';
+        $rows=$pdo->query("SELECT category,COUNT(*) AS question_count,SUM(CASE WHEN $locked THEN 1 ELSE 0 END) AS locked_count FROM questions q WHERE status='published' AND q.is_archived=0 AND correct_answer IN ('A','B','C','D') AND category IS NOT NULL AND TRIM(category)<>'' $scope GROUP BY category ORDER BY category LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+        hp_reply(200,['success'=>true,'data'=>array_map(static fn($r)=>['category'=>$r['category'],'question_count'=>(int)$r['question_count'],'locked_count'=>(int)$r['locked_count']],$rows)]);
     }
     if ($action==='home') {
         $order=$pdo->query('SELECT section_order FROM homepage_settings WHERE id=1')->fetchColumn();
@@ -28,16 +32,17 @@ try {
             $q->execute([$kind]);
             $items[$kind]=$q->fetchAll(PDO::FETCH_ASSOC);
         }
-        hp_reply(200,['success'=>true,'sections'=>$sections,'banners'=>$items['banner'],'tips'=>$items['tip']]);
+        require_once __DIR__.'/../../premium_learning.php';
+        hp_reply(200,['success'=>true,'sections'=>$sections,'banners'=>$items['banner'],'tips'=>$items['tip'],'access_policy'=>premium_policy_public(premium_policy($pdo))]);
     }
     if ($action==='interviews') {
         $page=filter_var($_GET['page']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>10000]]);
         $search=$_GET['search']??''; $role=$_GET['role']??''; $industry=$_GET['industry']??'';
         if ($page===false || !is_string($search)||!is_string($role)||!is_string($industry)||strlen($search)>600||strlen($role)>400||strlen($industry)>400) hp_reply(422,['success'=>false,'message'=>'Invalid filter']);
-        require_once __DIR__.'/../../premium_access.php';
+        require_once __DIR__.'/../../premium_learning.php';
         $active=premium_active($pdo,premium_bearer_user($pdo))!==null;
         $preview=($_GET['premium_preview']??'')==='1';
-        $marked="EXISTS (SELECT 1 FROM premium_interview_items pi WHERE pi.content_id=homepage_content.id)";
+        $marked=premium_effective_interview(premium_policy($pdo)['effective_mode']);
         $locked=$active?'0':$marked;
         $base="kind='interview' AND is_published=1";
         // Legacy clients only receive free or entitled rows. Preview clients receive titles, never locked answers.

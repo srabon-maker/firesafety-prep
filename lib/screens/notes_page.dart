@@ -9,6 +9,7 @@ import '../services/notes_service.dart';
 import '../services/saved_notes_service.dart';
 import '../services/auth_guard.dart';
 import 'question_browser_page.dart';
+import 'premium_page.dart';
 import 'saved_notes_page.dart';
 
 const Color notesMaroon = Color(0xFF650D18);
@@ -367,6 +368,7 @@ class _NoteCardState extends State<_NoteCard> {
           padding: const EdgeInsets.only(top: 5),
           child: Text(
             [
+              if(widget.note.locked) '🔒 Premium',
               if (widget.note.categoryName != null) widget.note.categoryName!,
               if (widget.note.summary != null) widget.note.summary!,
               'বিস্তারিত পড়তে ট্যাপ করুন',
@@ -495,6 +497,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               );
             }
             final note = snapshot.data!;
+            if(note.locked)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.lock_outline,size:48),Text(note.title,textAlign:TextAlign.center),const Text('এই নোটটি Premium সদস্যদের জন্য।'),FilledButton(onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!context.mounted)return;await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));if(mounted)setState(()=>_noteFuture=NotesService.instance.fetchNote(widget.noteId));},child:const Text('Premium সদস্যপদ দেখুন'))])));
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
@@ -590,6 +593,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   icon:const Icon(Icons.quiz_outlined),
                   label:const Text('সংশ্লিষ্ট বিভাগের প্রশ্ন অনুশীলন করুন'),
                 ),
+                if(note.privatePdf)...[
+                  const SizedBox(height:24),
+                  FilledButton.icon(onPressed:() async {
+                    try{final uri=await NotesService.instance.privatePdfLink(note.id);if(!context.mounted)return;if(!await launchUrl(uri,mode:LaunchMode.externalApplication))throw const FormatException('Download failed');}
+                    catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('PDF ডাউনলোড হয়নি। আবার চেষ্টা করুন।')));}
+                  },icon:const Icon(Icons.picture_as_pdf_outlined),label:const Text('Premium PDF ডাউনলোড')),
+                ],
                 if (note.fileUrl != null) ...[
                   const SizedBox(height: 24),
                   FilledButton.icon(

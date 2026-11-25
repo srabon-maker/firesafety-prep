@@ -41,8 +41,14 @@ try {
     require_once __DIR__ . '/../db.php';
     if (!isset($pdo) || !$pdo instanceof PDO) throw new RuntimeException('Database unavailable.');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    require_once __DIR__.'/../premium_learning.php';
+    $active=premium_has_access($pdo);
+    $mode=premium_policy($pdo)['effective_mode'];
+    $marked=premium_effective_note($mode);
+    $locked=$active?'0':$marked;
+    $preview=($_GET['premium_preview']??'')==='1';
     $action = (string)($_GET['action'] ?? 'list');
-    $select = "SELECT n.id,n.category_id,n.title,n.summary,n.content,n.file_url,n.file_type,
+    $select = "SELECT n.id,n.category_id,n.title,CASE WHEN $locked THEN NULL ELSE n.summary END AS summary,CASE WHEN $locked THEN NULL ELSE n.content END AS content,CASE WHEN $locked THEN NULL ELSE n.file_url END AS file_url,CASE WHEN $locked THEN 'none' ELSE n.file_type END AS file_type,$marked AS premium_only,$locked AS locked,CASE WHEN NOT ($locked) THEN EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) ELSE 0 END AS private_pdf,
         DATE_FORMAT(n.published_at,'%Y-%m-%d %H:%i:%s') AS published_at,
         c.name AS category_name
         FROM notes n LEFT JOIN categories c ON c.id=n.category_id AND c.category_type='note'";
@@ -53,6 +59,8 @@ try {
         $stmt->execute([(int)$id]);
         $note=$stmt->fetch(PDO::FETCH_ASSOC);
         if (!$note) notes_api_reply(404,['success'=>false,'message'=>'প্রকাশিত নোটটি পাওয়া যায়নি।']);
+        if(!$preview&&!$active&&!empty($note['locked']))notes_api_reply(403,['success'=>false,'message'=>'এই নোটটি Premium সদস্যদের জন্য।']);
+        $note['private_pdf']=(bool)$note['private_pdf'];$note['locked']=(bool)$note['locked'];$note['premium_only']=(bool)$note['premium_only'];
         $note['id']=(int)$note['id'];
         $note['category_id']=$note['category_id']===null?null:(int)$note['category_id'];
         $note['file_url'] = notes_api_public_url(is_string($note['file_url']) ? $note['file_url'] : null);
@@ -66,8 +74,9 @@ try {
     $page=max(1,min(100000,(int)($_GET['page']??1)));
     $perPage=20;
     $where=["n.status='published'"];
+    if(!$active&&!$preview)$where[]="NOT ($marked)";
     $params=[];
-    if($search!==''){$where[]='(n.title LIKE ? OR n.summary LIKE ? OR n.content LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term);}
+    if($search!==''){$where[]="(n.title LIKE ? OR (NOT ($locked) AND (n.summary LIKE ? OR n.content LIKE ?)))";$term='%'.$search.'%';array_push($params,$term,$term,$term);}
     if($categoryId!==false){$where[]='n.category_id=?';$params[]=(int)$categoryId;}
     $whereSql=' WHERE '.implode(' AND ',$where);
     $count=$pdo->prepare('SELECT COUNT(*) FROM notes n'.$whereSql);
@@ -80,6 +89,7 @@ try {
     $stmt->execute($params);
     $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach($rows as &$row){
+        $row['private_pdf']=(bool)$row['private_pdf'];$row['locked']=(bool)$row['locked'];$row['premium_only']=(bool)$row['premium_only'];
         $row['id']=(int)$row['id'];
         $row['category_id']=$row['category_id']===null?null:(int)$row['category_id'];
         $row['file_url'] = notes_api_public_url(is_string($row['file_url']) ? $row['file_url'] : null);

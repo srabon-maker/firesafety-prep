@@ -37,3 +37,5 @@ jobs:
             php -l "$file"
           done
           echo "Validated ${#php_files[@]} PHP files."
+      - name: Premium access policy tests
+        run: php backend/tests/premium_policy_test.php
