@@ -21,8 +21,9 @@ deployment:
     - /bin/test -f backend/community_review.php
     - /bin/test -f backend/marketplace_admin.php
     - /bin/test -f backend/users.php
+    - /bin/test -f backend/admin_operations.php
     - /bin/mkdir -p "$RELEASEBACKUP/assets" "$DEPLOYPATH/assets"
-    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php marketplace_admin.php users.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
+    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php marketplace_admin.php users.php admin_operations.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
     - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
     # Marketplace order API: migration must already be applied; back up before copying.
     - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api/marketplace"; /bin/test -f "$DEPLOYPATH/api/marketplace/_common.php"; for f in _orders.php cart.php orders.php; do /bin/test -f "backend/api/marketplace/$f"; done; /bin/test -f "$DEPLOYPATH/api/marketplace/cart.php"; /bin/test -f "$DEPLOYPATH/api/marketplace/orders.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/marketplace"; for f in _orders.php cart.php orders.php; do if /bin/test -f "$DEPLOYPATH/api/marketplace/$f"; then /bin/cp -p "$DEPLOYPATH/api/marketplace/$f" "$RELEASEBACKUP/api/marketplace/$f"; fi; done; for f in _orders.php cart.php orders.php; do /bin/cp -p "backend/api/marketplace/$f" "$DEPLOYPATH/api/marketplace/$f"; done'
@@ -39,4 +40,5 @@ deployment:
     - /bin/cp -p backend/community_review.php "$DEPLOYPATH/community_review.php"
     - /bin/cp -p backend/marketplace_admin.php "$DEPLOYPATH/marketplace_admin.php"
     - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
+    - /bin/cp -p backend/admin_operations.php "$DEPLOYPATH/admin_operations.php"
     - /bin/cp -p backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
