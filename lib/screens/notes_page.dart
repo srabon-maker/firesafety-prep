@@ -7,6 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/study_note.dart';
 import '../services/notes_service.dart';
 import '../services/saved_notes_service.dart';
+import '../services/auth_guard.dart';
+import 'question_browser_page.dart';
+import 'saved_notes_page.dart';
 
 const Color notesMaroon = Color(0xFF650D18);
 
@@ -99,6 +102,7 @@ class _NotesPageState extends State<NotesPage> {
       appBar: AppBar(
         title: const Text('নোট ও রিসোর্স'),
         actions: [
+          IconButton(tooltip:'সংরক্ষিত নোট',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const SavedNotesPage())),icon:const Icon(Icons.bookmarks_outlined)),
           IconButton(
             tooltip: 'রিফ্রেশ',
             onPressed: _loading ? null : () => _loadNotes(),
@@ -230,6 +234,7 @@ class _NotesPageState extends State<NotesPage> {
                   itemBuilder: (context, index) {
                     final note = _result!.notes[index];
                     return _NoteCard(
+                      key: ValueKey(note.id),
                       note: note,
                       index: index,
                       onTap: () => Navigator.push(
@@ -279,6 +284,7 @@ class _NotesPageState extends State<NotesPage> {
 
 class _NoteCard extends StatefulWidget {
   const _NoteCard({
+    super.key,
     required this.note,
     required this.index,
     required this.onTap,
@@ -571,6 +577,15 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     },
                   ),
                 ],
+                const SizedBox(height:24),
+                OutlinedButton.icon(
+                  onPressed:() async {
+                    if(!await AuthGuard.ensureAuthenticated(context)||!context.mounted)return;
+                    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(noteId:note.id)));
+                  },
+                  icon:const Icon(Icons.quiz_outlined),
+                  label:const Text('সংশ্লিষ্ট বিভাগের প্রশ্ন অনুশীলন করুন'),
+                ),
                 if (note.fileUrl != null) ...[
                   const SizedBox(height: 24),
                   FilledButton.icon(

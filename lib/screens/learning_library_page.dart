@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/homepage_service.dart';
 import 'tests_page.dart';
+import 'question_browser_page.dart';
 
 class QuestionBankPage extends StatefulWidget {
   const QuestionBankPage({super.key, this.initialSearch = ''});
@@ -30,6 +31,8 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         return ListView(padding: const EdgeInsets.all(16), children: [
           TextField(controller: _search, onChanged: (_) => setState(() {}), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'প্রশ্নের বিভাগ খুঁজুন')),
           const SizedBox(height: 12),
+          FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(initialSearch:_search.text.trim()))),icon:const Icon(Icons.search),label:const Text('সরাসরি প্রশ্ন খুঁজুন')),
+          OutlinedButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const QuestionBrowserPage(savedOnly:true))),icon:const Icon(Icons.bookmark_outline),label:const Text('বুকমার্ক করা প্রশ্ন')),
           const Text('বিষয় নির্বাচন করে প্রকাশিত MCQ অনুশীলন করুন।'),
           for (final row in filtered)
             Card(child: ListTile(
