@@ -4,6 +4,7 @@ require_once __DIR__.'/admin_helpers.php';
 require_admin();
 require_once __DIR__.'/db.php';
 require_once __DIR__.'/premium_learning.php';
+require_once __DIR__.'/premium_pdf_storage.php';
 header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
 $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
@@ -17,6 +18,7 @@ function pm_id(mixed $v,int $min=1,int $max=PHP_INT_MAX):int {
 }
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
     verify_csrf();
+    $uploadedPdf=null;
     try{
         $action=$_POST['action']??'';
         if($isAds&&$action==='ads'){
@@ -35,6 +37,18 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
                 $args[]=$v;
             }
             $q=$pdo->prepare('UPDATE premium_integration_config SET '.implode('=?,',$keys).'=? WHERE id=1');$q->execute($args);
+        }elseif(!$isAds&&$action==='private_pdf'){
+            $id=pm_id($_POST['content_id']??null);
+            $pdo->beginTransaction();
+            $q=$pdo->prepare("SELECT n.id,n.file_url FROM notes n JOIN premium_note_items i ON i.note_id=n.id WHERE n.id=? FOR UPDATE");
+            $q->execute([$id]);$note=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$note||trim((string)$note['file_url'])!=='')throw new DomainException('পাবলিক ফাইল ছাড়া Premium নোট নির্বাচন করুন।');
+            $file=$_FILES['private_pdf']??null;if(!is_array($file))throw new DomainException('PDF নির্বাচন করুন।');
+            $uploadedPdf=premium_pdf_upload($file);
+            $q=$pdo->prepare('INSERT INTO premium_note_pdfs(note_id,storage_name,size_bytes,updated_at) VALUES (?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE storage_name=VALUES(storage_name),size_bytes=VALUES(size_bytes),updated_at=VALUES(updated_at)');
+            $q->execute([$id,$uploadedPdf['name'],$uploadedPdf['size']]);
+            $pdo->prepare('DELETE FROM premium_pdf_downloads WHERE note_id=?')->execute([$id]);
+            $pdo->commit();$uploadedPdf=null;
         }elseif(!$isAds&&$action==='learning'){
             $type=$_POST['type']??'';$id=pm_id($_POST['content_id']??null);
             $map=['question'=>['questions','premium_question_items','question_id'],'note'=>['notes','premium_note_items','note_id'],'test'=>['model_tests','premium_test_items','test_id']];
@@ -77,11 +91,13 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
         }else throw new DomainException('অনুরোধ সঠিক নয়।');
         $_SESSION[$flashKey]='সংরক্ষণ হয়েছে।';
     }catch(Throwable $e){
-        if($pdo->inTransaction())$pdo->rollBack();
+        if($pdo->inTransaction()){$pdo->rollBack();if($uploadedPdf!==null)@unlink($uploadedPdf['path']);}
         if(!($e instanceof DomainException))error_log('Premium admin: '.$e->getMessage());
         $_SESSION[$flashKey]=$e instanceof DomainException?$e->getMessage():'সংরক্ষণ হয়নি। মাইগ্রেশন ও সার্ভার লগ পরীক্ষা করুন।';
     }
-    header('Location: '.$url,true,303);exit;
+    $back=$url;
+    if(!$isAds&&in_array($_POST['action']??'',['learning','private_pdf'],true)){$back.='?learning_type='.rawurlencode(($_POST['action']??'')==='private_pdf'?'note':(is_string($_POST['type']??null)?$_POST['type']:'question'));}
+    header('Location: '.$back,true,303);exit;
 }
 $flash=$_SESSION[$flashKey]??'';unset($_SESSION[$flashKey]);$ready=true;$plans=[];$members=[];$events=[];$items=[];$ads=[];$more=false;
 $integration=[];$memberStats=[];$learning=[];$learningMore=false;
@@ -96,7 +112,7 @@ try{
         $learningOffset=($learningPage-1)*25;
         $sql=match($learningType){
             'question'=>"SELECT q.id,q.question AS title,q.status,".premium_question_marked()." AS marked,0 AS inherited FROM questions q WHERE q.is_archived=0 ORDER BY q.id DESC",
-            'note'=>"SELECT n.id,n.title,n.status,".premium_note_marked()." AS marked,0 AS inherited FROM notes n ORDER BY n.id DESC",
+            'note'=>"SELECT n.id,n.title,n.status,".premium_note_marked()." AS marked,0 AS inherited,EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) AS private_pdf FROM notes n ORDER BY n.id DESC",
             'test'=>"SELECT mt.id,mt.title,mt.status,EXISTS(SELECT 1 FROM premium_test_items p WHERE p.test_id=mt.id) AS marked,".premium_test_marked()." AS inherited FROM model_tests mt ORDER BY mt.id DESC"
         };
         $learning=$pdo->query($sql." LIMIT 26 OFFSET ".$learningOffset)->fetchAll(PDO::FETCH_ASSOC);$learningMore=count($learning)>25;if($learningMore)array_pop($learning);
@@ -131,7 +147,7 @@ function pm_nav(array $nav,string $url):void{?><nav class="pm-nav" aria-label="�
 <p class="pm-note">এই ধাপে শুধু পরীক্ষামূলক/সৌজন্যমূলক সদস্যপদ। Google Play Billing যাচাই না হওয়া পর্যন্ত কেনাকাটা বন্ধ। কোনো টাকা গ্রহণ বা বিক্রয় রেকর্ড করা হচ্ছে না।</p>
 <section class="pm-panel"><h2>সদস্যপদের রিপোর্ট</h2><div class="pm-grid"><div>মোট সদস্যপদ: <strong><?=(int)$memberStats['total']?></strong></div><div>সক্রিয়: <strong><?=(int)$memberStats['active']?></strong></div><div>মেয়াদ শেষ: <strong><?=(int)$memberStats['expired']?></strong></div></div><p class="pm-muted">এটি সৌজন্যমূলক/পরীক্ষামূলক সদস্যপদ। যাচাইকৃত বিক্রয় বা আয়ের তথ্য এখন নেই।</p></section>
 <section class="pm-panel"><h2>Google Play Billing — নিষ্ক্রিয়</h2><p class="pm-muted">শুধু Product ID সংরক্ষণ। কোনো পেমেন্ট চালু হবে না।</p><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="integration"><?php foreach(['monthly_product_id'=>'Monthly Product ID','quarterly_product_id'=>'Quarterly Product ID','annual_product_id'=>'Annual Product ID'] as $k=>$label):?><label><?=h($label)?><input name="<?=h($k)?>" maxlength="150" value="<?=h($integration[$k])?>"></label><?php endforeach;?><button>আইডি সংরক্ষণ</button></form></section>
-<section class="pm-panel"><h2>প্রশ্ন / নোট / মডেল টেস্ট — Free / Premium</h2><p class="pm-muted">সব কনটেন্ট শুরুতে Free। পুরোনো পাবলিক PDF বা লিংকসহ নোট লক করা যাবে না। জরুরি নিরাপত্তা নির্দেশনা Free রাখুন। Premium প্রশ্ন যুক্ত টেস্ট স্বয়ংক্রিয়ভাবে Premium হবে। চলমান পরীক্ষার ফলাফল অক্ষত থাকবে।</p><div class="pm-grid"><a href="?learning_type=question">প্রশ্ন ব্যাংক</a><a href="?learning_type=note">স্টাডি নোট</a><a href="?learning_type=test">মডেল টেস্ট</a></div><p>নির্বাচিত: <?=h($learningType)?></p><div class="pm-scroll"><table><thead><tr><th>ID</th><th>কনটেন্ট</th><th>অবস্থা</th><th>অ্যাক্সেস</th></tr></thead><tbody><?php foreach($learning as $item):?><tr><td><?=h((string)$item['id'])?></td><td><?=h($item['title'])?></td><td><?=h($item['status'])?></td><td><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="learning"><input type="hidden" name="type" value="<?=h($learningType)?>"><input type="hidden" name="content_id" value="<?=h((string)$item['id'])?>"><select name="locked"><option value="0" <?=$item['marked']?'':'selected'?>>Free</option><option value="1" <?=$item['marked']?'selected':''?>>Premium</option></select><?php if($learningType==='test'&&!$item['marked']&&$item['inherited']):?><small>Premium প্রশ্ন থাকার কারণে লক</small><?php endif;?><button>সংরক্ষণ</button></form></td></tr><?php endforeach;?></tbody></table></div><?php if(!$learning):?><p>কোনো কনটেন্ট নেই।</p><?php endif;?><?php if($learningPage>1):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage-1?>">আগের পেজ</a> <?php endif;?><?php if($learningMore):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage+1?>">পরের পেজ</a><?php endif;?></section>
+<section class="pm-panel"><h2>প্রশ্ন / নোট / মডেল টেস্ট — Free / Premium</h2><p class="pm-muted">সব কনটেন্ট শুরুতে Free। পুরোনো পাবলিক PDF বা লিংকসহ নোট লক করা যাবে না। জরুরি নিরাপত্তা নির্দেশনা Free রাখুন। Premium প্রশ্ন যুক্ত টেস্ট স্বয়ংক্রিয়ভাবে Premium হবে। চলমান পরীক্ষার ফলাফল অক্ষত থাকবে।</p><div class="pm-grid"><a href="?learning_type=question">প্রশ্ন ব্যাংক</a><a href="?learning_type=note">স্টাডি নোট</a><a href="?learning_type=test">মডেল টেস্ট</a></div><p>নির্বাচিত: <?=h($learningType)?></p><div class="pm-scroll"><table><thead><tr><th>ID</th><th>কনটেন্ট</th><th>অবস্থা</th><th>অ্যাক্সেস</th></tr></thead><tbody><?php foreach($learning as $item):?><tr><td><?=h((string)$item['id'])?></td><td><?=h($item['title'])?></td><td><?=h($item['status'])?></td><td><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="learning"><input type="hidden" name="type" value="<?=h($learningType)?>"><input type="hidden" name="content_id" value="<?=h((string)$item['id'])?>"><select name="locked"><option value="0" <?=$item['marked']?'':'selected'?>>Free</option><option value="1" <?=$item['marked']?'selected':''?>>Premium</option></select><?php if($learningType==='test'&&!$item['marked']&&$item['inherited']):?><small>Premium প্রশ্ন থাকার কারণে লক</small><?php endif;?><button>সংরক্ষণ</button></form><?php if($learningType==='note'&&$item['marked']):?><form method="post" enctype="multipart/form-data" class="pm-fields" style="margin-top:12px"><?php pm_csrf();?><input type="hidden" name="action" value="private_pdf"><input type="hidden" name="content_id" value="<?=h((string)$item['id'])?>"><label><?=$item['private_pdf']?'নতুন PDF দিয়ে প্রতিস্থাপন':'Private PDF (সর্বোচ্চ ১০ MB)'?><input type="file" name="private_pdf" accept="application/pdf,.pdf" required></label><button>সুরক্ষিত PDF আপলোড</button></form><?php endif;?></td></tr><?php endforeach;?></tbody></table></div><?php if(!$learning):?><p>কোনো কনটেন্ট নেই।</p><?php endif;?><?php if($learningPage>1):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage-1?>">আগের পেজ</a> <?php endif;?><?php if($learningMore):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage+1?>">পরের পেজ</a><?php endif;?></section>
 <div class="pm-grid"><section class="pm-panel"><h2>সদস্যপদ প্রদান / বাতিল</h2><form method="post" class="pm-fields"><?php pm_csrf();?>
 <label>নিবন্ধিত ব্যবহারকারীর আইডি<input name="user_id" type="number" min="1" required></label><label>মেয়াদ (আজ থেকে ১–৩৬৫ দিন)<input name="days" type="number" min="1" max="365" value="30"></label>
 <label>কারণ<input name="reason" maxlength="240" required></label><label><input type="checkbox" name="confirm" value="1" required> মেয়াদ নতুন করে নির্ধারণ বা বাতিল করার অনুমোদন দিচ্ছি।</label>

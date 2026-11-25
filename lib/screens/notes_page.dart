@@ -593,6 +593,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   icon:const Icon(Icons.quiz_outlined),
                   label:const Text('সংশ্লিষ্ট বিভাগের প্রশ্ন অনুশীলন করুন'),
                 ),
+                if(note.privatePdf)...[
+                  const SizedBox(height:24),
+                  FilledButton.icon(onPressed:() async {
+                    try{final uri=await NotesService.instance.privatePdfLink(note.id);if(!context.mounted)return;if(!await launchUrl(uri,mode:LaunchMode.externalApplication))throw const FormatException('Download failed');}
+                    catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('PDF ডাউনলোড হয়নি। আবার চেষ্টা করুন।')));}
+                  },icon:const Icon(Icons.picture_as_pdf_outlined),label:const Text('Premium PDF ডাউনলোড')),
+                ],
                 if (note.fileUrl != null) ...[
                   const SizedBox(height: 24),
                   FilledButton.icon(
