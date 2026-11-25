@@ -24,8 +24,8 @@ try {
     if ($action==='home') {
         $order=$pdo->query('SELECT section_order FROM homepage_settings WHERE id=1')->fetchColumn();
         if ($order===false) throw new RuntimeException('Homepage settings missing');
-        $allowed=['banners','progress','jobs','topics','notes','marketplace','community','tips'];
-        $sections=array_values(array_unique(array_intersect(explode(',',$order),$allowed)));
+        require_once __DIR__.'/../../homepage_sections.php';
+        $sections=hp_section_order((string)$order);
         $items=[];
         foreach (['banner'=>8,'tip'=>5] as $kind=>$limit) {
             $q=$pdo->prepare("SELECT id,title,body,title_en,body_en,target,image_url FROM homepage_content WHERE kind=? AND is_published=1 ORDER BY sort_order,id DESC LIMIT $limit");
@@ -33,7 +33,7 @@ try {
             $items[$kind]=$q->fetchAll(PDO::FETCH_ASSOC);
         }
         require_once __DIR__.'/../../premium_learning.php';
-        hp_reply(200,['success'=>true,'sections'=>$sections,'banners'=>$items['banner'],'tips'=>$items['tip'],'access_policy'=>premium_policy_public(premium_policy($pdo))]);
+        hp_reply(200,['success'=>true,'sections'=>$sections,'career_layout'=>true,'banners'=>$items['banner'],'tips'=>$items['tip'],'access_policy'=>premium_policy_public(premium_policy($pdo))]);
     }
     if ($action==='interviews') {
         $page=filter_var($_GET['page']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>10000]]);

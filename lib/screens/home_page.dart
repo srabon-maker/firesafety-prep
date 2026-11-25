@@ -15,6 +15,8 @@ import 'community_page.dart';
 import 'notification_inbox_page.dart';
 import 'learning_library_page.dart';
 import '../widgets/home_hero_banner.dart';
+import '../widgets/career_quick_links.dart';
+import 'career_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -204,6 +206,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       );
+      case 'career':return CareerQuickLinks(onOpen:(section)=>CareerPage.open(context,section:section));
       case 'community':return _link('ফায়ার সেফটি কমিউনিটি','অভিজ্ঞতা, প্রশ্ন ও আলোচনা',Icons.groups_outlined,'community');
       case 'tips':
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['tips']);
@@ -233,7 +236,7 @@ class _HomePageState extends State<HomePage> {
         ])),
       Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
         final data=snapshot.hasData?snapshot.data:null;
-        final sections=data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']);
+        final sections=data==null?HomepageService.defaultSections:HomepageService.homeSections(data['sections'], careerConfigured:data['career_layout']==true);
         final policy=data?['access_policy'];
         final pending=policy is Map&&policy['mode']=='free'&&policy['scheduled_mode']!='free';
         final activation=policy is Map?DateTime.tryParse(policy['starts_at']?.toString()??'')?.toUtc().add(const Duration(hours:6)):null;

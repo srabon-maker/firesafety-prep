@@ -4,7 +4,7 @@ import 'auth_service.dart';
 
 class HomepageService {
   static const defaultSections = <String>[
-    'banners', 'marketplace', 'progress', 'jobs', 'topics', 'notes', 'community', 'tips'
+    'banners', 'marketplace', 'career', 'progress', 'jobs', 'topics', 'notes', 'community', 'tips'
   ];
   static const endpoint = 'https://fire.manobikishwarganj.com/api/homepage/index.php';
 
@@ -20,6 +20,18 @@ class HomepageService {
 
   static List<String> sections(dynamic raw) =>
       strings(raw).where(defaultSections.contains).toSet().toList();
+
+  // Older deployed APIs have no career layout flag. Preserve their order
+  // and provide the new hub; updated APIs can intentionally hide or move it.
+  static List<String> homeSections(dynamic raw, {required bool careerConfigured}) {
+    final order = sections(raw);
+    if (!careerConfigured && !order.contains('career')) {
+      final marketplace = order.indexOf('marketplace');
+      final banners = order.indexOf('banners');
+      order.insert(marketplace >= 0 ? marketplace + 1 : banners >= 0 ? banners + 1 : 0, 'career');
+    }
+    return order;
+  }
 
   static Future<Map<String, dynamic>> fetch(String action,
       {Map<String, String> filters = const {}, http.Client? client}) async {

@@ -3,11 +3,12 @@ declare(strict_types=1);
 require_once __DIR__.'/admin_helpers.php';
 require_admin();
 require_once __DIR__.'/homepage_image_upload.php';
+require_once __DIR__.'/homepage_sections.php';
 require_once __DIR__.'/db.php';
 header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
 $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
-$sections=['banners'=>'ব্যানার','progress'=>'দৈনিক প্রস্তুতি','jobs'=>'চাকরি','topics'=>'বিষয়ভিত্তিক প্রস্তুতি','notes'=>'নতুন নোট','marketplace'=>'মার্কেটপ্লেস','community'=>'কমিউনিটি','tips'=>'সেফটি টিপস'];
+$sections=['banners'=>'ব্যানার','progress'=>'দৈনিক প্রস্তুতি','jobs'=>'চাকরি','topics'=>'বিষয়ভিত্তিক প্রস্তুতি','notes'=>'নতুন নোট','marketplace'=>'মার্কেটপ্লেস','career'=>'ক্যারিয়ার ডেভেলপমেন্ট','community'=>'কমিউনিটি','tips'=>'সেফটি টিপস'];
 // Only the interview entry point may select interview mode; never trust request parameters.
 $isInterview=defined('FSBD_INTERVIEW_ADMIN') && FSBD_INTERVIEW_ADMIN===true;
 $pageTitle=$isInterview?'ইন্টারভিউ ব্যবস্থাপনা':'হোমপেজ ব্যবস্থাপনা';
@@ -37,7 +38,7 @@ if (($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
             $order=$raw===''?[]:array_map('trim',explode(',',$raw));
             if (array_diff($order,array_keys($sections))||count($order)!==count(array_unique($order))) throw new DomainException('সেকশনের নাম বা ক্রম সঠিক নয়।');
             $q=$pdo->prepare('UPDATE homepage_settings SET section_order=? WHERE id=1');
-            $q->execute([implode(',',$order)]);
+            $q->execute([hp_store_section_order($order)]);
         } elseif (($_POST['action']??'')==='save') {
             $id=hp_id($_POST['id']??0);
             $kind=hp_field('kind',20,true); if(!isset($kinds[$kind])) throw new DomainException('কনটেন্টের ধরন সঠিক নয়।');
@@ -89,6 +90,7 @@ try {
     if (!$isInterview) {
         $order=$pdo->query('SELECT section_order FROM homepage_settings WHERE id=1')->fetchColumn();
         if($order===false) throw new RuntimeException('Migration missing');
+        $order=implode(',',hp_section_order((string)$order));
     }
     $offset=($page-1)*30;
     $rows=$pdo->query("SELECT * FROM homepage_content WHERE $scope ORDER BY id DESC LIMIT 31 OFFSET $offset")->fetchAll(PDO::FETCH_ASSOC);
