@@ -1,0 +1,12 @@
+# Public, re-encoded banner images only. No script execution or directory listings.
+Options -Indexes -ExecCGI
+<FilesMatch "(?i)^(?![a-f0-9]{48}\.jpg$).+">
+    Require all denied
+</FilesMatch>
+<FilesMatch "(?i)^[a-f0-9]{48}\.jpg$">
+    SetHandler none
+    ForceType image/jpeg
+</FilesMatch>
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -14,6 +14,7 @@ import 'marketplace_page.dart';
 import 'community_page.dart';
 import 'notification_inbox_page.dart';
 import 'learning_library_page.dart';
+import '../widgets/home_hero_banner.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -115,6 +116,19 @@ class _HomePageState extends State<HomePage> {
   );
   Widget _link(String title,String subtitle,IconData icon,String target)=>Card(child:ListTile(
     leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:()=>_open(target)));
+  void _openBanner(Map<String,dynamic> row) {
+    final target=HomepageService.text(row,'target');
+    final title=AppText.of(context,HomepageService.text(row,'title'),
+      HomepageService.text(row,'title_en').isEmpty?HomepageService.text(row,'title'):HomepageService.text(row,'title_en'));
+    final body=AppText.of(context,HomepageService.text(row,'body'),
+      HomepageService.text(row,'body_en').isEmpty?HomepageService.text(row,'body'):HomepageService.text(row,'body_en'));
+    showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+      title:Text(title),content:SingleChildScrollView(child:Text(body)),actions:[
+        TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('বন্ধ করুন')),
+        if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:const Text('দেখুন')),
+      ],
+    ));
+  }
   Widget _content(Map<String,dynamic> row,{bool banner=false}) {
     final image=HomepageService.text(row,'image_url');
     final target=HomepageService.text(row,'target');
@@ -136,10 +150,7 @@ class _HomePageState extends State<HomePage> {
       case 'banners':
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['banners']);
         if(rows.isEmpty)return const SizedBox.shrink();
-        return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          _heading('গুরুত্বপূর্ণ ঘোষণা'),
-          SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[for(final row in rows) SizedBox(width:260,child:_content(row,banner:true))])),
-        ]);
+        return HomeHeroBanner(items: rows, onOpen: _openBanner);
       case 'progress':return _link('আজকের প্রস্তুতি','দৈনিক লক্ষ্য, অনুশীলন ও অগ্রগতি',Icons.track_changes,'progress');
       case 'jobs':return Column(children:[_heading('সর্বশেষ চাকরির বিজ্ঞপ্তি',target:'jobs'),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const LinearProgressIndicator();

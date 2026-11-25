@@ -55,7 +55,10 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) => Scaffold(
         body: IndexedStack(
           index: index,
-          children: pages,
+          children: [
+            TickerMode(enabled: index == 0, child: pages[0]),
+            ...pages.skip(1),
+          ],
         ),
         bottomNavigationBar: NavigationBar(
           height: 70,
