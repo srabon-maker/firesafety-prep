@@ -39,8 +39,9 @@ class _CommunityPageState extends State<CommunityPage> {
   String _tr(String bn, String en) => AppText.of(context, bn, en);
 
   void _reload() {
-    _feed = CommunityService.instance.feed(sort: _sort).then((posts) {
-      _lastPosts = posts;
+    final sortAtStart = _sort;
+    _feed = CommunityService.instance.feed(sort: sortAtStart).then((posts) {
+      if (sortAtStart == _sort) _lastPosts = posts;
       return posts;
     });
   }
@@ -232,12 +233,30 @@ class _CommunityPageState extends State<CommunityPage> {
                 _sortButton(_tr('জনপ্রিয়', 'Popular'), 'popular'),
               ],
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: Icon(_sort == 'mine' ? Icons.forum_outlined : Icons.person_outline),
+                label: Text(_sort == 'mine'
+                    ? _tr('সকল পোস্ট', 'All posts')
+                    : _tr('আমার পোস্ট', 'My posts')),
+                onPressed: () async {
+                  if (_sort != 'mine' &&
+                      (!await AuthGuard.ensureAuthenticated(context) || !mounted)) return;
+                  setState(() {
+                    _sort = _sort == 'mine' ? 'latest' : 'mine';
+                    _lastPosts = null;
+                    _reload();
+                  });
+                },
+              ),
+            ),
             const SizedBox(height: 14),
             FutureBuilder<List<CommunityPost>>(
               future: _feed,
               builder: (context, snapshot) {
                 // New data if ready, otherwise the last loaded posts.
-                final loaded = snapshot.data ?? _lastPosts;
+                final loaded = _lastPosts ?? (snapshot.connectionState == ConnectionState.done ? snapshot.data : null);
                 if (loaded == null) {
                   if (snapshot.hasError) {
                     return _message(
@@ -303,6 +322,7 @@ class _CommunityPageState extends State<CommunityPage> {
         if (selected) return;
         setState(() {
           _sort = value;
+          _lastPosts = null;
           _reload();
         });
       },

@@ -3,8 +3,101 @@ import 'package:flutter/material.dart';
 import '../models/community_post.dart';
 import '../services/auth_guard.dart';
 import '../services/community_service.dart';
+import '../settings/app_settings.dart';
 
 const _maroon = Color(0xFF650D18);
+
+String _tr(BuildContext context, String bn, String en) => AppText.of(context, bn, en);
+
+void _feedback(BuildContext context, String message) {
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+Future<bool> _confirmDelete(BuildContext context, String title) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(title),
+        content: Text(_tr(dialog, 'এটি আর প্রকাশ্যে দেখা যাবে না।', 'This will no longer be publicly visible.')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: Text(_tr(dialog, 'বাতিল', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: Text(_tr(dialog, 'মুছুন', 'Delete'))),
+        ],
+      ),
+    ) == true;
+
+Future<void> _report(BuildContext context, String type, int id) async {
+  if (!await AuthGuard.ensureAuthenticated(context) || !context.mounted) return;
+  final reasons = {
+    'spam': _tr(context, 'স্প্যাম', 'Spam'),
+    'harassment': _tr(context, 'হয়রানি', 'Harassment'),
+    'misinformation': _tr(context, 'ভুল তথ্য', 'Misinformation'),
+    'inappropriate': _tr(context, 'অনুপযুক্ত বিষয়', 'Inappropriate content'),
+    'other': _tr(context, 'অন্যান্য', 'Other'),
+  };
+  final reason = await showDialog<String>(
+    context: context,
+    builder: (dialog) => SimpleDialog(
+      title: Text(_tr(dialog, 'রিপোর্টের কারণ', 'Report reason')),
+      children: [
+        for (final entry in reasons.entries)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialog, entry.key),
+            child: Text(entry.value),
+          ),
+      ],
+    ),
+  );
+  if (reason == null || !context.mounted) return;
+  try {
+    await CommunityService.instance.report(targetType: type, targetId: id, reason: reason);
+    if (context.mounted) _feedback(context, _tr(context, 'রিপোর্ট জমা হয়েছে।', 'Report submitted.'));
+  } catch (error) {
+    _feedback(context, error.toString().replaceFirst('Exception: ', ''));
+  }
+}
+
+class _EditPostDialog extends StatefulWidget {
+  const _EditPostDialog({required this.post});
+  final CommunityPost post;
+  @override
+  State<_EditPostDialog> createState() => _EditPostDialogState();
+}
+
+class _EditPostDialogState extends State<_EditPostDialog> {
+  late final TextEditingController _controller = TextEditingController(text: widget.post.text);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(_tr(context, 'পোস্ট সম্পাদনা', 'Edit post')),
+    content: SingleChildScrollView(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(_tr(context, 'ছবি অপরিবর্তিত থাকবে। পরিবর্তিত পোস্ট আবার অনুমোদনের জন্য যাবে।',
+            'The photo stays unchanged. Edited posts require approval again.')),
+        TextField(
+          controller: _controller, minLines: 3, maxLines: 8, maxLength: 3000,
+          onChanged: (_) => setState(() {}),
+        ),
+      ]),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(_tr(context, 'বাতিল', 'Cancel'))),
+      FilledButton(
+        onPressed: _controller.text.trim() == widget.post.text ||
+            (_controller.text.trim().isEmpty && (widget.post.imageUrl?.isNotEmpty != true))
+            ? null : () => Navigator.pop(context, _controller.text.trim()),
+        child: Text(_tr(context, 'সংরক্ষণ', 'Save')),
+      ),
+    ],
+  );
+}
 
 class PostCard extends StatelessWidget {
   const PostCard({
@@ -28,6 +121,32 @@ class PostCard extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(error.toString().replaceFirst('Exception: ', '')),
       ));
+    }
+  }
+
+  Future<void> _postAction(BuildContext context, String action) async {
+    if (action == 'report') {
+      await _report(context, 'post', post.id);
+      return;
+    }
+    if (!await AuthGuard.ensureAuthenticated(context) || !context.mounted) return;
+    try {
+      if (action == 'edit') {
+        final body = await showDialog<String>(
+          context: context, builder: (_) => _EditPostDialog(post: post),
+        );
+        if (body == null || !context.mounted) return;
+        await CommunityService.instance.editPost(post.id, body);
+        onChanged();
+        if (context.mounted) _feedback(context, _tr(context, 'পরিবর্তন অনুমোদনের জন্য জমা হয়েছে।', 'Edit submitted for approval.'));
+      } else if (action == 'delete') {
+        if (!await _confirmDelete(context, _tr(context, 'পোস্ট মুছবেন?', 'Delete post?')) || !context.mounted) return;
+        await CommunityService.instance.deletePost(post.id);
+        onChanged();
+        if (context.mounted) _feedback(context, _tr(context, 'পোস্ট সরানো হয়েছে।', 'Post removed.'));
+      }
+    } catch (error) {
+      _feedback(context, error.toString().replaceFirst('Exception: ', ''));
     }
   }
 
@@ -106,8 +225,25 @@ class PostCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.public_rounded,
-                    color: scheme.onSurfaceVariant, size: 22),
+                if (post.status != 'approved')
+                  Flexible(child: Text(post.status == 'pending'
+                    ? _tr(context, 'অপেক্ষমাণ', 'Pending')
+                    : _tr(context, 'প্রত্যাখ্যাত', 'Rejected'),
+                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant))),
+                if (showActions && post.id > 0)
+                  PopupMenuButton<String>(
+                    tooltip: _tr(context, 'পোস্ট অপশন', 'Post options'),
+                    onSelected: (action) => _postAction(context, action),
+                    itemBuilder: (context) => [
+                      if (post.isOwner) ...[
+                        PopupMenuItem(value: 'edit', child: Text(_tr(context, 'সম্পাদনা', 'Edit post'))),
+                        PopupMenuItem(value: 'delete', child: Text(_tr(context, 'মুছুন', 'Delete post'))),
+                      ] else
+                        PopupMenuItem(value: 'report', child: Text(_tr(context, 'রিপোর্ট', 'Report post'))),
+                    ],
+                  )
+                else
+                  Icon(Icons.public_rounded, color: scheme.onSurfaceVariant, size: 22),
               ],
             ),
           ),
@@ -159,7 +295,7 @@ class PostCard extends StatelessWidget {
                 ),
               ),
             ),
-          if (showActions) ...[
+          if (showActions && post.status == 'approved') ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 3),
               child: Row(
@@ -275,6 +411,24 @@ class _CommentsPageState extends State<CommentsPage> {
     }
   }
 
+  Future<void> _commentAction(Comment comment, String action) async {
+    if (action == 'report') {
+      await _report(context, 'comment', comment.id);
+      return;
+    }
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    if (!await _confirmDelete(context, _tr(context, 'মন্তব্য মুছবেন?', 'Delete comment?')) || !mounted) return;
+    try {
+      await CommunityService.instance.deleteComment(comment.id);
+      if (!mounted) return;
+      setState(_reload);
+      widget.onChanged();
+      _feedback(context, _tr(context, 'মন্তব্য সরানো হয়েছে।', 'Comment removed.'));
+    } catch (error) {
+      if (mounted) _feedback(context, error.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -331,12 +485,24 @@ class _CommentsPageState extends State<CommentsPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(comment.author,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: scheme.primary,
-                                      fontSize: 12,
-                                    )),
+                                Row(
+                                  children: [
+                                    Expanded(child: Text(comment.author,
+                                      style: TextStyle(fontWeight: FontWeight.w800,
+                                        color: scheme.primary, fontSize: 12))),
+                                    if (comment.id > 0)
+                                      PopupMenuButton<String>(
+                                        tooltip: _tr(context, 'মন্তব্য অপশন', 'Comment options'),
+                                        onSelected: (action) => _commentAction(comment, action),
+                                        itemBuilder: (context) => [
+                                          if (comment.isOwner)
+                                            PopupMenuItem(value: 'delete', child: Text(_tr(context, 'মুছুন', 'Delete comment')))
+                                          else
+                                            PopupMenuItem(value: 'report', child: Text(_tr(context, 'রিপোর্ট', 'Report comment'))),
+                                        ],
+                                      ),
+                                  ],
+                                ),
                                 const SizedBox(height: 5),
                                 Text(comment.text,
                                     style: const TextStyle(height: 1.5)),

@@ -109,6 +109,7 @@ try {
             'posts_table' => false,
             'comments_table' => false,
             'likes_table' => false,
+            'reports_table' => false,
             'upload_directory' => false,
             'upload_writable' => false,
         ];
@@ -116,6 +117,7 @@ try {
             'posts_table' => 'SELECT 1 FROM community_posts LIMIT 1',
             'comments_table' => 'SELECT 1 FROM community_comments LIMIT 1',
             'likes_table' => 'SELECT 1 FROM community_post_likes LIMIT 1',
+            'reports_table' => 'SELECT 1 FROM community_reports LIMIT 1',
         ] as $key => $sql) {
             try { $pdo->query($sql); $checks[$key] = true; }
             catch (Throwable $ignored) { $checks[$key] = false; }
@@ -133,26 +135,32 @@ try {
                 : 'কমিউনিটি API সেটআপ অসম্পূর্ণ। cPanel deployment checklist দেখুন।',
         ]);
     }
-    if ($method === 'GET' && $action === 'feed') {
-        $userId = community_auth($pdo, false);
+    if ($method === 'GET' && in_array($action, ['feed', 'my_posts'], true)) {
+        $mine = $action === 'my_posts';
+        $userId = community_auth($pdo, $mine);
+        $where = $mine ? "p.user_id=? AND p.status IN ('pending','approved','rejected')" : "p.status='approved'";
         $sort = ($_GET['sort'] ?? '') === 'popular' ? 'popular' : 'latest';
         $order = $sort === 'popular' ? 'likes_count DESC, p.created_at DESC' : 'p.created_at DESC';
         $stmt = $pdo->prepare(
-            "SELECT p.id, p.body, p.image_path, p.created_at,
+            "SELECT p.id, p.body, p.image_path, p.created_at, p.status,
+                    (p.user_id=?) AS is_owner,
                     u.full_name AS author, u.profile_photo AS author_photo,
                     (SELECT COUNT(*) FROM community_post_likes l WHERE l.post_id=p.id) AS likes_count,
                     (SELECT COUNT(*) FROM community_comments c WHERE c.post_id=p.id AND c.status='visible') AS comments_count,
                     (SELECT COUNT(*) FROM community_post_likes mine WHERE mine.post_id=p.id AND mine.user_id=?) AS liked
              FROM community_posts p JOIN users u ON u.id=p.user_id
-             WHERE p.status='approved' ORDER BY $order LIMIT 50"
+             WHERE $where ORDER BY $order LIMIT 50"
         );
-        $stmt->execute([$userId ?? 0]);
+        $args = [$userId ?? 0, $userId ?? 0];
+        if ($mine) $args[] = $userId;
+        $stmt->execute($args);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as &$row) {
             $row['id'] = (int)$row['id'];
             $row['likes_count'] = (int)$row['likes_count'];
             $row['comments_count'] = (int)$row['comments_count'];
             $row['liked'] = (int)$row['liked'] > 0;
+            $row['is_owner'] = (int)$row['is_owner'] > 0;
             $row['image_url'] = community_image_url($row['image_path']);
             unset($row['image_path']);
         }
@@ -160,17 +168,25 @@ try {
         community_reply(200, ['success'=>true,'data'=>$rows]);
     }
     if ($method === 'GET' && $action === 'comments') {
+        $userId = community_auth($pdo, false);
         $postId = community_id($_GET['post_id'] ?? null);
         $check = $pdo->prepare("SELECT id FROM community_posts WHERE id=? AND status='approved'");
         $check->execute([$postId]);
         if (!$check->fetchColumn()) community_reply(404, ['success'=>false,'message'=>'পোস্ট পাওয়া যায়নি।']);
         $q = $pdo->prepare(
-            "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author
+            "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author,
+                    (c.user_id=?) AS is_owner
              FROM community_comments c JOIN users u ON u.id=c.user_id
              WHERE c.post_id=? AND c.status='visible' ORDER BY c.id ASC LIMIT 100"
         );
-        $q->execute([$postId]);
-        community_reply(200, ['success'=>true,'data'=>$q->fetchAll(PDO::FETCH_ASSOC)]);
+        $q->execute([$userId ?? 0, $postId]);
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $row['id'] = (int)$row['id'];
+            $row['is_owner'] = (int)$row['is_owner'] > 0;
+        }
+        unset($row);
+        community_reply(200, ['success'=>true,'data'=>$rows]);
     }
     if ($method === 'POST' && $action === 'create') {
         $userId = community_auth($pdo);
@@ -232,12 +248,94 @@ try {
         $stmt->execute([$postId, $userId, $body]);
         community_reply(201, ['success'=>true,'message'=>'মন্তব্য প্রকাশিত হয়েছে।']);
     }
+    if ($method === 'POST' && in_array($action, ['edit_post','delete_post','delete_comment','report'], true)) {
+        $userId = community_auth($pdo);
+        $data = community_input();
+        if ($action === 'edit_post' || $action === 'delete_post') {
+            $postId = community_id($data['post_id'] ?? null);
+            $pdo->beginTransaction();
+            $q = $pdo->prepare("SELECT body,image_path,status FROM community_posts WHERE id=? AND user_id=? FOR UPDATE");
+            $q->execute([$postId, $userId]);
+            $post = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$post || !in_array($post['status'], ['approved','pending','rejected'], true)) {
+                $pdo->rollBack();
+                community_reply(404, ['success'=>false,'message'=>'নিজের পোস্ট পাওয়া যায়নি।']);
+            }
+            if ($action === 'edit_post') {
+                $body = community_text($data['body'] ?? null, COMMUNITY_MAX_TEXT, !empty($post['image_path']));
+                if ($body === $post['body']) {
+                    $pdo->rollBack();
+                    community_reply(200, ['success'=>true,'status'=>$post['status']]);
+                }
+                $q = $pdo->prepare("UPDATE community_posts SET body=?,status='pending',moderated_at=NULL WHERE id=? AND user_id=?");
+                $q->execute([$body,$postId,$userId]);
+                $status = 'pending';
+            } else {
+                $q = $pdo->prepare("UPDATE community_posts SET status='hidden',moderated_at=NOW() WHERE id=? AND user_id=?");
+                $q->execute([$postId,$userId]);
+                $status = 'hidden';
+            }
+            $pdo->commit();
+            community_reply(200, ['success'=>true,'status'=>$status]);
+        }
+        if ($action === 'delete_comment') {
+            $commentId = community_id($data['comment_id'] ?? null);
+            $q = $pdo->prepare("UPDATE community_comments SET status='hidden' WHERE id=? AND user_id=? AND status='visible'");
+            $q->execute([$commentId,$userId]);
+            if (!$q->rowCount()) community_reply(404, ['success'=>false,'message'=>'নিজের মন্তব্য পাওয়া যায়নি।']);
+            community_reply(200, ['success'=>true]);
+        }
+        $type = $data['target_type'] ?? '';
+        if (!in_array($type, ['post','comment'], true)) community_reply(422, ['success'=>false,'message'=>'সঠিক রিপোর্ট নির্বাচন করুন।']);
+        $targetId = community_id($data['target_id'] ?? null);
+        $reason = $data['reason'] ?? '';
+        if (!in_array($reason, ['spam','harassment','misinformation','inappropriate','other'], true)) {
+            community_reply(422, ['success'=>false,'message'=>'রিপোর্টের কারণ নির্বাচন করুন।']);
+        }
+        $details = community_text($data['details'] ?? '', 500, true);
+        // Serialize reports by the same account, including its rate limit.
+        $pdo->beginTransaction();
+        $q = $pdo->prepare('SELECT id FROM users WHERE id=? FOR UPDATE');
+        $q->execute([$userId]);
+        if (!$q->fetchColumn()) {
+            $pdo->rollBack();
+            community_reply(401, ['success'=>false,'message'=>'আবার লগইন করুন।']);
+        }
+        $sql = $type === 'post'
+            ? "SELECT id AS post_id,user_id FROM community_posts WHERE id=? AND status='approved'"
+            : "SELECT c.post_id,c.user_id FROM community_comments c JOIN community_posts p ON p.id=c.post_id WHERE c.id=? AND c.status='visible' AND p.status='approved'";
+        $q = $pdo->prepare($sql);
+        $q->execute([$targetId]);
+        $target = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$target || (int)$target['user_id'] === $userId) {
+            $pdo->rollBack();
+            community_reply(404, ['success'=>false,'message'=>'রিপোর্ট করার উপযুক্ত পোস্ট বা মন্তব্য পাওয়া যায়নি।']);
+        }
+        $q = $pdo->prepare('SELECT id FROM community_reports WHERE reporter_id=? AND target_type=? AND target_id=?');
+        $q->execute([$userId,$type,$targetId]);
+        if ($q->fetchColumn()) {
+            $pdo->rollBack();
+            community_reply(409, ['success'=>false,'message'=>'আপনি ইতিমধ্যে এটি রিপোর্ট করেছেন।']);
+        }
+        $q = $pdo->prepare('SELECT COUNT(*) FROM community_reports WHERE reporter_id=? AND created_at>=NOW()-INTERVAL 1 DAY');
+        $q->execute([$userId]);
+        if ((int)$q->fetchColumn() >= 20) {
+            $pdo->rollBack();
+            community_reply(429, ['success'=>false,'message'=>'২৪ ঘণ্টায় সর্বোচ্চ ২০টি রিপোর্ট করা যাবে।']);
+        }
+        $q = $pdo->prepare('INSERT INTO community_reports (reporter_id,post_id,target_type,target_id,reason,details) VALUES (?,?,?,?,?,?)');
+        $q->execute([$userId,$target['post_id'],$type,$targetId,$reason,$details]);
+        $pdo->commit();
+        community_reply(201, ['success'=>true,'message'=>'রিপোর্ট জমা হয়েছে।']);
+    }
     header('Allow: GET, POST');
     community_reply(405, ['success'=>false,'message'=>'Unsupported request.']);
 } catch (PDOException $e) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
     error_log('Community database error: ' . $e->getMessage());
     community_reply(500, ['success'=>false,'message'=>'কমিউনিটি সার্ভারে সমস্যা হয়েছে।']);
 } catch (Throwable $e) {
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
     error_log('Community error: ' . $e->getMessage());
     community_reply(500, ['success'=>false,'message'=>'অনুরোধটি সম্পন্ন হয়নি।']);
 }

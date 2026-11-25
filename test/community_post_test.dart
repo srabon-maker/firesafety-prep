@@ -22,6 +22,19 @@ void main() {
     expect(post.liked, true);
   });
 
+  test('ownership and moderation status are parsed with safe defaults', () {
+    final mine = CommunityPost.fromJson({'id': 7, 'is_owner': true, 'status': 'pending'});
+    expect(mine.isOwner, isTrue);
+    expect(mine.status, 'pending');
+    final other = CommunityPost.fromJson({'id': 8});
+    expect(other.isOwner, isFalse);
+    expect(other.status, 'approved');
+    final comment = Comment.fromJson({'id': '9', 'is_owner': 1, 'text': 'test'});
+    expect(comment.id, 9);
+    expect(comment.isOwner, isTrue);
+    expect(Comment.fromJson({}).isOwner, isFalse);
+  });
+
   test('photo-only post is valid with empty text', () {
     final post = CommunityPost.fromJson({
       'id': 2,
