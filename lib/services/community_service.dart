@@ -42,9 +42,9 @@ class CommunityService {
 
   Future<List<CommunityPost>> feed({String sort = 'latest'}) async {
     final uri = Uri.parse(_url).replace(queryParameters: {
-      'action': 'feed', 'sort': sort,
+      'action': sort == 'mine' ? 'my_posts' : 'feed', 'sort': sort,
     });
-    final response = await http.get(uri, headers: await _headers()).timeout(_timeout);
+    final response = await http.get(uri, headers: await _headers(requireLogin: sort == 'mine')).timeout(_timeout);
     final data = _decode(response)['data'];
     if (data is! List) throw Exception('পোস্টের তালিকা সঠিক নয়।');
     return data.map((item) =>
@@ -71,6 +71,30 @@ class CommunityService {
     }
     final streamed = await request.send().timeout(_timeout);
     _decode(await http.Response.fromStream(streamed));
+  }
+
+  Future<void> editPost(int postId, String body) async {
+    await _post('edit_post', {'post_id': postId, 'body': body});
+  }
+
+  Future<void> deletePost(int postId) async {
+    await _post('delete_post', {'post_id': postId});
+  }
+
+  Future<void> deleteComment(int commentId) async {
+    await _post('delete_comment', {'comment_id': commentId});
+  }
+
+  Future<void> report({
+    required String targetType,
+    required int targetId,
+    required String reason,
+    String details = '',
+  }) async {
+    await _post('report', {
+      'target_type': targetType, 'target_id': targetId,
+      'reason': reason, 'details': details,
+    });
   }
 
   Future<void> toggleLike(int postId) async {

@@ -12,11 +12,49 @@ function community_review_escape(mixed $value): string {
 $error = '';
 $saved = isset($_GET['saved']);
 $csrf = csrf_token();
+$reportsReady = true;
+try { $pdo->query('SELECT 1 FROM community_reports LIMIT 1'); }
+catch (Throwable $ignored) { $reportsReady = false; }
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     verify_csrf();
     $id = filter_var($_POST['post_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
     $decision = (string)($_POST['decision'] ?? '');
     try {
+        if (in_array($decision, ['hide_comment','resolve_report','dismiss_report','hide_report_target'], true)) {
+            if (!$reportsReady) throw new InvalidArgumentException('প্রথমে রিপোর্ট migration চালান।');
+            $pdo->beginTransaction();
+            if ($decision === 'hide_comment') {
+                $commentId = filter_var($_POST['comment_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+                if (!$commentId) throw new InvalidArgumentException('সঠিক মন্তব্য নির্বাচন করুন।');
+                $q = $pdo->prepare("UPDATE community_comments SET status='hidden' WHERE id=? AND status='visible'");
+                $q->execute([$commentId]);
+                $q = $pdo->prepare("UPDATE community_reports SET status='resolved',reviewed_at=NOW() WHERE target_type='comment' AND target_id=? AND status='open'");
+                $q->execute([$commentId]);
+            } else {
+                $reportId = filter_var($_POST['report_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+                if (!$reportId) throw new InvalidArgumentException('সঠিক রিপোর্ট নির্বাচন করুন।');
+                $q = $pdo->prepare("SELECT * FROM community_reports WHERE id=? AND status='open' FOR UPDATE");
+                $q->execute([$reportId]);
+                $report = $q->fetch(PDO::FETCH_ASSOC);
+                if (!$report) throw new InvalidArgumentException('রিপোর্টটি ইতিমধ্যে পর্যালোচনা করা হয়েছে।');
+                if ($decision === 'hide_report_target') {
+                    $sql = $report['target_type'] === 'post'
+                        ? "UPDATE community_posts SET status='hidden',moderated_at=NOW() WHERE id=? AND status IN ('pending','approved','rejected')"
+                        : "UPDATE community_comments SET status='hidden' WHERE id=? AND status='visible'";
+                    $q = $pdo->prepare($sql);
+                    $q->execute([$report['target_id']]);
+                    $q = $pdo->prepare("UPDATE community_reports SET status='resolved',reviewed_at=NOW() WHERE target_type=? AND target_id=? AND status='open'");
+                    $q->execute([$report['target_type'],$report['target_id']]);
+                } else {
+                    $next = $decision === 'dismiss_report' ? 'dismissed' : 'resolved';
+                    $q = $pdo->prepare('UPDATE community_reports SET status=?,reviewed_at=NOW() WHERE id=?');
+                    $q->execute([$next,$reportId]);
+                }
+            }
+            $pdo->commit();
+            header('Location: community_review.php?saved=1');
+            exit;
+        }
         if (!$id || !in_array($decision, ['approve','reject','hide'], true)) {
             throw new InvalidArgumentException('অনুরোধটি সঠিক নয়।');
         }
@@ -50,6 +88,20 @@ $recent = $pdo->query(
      FROM community_posts p WHERE p.status<>'pending'
      ORDER BY p.id DESC LIMIT 40"
 )->fetchAll(PDO::FETCH_ASSOC);
+$reports = $reportsReady ? $pdo->query(
+    "SELECT r.*, u.full_name AS reporter, p.body AS post_body, p.status AS post_status,
+            c.body AS comment_body, c.status AS comment_status
+     FROM community_reports r JOIN users u ON u.id=r.reporter_id
+     JOIN community_posts p ON p.id=r.post_id
+     LEFT JOIN community_comments c ON r.target_type='comment' AND c.id=r.target_id
+     WHERE r.status='open' ORDER BY r.id ASC LIMIT 100"
+)->fetchAll(PDO::FETCH_ASSOC) : [];
+$comments = $reportsReady ? $pdo->query(
+    "SELECT c.id,c.post_id,c.body,c.created_at,u.full_name
+     FROM community_comments c JOIN users u ON u.id=c.user_id
+     JOIN community_posts p ON p.id=c.post_id
+     WHERE c.status='visible' AND p.status='approved' ORDER BY c.id DESC LIMIT 100"
+)->fetchAll(PDO::FETCH_ASSOC) : [];
 ?>
 <!doctype html>
 <html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -93,5 +145,34 @@ button.reject{background:#666}button.hide{background:#a74a24}
 <input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
 <button type="submit" name="decision" value="hide" class="hide">Hide post</button></form>
 <?php endif; ?></section>
+<?php endforeach; ?>
+<h2>Community Reports (<?= count($reports) ?>)</h2>
+<?php if (!$reportsReady): ?><section>নতুন Community Moderation SQL migration চালানোর পর রিপোর্ট দেখা যাবে।</section>
+<?php elseif (!$reports): ?><section>কোনো অপেক্ষমাণ রিপোর্ট নেই।</section><?php endif; ?>
+<?php foreach ($reports as $r): ?>
+<article>
+<div class="muted">Report #<?= (int)$r['id'] ?> · <?= community_review_escape($r['target_type']) ?> #<?= (int)$r['target_id'] ?> · Post #<?= (int)$r['post_id'] ?></div>
+<p>কারণ: <strong><?= community_review_escape($r['reason']) ?></strong> · রিপোর্টকারী: <?= community_review_escape($r['reporter']) ?></p>
+<p class="body"><?= community_review_escape($r['details']) ?></p>
+<p class="body"><?= community_review_escape($r['target_type'] === 'comment' ? ($r['comment_body'] ?? '[removed]') : $r['post_body']) ?></p>
+<p class="muted">Status: <?= community_review_escape($r['target_type'] === 'comment' ? ($r['comment_status'] ?? 'removed') : $r['post_status']) ?></p>
+<form method="post" onsubmit="return confirm('এই সিদ্ধান্ত নিশ্চিত করবেন?');">
+<input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
+<input type="hidden" name="report_id" value="<?= (int)$r['id'] ?>">
+<button name="decision" value="hide_report_target" class="hide">Hide content &amp; resolve</button>
+<button name="decision" value="resolve_report">Resolve without hiding</button>
+<button name="decision" value="dismiss_report" class="reject">Dismiss</button>
+</form></article>
+<?php endforeach; ?>
+<h2>সাম্প্রতিক দৃশ্যমান মন্তব্য (<?= count($comments) ?>)</h2>
+<?php foreach ($comments as $c): ?>
+<article>
+<div class="muted">Comment #<?= (int)$c['id'] ?> · Post #<?= (int)$c['post_id'] ?> · <?= community_review_escape($c['full_name']) ?></div>
+<p class="body"><?= community_review_escape($c['body']) ?></p>
+<form method="post" onsubmit="return confirm('মন্তব্যটি লুকাবেন?');">
+<input type="hidden" name="csrf_token" value="<?= community_review_escape($csrf) ?>">
+<input type="hidden" name="comment_id" value="<?= (int)$c['id'] ?>">
+<button name="decision" value="hide_comment" class="hide">Hide comment</button>
+</form></article>
 <?php endforeach; ?>
 </main></body></html>

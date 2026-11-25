@@ -11,6 +11,8 @@ class CommunityPost {
     this.commentCount = 0,
     this.likes = 0,
     this.liked = false,
+    this.isOwner = false,
+    this.status = 'approved',
   });
 
   final int id;
@@ -24,6 +26,8 @@ class CommunityPost {
   int commentCount;
   int likes;
   bool liked;
+  final bool isOwner;
+  final String status;
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
     final created = DateTime.tryParse(json['created_at']?.toString() ?? '');
@@ -49,15 +53,21 @@ class CommunityPost {
       commentCount: int.tryParse(json['comments_count'].toString()) ?? 0,
       likes: int.tryParse(json['likes_count'].toString()) ?? 0,
       liked: json['liked'] == true,
+      isOwner: json['is_owner'] == true || json['is_owner'] == 1 || json['is_owner'] == '1',
+      status: json['status']?.toString() ?? 'approved',
     );
   }
 }
 
 class Comment {
-  Comment({required this.author, required this.text});
+  Comment({required this.author, required this.text, this.id = 0, this.isOwner = false});
+  final int id;
+  final bool isOwner;
   final String author;
   final String text;
   factory Comment.fromJson(Map<String, dynamic> json) => Comment(
+    id: int.tryParse(json['id'].toString()) ?? 0,
+    isOwner: json['is_owner'] == true || json['is_owner'] == 1 || json['is_owner'] == '1',
     author: json['author']?.toString() ?? 'সদস্য',
     text: json['text']?.toString() ?? '',
   );
