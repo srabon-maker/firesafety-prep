@@ -311,6 +311,7 @@ if (!function_exists('optionalCount')) {
 /* ---------- COMMUNITY: INTEGRATED ADMIN MODERATION ---------- */
 $communityError = '';
 $communitySaved = isset($_GET['saved']);
+$communityDeleteFlash = '';
 $communityTab = (($_GET['view'] ?? '') === 'comments') ? 'comments' : 'posts';
 $communityStatus = is_string($_GET['status'] ?? null) ? $_GET['status'] : 'all';
 $communityAllowedStatuses = $communityTab === 'posts'
@@ -333,6 +334,9 @@ $communityHasImages = false;
 $communityToken = null;
 
 if ($isCommunity) {
+    require_once __DIR__.'/community_admin_delete.php';
+    $communityDeleteFlash = (string)($_SESSION['community_delete_flash']??'');
+    unset($_SESSION['community_delete_flash']);
     header('Cache-Control: no-store, private');
     $communityToken = csrf_token();
     $communityHasPosts = hasTable($pdo, 'community_posts');
@@ -352,6 +356,12 @@ if ($isCommunity) {
             $action = (string)($_POST['community_action'] ?? '');
             $id = filter_var($_POST['item_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
             if ($id === false || $id === null) throw new InvalidArgumentException('সঠিক পোস্ট বা মন্তব্য নির্বাচন করুন।');
+            if ($action==='delete_post' && $communityTab==='posts' && $communityHasPosts) {
+                if (($_POST['confirm_delete']??'')!=='1') throw new InvalidArgumentException('পোস্ট মোছার অনুমোদন দিন।');
+                $_SESSION['community_delete_flash']=community_admin_delete_post($pdo,$id);
+                header('Location: fire_safety_job_prep_dashboard.php?section=community&view=posts',true,303);
+                exit;
+            }
             $postTransitions = [
                 'approve'=>['pending', 'approved'],
                 'reject'=>['pending', 'rejected'],
@@ -1201,6 +1211,7 @@ tr:last-child td {
 .community-action {border:0;border-radius:11px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer;background:#176b3b;color:white}
 .community-action.reject {background:#f5e7e7;color:#8e263c}
 .community-action.hide {background:#8b5660;color:white}
+.community-action.delete {background:#b42332;color:white}
 .community-action.restore {background:#f8eddc;color:#6c481d}
 .community-empty {background:white;border:1px dashed #d9bdb7;border-radius:18px;padding:45px 18px;text-align:center;color:var(--muted);line-height:1.8}
 .community-pagination {display:flex;justify-content:center;align-items:center;gap:12px;margin-top:22px}
@@ -1473,6 +1484,7 @@ tr:last-child td {
             <a class="community-quicklink" href="community_review.php">↗ আলাদা রিভিউ পেজ</a>
         </div>
         <?php if ($communityError !== ''): ?><div class="community-notice error" role="alert"><?= h($communityError) ?></div><?php endif; ?>
+        <?php if ($communityDeleteFlash !== ''): ?><div class="community-notice" role="status"><?= h($communityDeleteFlash) ?></div><?php endif; ?>
         <?php if ($communitySaved): ?><div class="community-notice" role="status">✓ আপনার সিদ্ধান্ত সফলভাবে সংরক্ষিত হয়েছে।</div><?php endif; ?>
         <?php if (!$communityHasPosts): ?>
             <div class="community-empty"><strong>কমিউনিটি পোস্ট টেবিল পাওয়া যায়নি।</strong><br>সঠিক ডাটাবেজ নির্বাচন করা আছে কি না এবং Community Backend ইনস্টল হয়েছে কি না পরীক্ষা করুন।</div>
@@ -1564,14 +1576,16 @@ tr:last-child td {
                                     'hidden'=>['restore_comment'=>'↺ মন্তব্য ফিরিয়ে আনুন'],
                                     default=>[],
                                 };
+                                if ($communityTab==='posts') $actions['delete_post']='✕ ডিলিট করুন';
                                 ?>
                                 <?php if ($actions): ?>
                                     <div class="community-actions">
                                         <?php foreach ($actions as $action=>$label): ?>
-                                            <form method="post" action="?section=community&amp;view=<?= h($communityTab) ?>" onsubmit="return confirm('আপনি কি এই সিদ্ধান্ত নিশ্চিত করতে চান?');">
+                                            <form method="post" action="?section=community&amp;view=<?= h($communityTab) ?>" onsubmit="return confirm('<?= $action==='delete_post'?'পোস্ট, মন্তব্য, লাইক ও রিপোর্ট স্থায়ীভাবে মুছে যাবে। ফিরিয়ে আনা যাবে না। নিশ্চিত করবেন?':'আপনি কি এই সিদ্ধান্ত নিশ্চিত করতে চান?' ?>');">
                                                 <input type="hidden" name="csrf_token" value="<?= h($communityToken) ?>">
                                                 <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
-                                                <button class="community-action <?= str_contains($action,'restore') ? 'restore' : (str_contains($action,'hide') ? 'hide' : ($action === 'reject' ? 'reject' : '')) ?>" type="submit" name="community_action" value="<?= h($action) ?>"><?= h($label) ?></button>
+                                                <?php if($action==='delete_post'): ?><input type="hidden" name="confirm_delete" value="1"><?php endif; ?>
+                                                <button class="community-action <?= $action==='delete_post' ? 'delete' : (str_contains($action,'restore') ? 'restore' : (str_contains($action,'hide') ? 'hide' : ($action === 'reject' ? 'reject' : ''))) ?>" type="submit" name="community_action" value="<?= h($action) ?>"><?= h($label) ?></button>
                                             </form>
                                         <?php endforeach; ?>
                                     </div>
