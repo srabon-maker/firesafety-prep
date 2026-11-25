@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/admin_helpers.php';
 require_admin();
+require_once __DIR__.'/homepage_image_upload.php';
 require_once __DIR__.'/db.php';
 header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
@@ -23,6 +24,7 @@ function hp_id(mixed $v,int $min=0): int {
 }
 if (($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
     verify_csrf();
+    $newUpload=null;
     try {
         if (($_POST['action']??'')==='settings') {
             $raw=hp_field('section_order',180);
@@ -46,18 +48,27 @@ if (($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
             if($image!==''&&!preg_match('~^https://fire\.manobikishwarganj\.com/uploads/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp)$~D',$image)) throw new DomainException('শুধু নিজের সাইটের uploads ফোল্ডারের PNG/JPG/WebP URL দিন।');
             $sort=hp_id($_POST['sort_order']??100); if($sort>10000) throw new DomainException('ক্রম ০–১০০০০ দিন।');
             $published=($_POST['is_published']??'')==='1'?1:0;
+            if (isset($_FILES['banner_image']) && !is_array($_FILES['banner_image'])) throw new DomainException('ছবির তথ্য সঠিক নয়।');
+            $upload=$_FILES['banner_image']??[];
+            if ($kind!=='banner' && ($upload['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE) throw new DomainException('ছবি শুধু ব্যানারের জন্য দেওয়া যাবে।');
+            if ($kind==='banner') {
+                $newUpload=hp_store_banner_image($upload,__DIR__.'/uploads/homepage');
+                if ($newUpload!==null) $image=$newUpload['url'];
+            }
             $args=[$kind,$title,$body,$titleEn,$bodyEn,$role,$industry,$difficulty,$target,$image,$sort,$published];
             if ($id>0) {
                 $q=$pdo->prepare('UPDATE homepage_content SET kind=?,title=?,body=?,title_en=?,body_en=?,role_name=?,industry=?,difficulty=?,target=?,image_url=?,sort_order=?,is_published=? WHERE id=?');
                 $q->execute([...$args,$id]);
+                if ($newUpload!==null && $q->rowCount()!==1) throw new DomainException('সম্পাদনার ব্যানার পাওয়া যায়নি।');
             } else {
                 $q=$pdo->prepare('INSERT INTO homepage_content (kind,title,body,title_en,body_en,role_name,industry,difficulty,target,image_url,sort_order,is_published) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
                 $q->execute($args);
             }
         } else throw new DomainException('অনুরোধ সঠিক নয়।');
+        $newUpload=null; // Database now references the new image.
         $_SESSION['homepage_flash']='সংরক্ষণ হয়েছে।';
-    } catch(DomainException $e) {$_SESSION['homepage_flash']=$e->getMessage();}
-    catch(Throwable $e) {error_log('Homepage admin: '.$e->getMessage());$_SESSION['homepage_flash']='সংরক্ষণ করা যায়নি। মাইগ্রেশন পরীক্ষা করুন।';}
+    } catch(DomainException $e) {if($newUpload!==null) @unlink($newUpload['path']); $_SESSION['homepage_flash']=$e->getMessage();}
+    catch(Throwable $e) {if($newUpload!==null) @unlink($newUpload['path']); error_log('Homepage admin: '.$e->getMessage());$_SESSION['homepage_flash']='সংরক্ষণ করা যায়নি। মাইগ্রেশন বা আপলোড সেটিংস পরীক্ষা করুন।';}
     header('Location: homepage_admin.php',true,303); exit;
 }
 $flash=$_SESSION['homepage_flash']??''; unset($_SESSION['homepage_flash']);
@@ -79,7 +90,7 @@ function hp_val(array $row,string $key,string $default=''): string {return h((st
 <?php if($flash!==''): ?><p class="panel"><?=h($flash)?></p><?php endif; ?>
 <?php if(!$ready): ?><p class="panel">হোমপেজ মাইগ্রেশন চালিয়ে আবার চেষ্টা করুন।</p><?php else: ?>
 <section class="panel"><h2>হোমপেজ সেকশনের ক্রম ও দৃশ্যমানতা</h2><p class="muted">কমা দিয়ে সেকশনের নাম সাজান। বাদ দিলে ঐ ঐচ্ছিক সেকশন লুকাবে; মূল সেবার মেনু ও নেভিগেশন সবসময় থাকবে।</p><p><?php foreach($sections as $key=>$label): ?><code><?=h($key)?></code> = <?=h($label)?> · <?php endforeach; ?></p><form method="post"><input type="hidden" name="csrf_token" value="<?=h(csrf_token())?>"><input type="hidden" name="action" value="settings"><label>সেকশনের ক্রম<input name="section_order" maxlength="180" value="<?=h($order)?>"></label><p><button>সেটিংস সংরক্ষণ</button></p></form></section>
-<section class="panel"><h2><?= $edit?'কনটেন্ট সম্পাদনা':'নতুন কনটেন্ট' ?></h2><form method="post" class="fields"><input type="hidden" name="csrf_token" value="<?=h(csrf_token())?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?=(int)($edit['id']??0)?>">
+<section class="panel"><h2><?= $edit?'কনটেন্ট সম্পাদনা':'নতুন কনটেন্ট' ?></h2><form method="post" enctype="multipart/form-data" class="fields"><input type="hidden" name="csrf_token" value="<?=h(csrf_token())?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?=(int)($edit['id']??0)?>">
 <label>ধরন<select name="kind"><?php foreach($kinds as $k=>$v): ?><option value="<?=h($k)?>" <?=($edit['kind']??'banner')===$k?'selected':''?>><?=h($v)?></option><?php endforeach; ?></select></label>
 <label>ক্রম (কম সংখ্যা আগে)<input type="number" min="0" max="10000" name="sort_order" value="<?=hp_val($edit,'sort_order','100')?>" required></label>
 <label class="wide">বাংলা শিরোনাম / প্রশ্ন<input name="title" maxlength="240" required value="<?=hp_val($edit,'title')?>"></label><label class="wide">বাংলা বিস্তারিত / উত্তর<textarea name="body" rows="5" maxlength="4000" required><?=hp_val($edit,'body')?></textarea></label>
@@ -88,6 +99,8 @@ function hp_val(array $row,string $key,string $default=''): string {return h((st
 <label>লেভেল<select name="difficulty"><?php foreach(['basic','intermediate','advanced'] as $v): ?><option <?=($edit['difficulty']??'basic')===$v?'selected':''?>><?=h($v)?></option><?php endforeach; ?></select></label>
 <label>ব্যানার/টিপসের গন্তব্য<select name="target"><?php foreach($targets as $v): ?><option <?=($edit['target']??'none')===$v?'selected':''?>><?=h($v)?></option><?php endforeach; ?></select></label>
 <label class="wide">ব্যানার ছবির URL (ঐচ্ছিক, নিজস্ব uploads-এর বিদ্যমান ছবি)<input name="image_url" maxlength="500" value="<?=hp_val($edit,'image_url')?>"></label>
+<label class="wide">সরাসরি ব্যানারের ছবি আপলোড করুন (JPG, PNG, WebP; সর্বোচ্চ ৪ MB)<input type="file" name="banner_image" accept="image/jpeg,image/png,image/webp"><span class="muted">প্রস্তাবিত মাপ ১২০০ × ৬০০ পিক্সেল। নতুন ছবি দিলে পুরোনো URL-এর পরিবর্তে সেটি ব্যবহার হবে। প্রকাশ না করলেও আপলোড করা ছবি সরাসরি URL-এ পাওয়া যেতে পারে; ব্যক্তিগত ছবি দেবেন না।</span></label>
+<?php if(($edit['kind']??'')==='banner' && preg_match('~^https://fire\.manobikishwarganj\.com/uploads/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp)$~D',(string)($edit['image_url']??''))): ?><div class="wide"><p>বর্তমান ছবি</p><img src="<?=hp_val($edit,'image_url')?>" alt="বর্তমান ব্যানার" style="max-width:100%;max-height:220px;border-radius:12px;object-fit:contain"></div><?php endif; ?>
 <label class="wide"><span><input type="checkbox" name="is_published" value="1" <?=!empty($edit['is_published'])?'checked':''?>> প্রকাশ করুন (টিক সরালে ড্রাফট হবে)</span></label><div><button>সংরক্ষণ</button> <?php if($edit): ?><a href="homepage_admin.php">বাতিল</a><?php endif; ?></div></form></section>
 <section class="panel"><h2>সংরক্ষিত কনটেন্ট</h2><div class="scroll"><table><thead><tr><th>ধরন</th><th>শিরোনাম</th><th>ক্রম</th><th>অবস্থা</th><th>সম্পাদনা</th></tr></thead><tbody><?php foreach(array_slice($rows,0,30) as $row): ?><tr><td><?=h($kinds[$row['kind']]??'')?></td><td><?=h($row['title'])?></td><td><?=(int)$row['sort_order']?></td><td><?=$row['is_published']?'প্রকাশিত':'ড্রাফট'?></td><td><a href="?edit=<?=(int)$row['id']?>">এডিট</a></td></tr><?php endforeach; ?></tbody></table></div><?php if(!$rows): ?><p>কোনো কনটেন্ট নেই।</p><?php endif; ?><?php if($page>1): ?><a href="?page=<?=$page-1?>">আগের পেজ</a> <?php endif; ?><?php if(count($rows)>30): ?><a href="?page=<?=$page+1?>">পরের পেজ</a><?php endif; ?></section>
 <?php endif; ?></main></div></body></html>
