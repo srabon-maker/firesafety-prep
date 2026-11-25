@@ -3,6 +3,16 @@ declare(strict_types=1);
 require_once __DIR__ . '/admin_helpers.php';
 require_admin();
 require_once __DIR__ . '/db.php';
+$orderHelper = __DIR__ . '/api/marketplace/_orders.php';
+$orderUpgradeReady = false;
+if (is_file($orderHelper)) {
+    require_once $orderHelper;
+    try {
+        market_delivery_fee($pdo);
+        $pdo->query('SELECT id FROM market_order_events LIMIT 1');
+        $orderUpgradeReady = true;
+    } catch (Throwable $ignored) { /* migrate before enabling new order controls */ }
+}
 
 $tabs = ['products','services','categories','orders','requests'];
 $tab = (string)($_GET['tab'] ?? 'products');
@@ -108,12 +118,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $stmt->execute($values);
             mk_flash('categories');
         }
+        if ($action === 'delivery_fee') {
+            if (!$orderUpgradeReady) throw new InvalidArgumentException('Order management migration required');
+            $fee = market_order_money(market_order_cents(mk_money($_POST['flat_fee'] ?? null)));
+            $pdo->prepare('UPDATE market_delivery_settings SET flat_fee=? WHERE id=1')->execute([$fee]);
+            mk_flash('orders');
+        }
         if ($action === 'order_status') {
+            if (!$orderUpgradeReady) throw new InvalidArgumentException('Deploy order API and SQL migration before changing status');
             if ($id === null) throw new InvalidArgumentException('Order ID required');
-            $status = mk_enum($_POST['order_status'] ?? '', ['pending','confirmed','processing','shipped','delivered','cancelled']);
-            // Do not automatically restock on cancellation: admin must reconcile stock separately.
-            $stmt = $pdo->prepare('UPDATE market_orders SET order_status=? WHERE id=?');
-            $stmt->execute([$status,$id]);
+            $status = mk_enum($_POST['order_status'] ?? '', ['confirmed','processing','shipped','delivered','cancelled']);
+            $courier = mk_string($_POST['courier_name'] ?? '',100,'courier name',false);
+            $tracking = mk_string($_POST['tracking_number'] ?? '',150,'tracking number',false);
+            $pdo->beginTransaction();
+            market_order_transition($pdo,$id,$status,null,$courier === '' ? null : $courier,$tracking === '' ? null : $tracking,isset($_POST['legacy_reconciled']));
+            $pdo->commit();
             mk_flash('orders');
         }
         if ($action === 'request_status') {
@@ -124,9 +143,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             mk_flash('requests');
         }
         throw new InvalidArgumentException('Invalid action');
-    } catch (InvalidArgumentException $e) { $error = $e->getMessage(); }
-    catch (PDOException $e) { error_log('Marketplace admin DB: '.$e->getMessage()); $error = 'Database error. Check duplicate slug/SKU or category.'; }
-    catch (Throwable $e) { error_log('Marketplace admin: '.$e->getMessage()); $error = 'Unable to save changes.'; }
+    } catch (InvalidArgumentException|DomainException|OutOfBoundsException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $error = $e->getMessage();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Marketplace admin: '.$e->getMessage());
+        $error = 'Unable to save changes.';
+    }
 }
 
 $categories = $pdo->query('SELECT id,name,category_type FROM market_categories ORDER BY name')->fetchAll();
@@ -187,6 +211,19 @@ function checked(array|null $edit,string $name,bool $default = false): string { 
 <div class="wide"><button type="submit">Save</button> <a href="?tab=<?= h($tab) ?>">Clear form</a></div>
 </form></section>
 <?php endif; ?>
+<?php if ($tab === 'orders'): ?>
+<section class="panel"><h2>Delivery charge (BDT)</h2>
+<?php if ($orderUpgradeReady): ?>
+<form method="post">
+<input type="hidden" name="csrf_token" value="<?= h($token) ?>">
+<input type="hidden" name="action" value="delivery_fee">
+<label>Flat fee per non-empty order<input name="flat_fee" type="number" min="0" max="9999999999.99" step="0.01" required value="<?= h(market_order_money(market_delivery_fee($pdo))) ?>"></label>
+<button>Save delivery charge</button>
+<p><small>Default is zero. Existing order totals are never changed. Older apps cannot place an order with a nonzero charge until updated.</small></p>
+</form>
+<?php else: ?><p>Deploy the order helper and SQL migration to enable delivery pricing and order updates.</p><?php endif; ?>
+</section>
+<?php endif; ?>
 <section class="panel"><h2><?= h(ucfirst($tab)) ?></h2><div class="scroll"><table><thead><tr>
 <?php if ($tab === 'products'): ?><th>ID</th><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th>
 <?php elseif ($tab === 'services'): ?><th>ID</th><th>Service</th><th>Pricing</th><th>Status</th><th>Action</th>
@@ -209,8 +246,27 @@ foreach ($rows as $r): ?>
 <?php elseif ($tab === 'orders'): ?>
 <td><?= h($r['order_number']) ?><br><small><?= h($r['created_at']) ?></small></td>
 <td><?= h($r['customer_name']) ?><br><?= h($r['mobile_number']) ?><br><?= h($r['delivery_address']) ?></td>
-<td>৳<?= h($r['total_amount']) ?></td><td><?= h($r['payment_method']) ?> / <?= h($r['payment_status']) ?></td>
-<td><form method="post"><input type="hidden" name="csrf_token" value="<?= h($token) ?>"><input type="hidden" name="action" value="order_status"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>"><select name="order_status"><?php foreach (['pending','confirmed','processing','shipped','delivered','cancelled'] as $s): ?><option value="<?= h($s) ?>"<?= $r['order_status'] === $s ? ' selected' : '' ?>><?= h($s) ?></option><?php endforeach; ?></select><button>Update</button></form></td>
+<td>৳<?= h($r['total_amount']) ?><br><small>Subtotal: ৳<?= h($r['subtotal']) ?><br>Delivery: ৳<?= h($r['delivery_charge']) ?></small></td><td><?= h($r['payment_method']) ?> / <?= h($r['payment_status']) ?></td>
+<td><strong><?= h($r['order_status']) ?></strong>
+<?php if ($orderUpgradeReady):
+    $nextStatuses = market_order_next((string)$r['order_status']);
+    $managed = market_order_managed($pdo,(int)$r['id']);
+    $eventQuery = $pdo->prepare('SELECT order_status,created_at,courier_name,tracking_number FROM market_order_events WHERE order_id=? ORDER BY id');
+    $eventQuery->execute([(int)$r['id']]);
+    foreach ($eventQuery->fetchAll(PDO::FETCH_ASSOC) as $event): ?>
+    <div><small><?= h($event['order_status']) ?> · <?= h($event['created_at']) ?> <?= h($event['courier_name'] ?? '') ?> <?= h($event['tracking_number'] ?? '') ?></small></div>
+<?php endforeach; if ($nextStatuses): ?>
+<form method="post" onsubmit="return confirm('Confirm order status change?');">
+<input type="hidden" name="csrf_token" value="<?= h($token) ?>"><input type="hidden" name="action" value="order_status"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+<select name="order_status" required><option value="">Select next status</option><?php foreach ($nextStatuses as $s): ?><option value="<?= h($s) ?>"><?= h($s) ?></option><?php endforeach; ?></select>
+<?php if (in_array('shipped',$nextStatuses,true)): ?>
+<label>Courier (optional)<input name="courier_name" maxlength="100"></label>
+<label>Tracking number (optional)<input name="tracking_number" maxlength="150"></label>
+<?php endif; ?>
+<?php if (!$managed && in_array('cancelled',$nextStatuses,true)): ?>
+<label><input type="checkbox" name="legacy_reconciled" value="1" style="width:auto;display:inline"> Legacy order: I will reconcile stock manually if cancelling.</label>
+<?php endif; ?><button>Update</button></form>
+<?php endif; endif; ?></td>
 <td><?php $itemQuery->execute([(int)$r['id']]); foreach ($itemQuery->fetchAll() as $line): ?><?= h($line['product_name']) ?> × <?= (int)$line['quantity'] ?><br><?php endforeach; ?></td>
 <?php else: ?>
 <td><?= h($r['request_number']) ?><br><small><?= h($r['created_at']) ?></small></td><td>#<?= (int)$r['service_id'] ?><br><?= h($r['request_details']) ?></td><td><?= h($r['customer_name']) ?><br><?= h($r['mobile_number']) ?><br><?= h($r['company_name']) ?></td><td><?= h($r['service_location']) ?><br><?= h($r['preferred_date']) ?></td>
@@ -219,5 +275,5 @@ foreach ($rows as $r): ?>
 <?php endforeach; ?>
 <?php if (!$rows): ?><tr><td colspan="7">No records yet.</td></tr><?php endif; ?>
 </tbody></table></div></section>
-<p><small>Order cancellation does not automatically restore stock. Update stock manually after checking fulfilment/refunds. Only Cash on Delivery is supported.</small></p>
+<p><small>New unpaid COD orders restore reserved stock once on pre-shipment cancellation. Legacy orders require manual reconciliation. Shipped/delivered or paid orders cannot be cancelled here. Only COD is supported.</small></p>
 </main></body></html>
