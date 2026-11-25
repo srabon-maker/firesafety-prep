@@ -54,10 +54,10 @@ try{
   if($pref){
    $jobs=career_matches($pdo,$pref,$uid,true);
    $delivery=$pdo->prepare('INSERT INTO career_job_deliveries(user_id,job_id,created_at) VALUES(?,?,UTC_TIMESTAMP())');
-   $notify=$pdo->prepare("INSERT INTO notifications(user_id,title,message,notification_type,is_read,sent_at) VALUES(?,?,?,'general',0,NOW())");
+   $notify=$pdo->prepare("INSERT INTO notifications(user_id,title,message,notification_type,reference_type,reference_id,is_read,sent_at) VALUES(?,?,?,'general','career_job',?,0,NOW())");
    foreach(array_slice($jobs,0,20) as $job){
     $delivery->execute([$uid,$job['id']]);
-    $notify->execute([$uid,'নতুন মিল থাকা চাকরি',mb_substr($job['title'].' — '.$job['organization'],0,500).'। Career → Job Alert দেখুন।']);$count++;
+    $notify->execute([$uid,'নতুন মিল থাকা চাকরি',mb_substr($job['title'].' — '.$job['organization'],0,500).'। Career → Job Alert দেখুন।',$job['id']]);$count++;
    }
   }
  }elseif($action==='save_profile'){

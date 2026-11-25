@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_guard.dart';
+import '../services/auth_service.dart';
 import '../services/career_service.dart';
 
 class CareerPage extends StatelessWidget {
@@ -64,6 +65,7 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _load({bool more = false}) async {
     setState(() { _busy = true; _error = null; if (!more) { _rows = []; _next = null; } });
     try {
+      final token = await AuthService.instance.getSessionToken();
       final data = await CareerService.request(_section, filters: {
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
@@ -73,6 +75,7 @@ class _CareerSectionState extends State<CareerSection> {
         final mine = await CareerService.request('my_profile');
         if (mine['profile'] is Map) profile = Map<String, dynamic>.from(mine['profile'] as Map);
       }
+      if (await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
       if (!mounted) return;
       setState(() {
         _rows = [..._rows, ...CareerService.rows(data)];
@@ -98,7 +101,7 @@ class _CareerSectionState extends State<CareerSection> {
       final data = await CareerService.request(action, body: body);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'check_alerts'
-          ? 'নতুন নোটিফিকেশন: ' + data['new_alerts'].toString() : 'সংরক্ষণ হয়েছে')));
+          ? 'নতুন নোটিফিকেশন: ${data['new_alerts']}' : 'সংরক্ষণ হয়েছে')));
       await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -139,14 +142,14 @@ class _CareerSectionState extends State<CareerSection> {
       if (_rows.isNotEmpty && _index < _rows.length) ...[
         const SizedBox(height: 12),
         LinearProgressIndicator(value: _index / _rows.length),
-        _card('প্রশ্ন ' + (_index + 1).toString() + '/' + _rows.length.toString(),CareerService.text(_rows[_index],'title')),
+        _card('প্রশ্ন ${_index + 1}/${_rows.length}',CareerService.text(_rows[_index],'title')),
         if (!_revealed) FilledButton(onPressed: _busy ? null : () => setState(() => _revealed = true), child: const Text('নমুনা উত্তর দেখুন'))
         else ...[
           _card('নমুনা উত্তর',CareerService.text(_rows[_index],'body')),
           FilledButton(onPressed: _busy ? null : () => _rate(true), child: const Text('উত্তর মিলেছে')),
           OutlinedButton(onPressed: _busy ? null : () => _rate(false), child: const Text('আরও অনুশীলন দরকার')),
         ]
-      ] else if (_rows.isNotEmpty) _card('অনুশীলন সম্পন্ন','নিজস্ব মূল্যায়ন: $_score / ' + _rows.length.toString()),
+      ] else if (_rows.isNotEmpty) _card('অনুশীলন সম্পন্ন','নিজস্ব মূল্যায়ন: $_score / ${_rows.length}'),
     ];
     if (_section == 'courses') return [
       const Text('প্রতিষ্ঠান, তারিখ, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন। অ্যাপের মাধ্যমে কোর্সে ভর্তি বা পেমেন্ট হয় না।'),
@@ -155,7 +158,7 @@ class _CareerSectionState extends State<CareerSection> {
     ];
     return [
       const Text('নিজের সম্মতিতে পরিচিতি প্রকাশ করুন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা লিংক দেবেন না। প্রকাশিত পরিচিতি সনদ যাচাই করা নয়।'),
-      if(_status.isNotEmpty) Text('অবস্থা: ' + (({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status)),
+      if(_status.isNotEmpty) Text('অবস্থা: ${({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status}'),
       const SizedBox(height: 10),_field(_name,'প্রদর্শিত নাম',100),_field(_role,'পদ / পেশা',120),
       _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),_field(_city,'শহর (ঐচ্ছিক)',100),
       CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
