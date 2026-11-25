@@ -35,6 +35,7 @@ class MarketplaceTransactionService {
     required String mobile,
     required String address,
     String note = '',
+    double? expectedTotal,
   }) async {
     final result = await _api.post('orders.php', body: {
       'customer_name': name.trim(),
@@ -42,6 +43,7 @@ class MarketplaceTransactionService {
       'delivery_address': address.trim(),
       'customer_note': note.trim(),
       'payment_method': 'cod',
+      if (expectedTotal != null) 'expected_total': expectedTotal.toStringAsFixed(2),
     });
     return marketObject(result['data'])['order_number'].toString();
   }
@@ -49,6 +51,16 @@ class MarketplaceTransactionService {
   Future<List<MarketOrder>> getOrders() async =>
       marketList(await _api.get('orders.php', requireAuth: true))
           .map((e) => MarketOrder.fromJson(marketObject(e))).toList();
+
+  Future<MarketOrderDetail> getOrderDetail(int id) async {
+    final response = await _api.get('orders.php',
+        queryParameters: {'order_id': id.toString()}, requireAuth: true);
+    return MarketOrderDetail.fromJson(marketObject(response['data']));
+  }
+
+  Future<void> cancelOrder(int id) async {
+    await _api.post('orders.php', body: {'action': 'cancel', 'order_id': id});
+  }
 
   Future<String> requestService({
     required int serviceId,

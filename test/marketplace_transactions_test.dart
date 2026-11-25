@@ -26,6 +26,33 @@ void main() {
     expect(cart.items.single.lineTotal, 2444);
   });
 
+  test('cart keeps server delivery fee and total', () {
+    final cart = MarketCart.fromResponse({'data': {
+      'items': [], 'subtotal': '100.00', 'delivery_charge': '60.00',
+      'total_amount': '160.00',
+    }});
+    expect(cart.deliveryCharge, 60);
+    expect(cart.total, 160);
+  });
+
+  test('order details map saved line prices, tracking and server cancellation policy', () {
+    final detail = MarketOrderDetail.fromJson({
+      'id': 4, 'order_number': 'FS-4', 'subtotal': '100.00',
+      'delivery_charge': '60.00', 'total_amount': '160.00',
+      'order_status': 'shipped', 'payment_status': 'pending', 'payment_method': 'cod',
+      'customer_name': 'Test', 'mobile_number': '01000000000',
+      'delivery_address': 'Test address', 'can_cancel': false,
+      'items': [{'product_name': 'Helmet', 'quantity': 2, 'unit_price': '50.00',
+        'total_price': '100.00'}],
+      'events': [{'order_status': 'shipped', 'courier_name': 'Courier',
+        'tracking_number': 'TEST-123', 'created_at': '2026-11-25 12:00:00'}],
+    });
+    expect(detail.order.deliveryCharge, 60);
+    expect(detail.items.single.total, 100);
+    expect(detail.events.single.trackingNumber, 'TEST-123');
+    expect(detail.canCancel, isFalse);
+  });
+
   test('empty cart has zero subtotal', () {
     final cart = MarketCart.fromResponse({
       'success': true,
