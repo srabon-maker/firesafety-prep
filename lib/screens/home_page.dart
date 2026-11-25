@@ -234,9 +234,13 @@ class _HomePageState extends State<HomePage> {
       Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
         final data=snapshot.hasData?snapshot.data:null;
         final sections=data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']);
+        final policy=data?['access_policy'];
+        final pending=policy is Map&&policy['mode']=='free'&&policy['scheduled_mode']!='free';
+        final activation=policy is Map?DateTime.tryParse(policy['starts_at']?.toString()??'')?.toUtc().add(const Duration(hours:6)):null;
         // Quick access and the bottom navigation cannot be hidden by remote configuration.
         final top=sections.isNotEmpty&&sections.first=='banners';
         return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          if(pending&&activation!=null)Card(child:ListTile(leading:const Icon(Icons.campaign_outlined,color:maroon),title:const Text('Premium সুবিধা চালুর আগাম নোটিশ'),subtitle:Text('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।'))),
           if(top)_section('banners',data),
           _heading('দ্রুত সেবা'),
           LayoutBuilder(builder:(context,box)=>GridView.count(crossAxisCount:box.maxWidth<320?2:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:110,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
