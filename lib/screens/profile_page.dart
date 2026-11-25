@@ -9,6 +9,7 @@ import 'tests_page.dart';
 import 'notes_page.dart';
 import 'saved_notes_page.dart';
 import 'notification_preferences_page.dart';
+import 'notification_inbox_page.dart';
 
 // Private colours: other files can not clash with these names.
 const Color _maroon = Color(0xFF650D18);
@@ -903,8 +904,18 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 _menuTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: _tr(context, 'নোটিফিকেশন ইনবক্স', 'Notification inbox'),
+                  subtitle: _tr(context, 'প্রাপ্ত নোটিফিকেশন দেখুন', 'View received notifications'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationInboxPage(),
+                    ),
+                  ),
+                ),
+                _menuTile(
                   icon: Icons.notifications_none_rounded,
-                  title: _tr(context, 'নোটিফিকেশন', 'Notifications'),
+                  title: _tr(context, 'নোটিফিকেশন পছন্দ', 'Notification preferences'),
                   subtitle: _tr(
                       context,
                       'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',

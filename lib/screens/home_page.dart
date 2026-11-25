@@ -7,6 +7,7 @@ import 'tests_page.dart';
 import 'notes_page.dart';
 import 'topic_page.dart';
 import 'marketplace_page.dart';
+import 'notification_inbox_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -148,7 +149,14 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    tooltip: 'নোটিফিকেশন',
+                    onPressed: () async {
+                      final authenticated = await AuthGuard.ensureAuthenticated(context);
+                      if (!context.mounted || !authenticated) return;
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => const NotificationInboxPage(),
+                      ));
+                    },
                     icon: const Icon(
                       Icons.notifications_none,
                       color: Colors.white,
