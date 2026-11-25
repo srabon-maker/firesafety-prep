@@ -6,6 +6,7 @@ import '../utils/job_notice_sections.dart';
 import '../services/job_circular_service.dart';
 import '../services/auth_guard.dart';
 import 'submit_job_page.dart';
+import 'career_page.dart';
 
 const Color _maroon = Color(0xFF650D18);
 const Color _deepMaroon = Color(0xFF36060D);
@@ -160,6 +161,7 @@ class _JobsPageState extends State<JobsPage> {
           ],
         ),
         actions: [
+          IconButton(tooltip: 'Job Alert', onPressed: () => CareerPage.open(context, section: 'alerts'), icon: const Icon(Icons.notifications_active_outlined)),
           IconButton(
             tooltip: 'রিফ্রেশ',
             onPressed: _refresh,
