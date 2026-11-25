@@ -23,7 +23,7 @@ class HomepageService {
 
   static Future<Map<String, dynamic>> fetch(String action,
       {Map<String, String> filters = const {}, http.Client? client}) async {
-    final uri = Uri.parse(endpoint).replace(queryParameters: {'action': action, ...filters});
+    final uri = Uri.parse(endpoint).replace(queryParameters: {'action': action, if(action=='question_categories')'premium_preview':'1', ...filters});
     final token=action=='question_categories'&&client==null?await AuthService.instance.getSessionToken():null;
     final headers={'Accept':'application/json',if(token!=null&&token.isNotEmpty)'Authorization':'Bearer $token'};
     final response = await (client == null ? http.get(uri,headers:headers) : client.get(uri,headers:headers))
