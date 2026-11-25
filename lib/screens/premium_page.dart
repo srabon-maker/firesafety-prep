@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/premium_service.dart';
+import 'support_page.dart';
 
 class PremiumPage extends StatefulWidget {
   const PremiumPage({super.key});
@@ -13,6 +14,7 @@ class _PremiumPageState extends State<PremiumPage> {
   @override
   Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Fire Safety BD Premium'),actions:[
+      IconButton(tooltip:'পেমেন্ট সহায়তা',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const SupportPage())),icon:const Icon(Icons.chat_bubble_outline)),
       IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ'),
     ]),
     body:FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,snapshot){
@@ -48,6 +50,7 @@ class _PremiumPageState extends State<PremiumPage> {
           subtitle:const Text('প্রস্তাবিত মূল্য • এখন কেনা যাবে না'),
           trailing:Text('৳${p['proposed_price_bdt']}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
         )),
+        OutlinedButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const SupportPage())),icon:const Icon(Icons.chat_bubble_outline),label:const Text('পেমেন্ট সংক্রান্ত সহায়তা')),
         const Padding(padding:EdgeInsets.all(12),child:Text('Google Play-এর পেমেন্ট ব্যবস্থা চালু হলে চূড়ান্ত দাম ও কেনার অপশন দেখানো হবে। এখন কোনো পেমেন্ট নেওয়া হচ্ছে না।')),
       ]);
     }),
