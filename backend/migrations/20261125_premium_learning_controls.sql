@@ -23,3 +23,22 @@ CREATE TABLE IF NOT EXISTS premium_integration_config (
  annual_product_id VARCHAR(150) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT IGNORE INTO premium_integration_config(id) VALUES (1);
+
+-- Private PDF metadata. File bytes are stored outside the web document root.
+CREATE TABLE IF NOT EXISTS premium_note_pdfs (
+ note_id BIGINT UNSIGNED PRIMARY KEY,
+ storage_name CHAR(68) NOT NULL UNIQUE,
+ size_bytes INT UNSIGNED NOT NULL,
+ updated_at DATETIME NOT NULL,
+ CONSTRAINT fk_pnp_note FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS premium_pdf_downloads (
+ token_hash CHAR(64) PRIMARY KEY,
+ user_id BIGINT UNSIGNED NOT NULL,
+ note_id BIGINT UNSIGNED NOT NULL,
+ expires_at DATETIME NOT NULL,
+ KEY idx_ppd_expiry(expires_at),
+ KEY idx_ppd_user(user_id),
+ CONSTRAINT fk_ppd_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+ CONSTRAINT fk_ppd_note FOREIGN KEY(note_id) REFERENCES premium_note_pdfs(note_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
