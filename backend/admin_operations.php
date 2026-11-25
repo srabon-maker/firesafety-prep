@@ -159,6 +159,8 @@ $opsNav = [
  ['fire_safety_job_prep_dashboard.php?section=marketplace','🛒','মার্কেটপ্লেস',''],
  ['category_management.php','⊞','ক্যাটাগরি',''],
  ['users.php','♙','ব্যবহারকারী',''],
+ ['homepage_admin.php','⌂','হোমপেজ ব্যবস্থাপনা',''],
+ ['interview_admin.php','▤','ইন্টারভিউ ব্যবস্থাপনা',''],
  ['admin_operations.php?tab=notifications','♧','নোটিফিকেশন','notifications'],
  ['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি',''],
  ['admin_operations.php?tab=settings','☼','সেটিংস','settings'],

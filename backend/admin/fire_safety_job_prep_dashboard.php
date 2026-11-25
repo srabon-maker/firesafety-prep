@@ -1276,7 +1276,11 @@ tr:last-child td {
         </a>
 
         <a href="homepage_admin.php">
-            <span class="ico">⌂</span> হোমপেজ ও ইন্টারভিউ
+            <span class="ico">⌂</span> হোমপেজ ব্যবস্থাপনা
+        </a>
+
+        <a href="interview_admin.php">
+            <span class="ico">▤</span> ইন্টারভিউ ব্যবস্থাপনা
         </a>
 
         <a href="admin_operations.php?tab=notifications">
