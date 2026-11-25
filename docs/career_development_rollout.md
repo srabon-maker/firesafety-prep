@@ -1,0 +1,9 @@
+# Career development rollout
+
+1. Back up database and apply backend/migrations/20261125_career_development.sql (four additive tables).
+2. Deploy via cPanel after CI passes and merge; no changes to db.php, signing, billing, ads, or global free policy.
+3. Admin career_admin.php: create draft course, edit, publish; verify only published items show. Verify dates and provider links externally. No payment or enrollment.
+4. Job Alert: registered user saves keyword and/or location, gets matching published, nonexpired jobs from last 30 days. Tap Check to create up to 20 deduplicated inbox notifications per request. Repeat should not duplicate. No background scheduler, no push, no automatic qualification determination. Check two accounts, disable preference and confirm no new notifications.
+5. Mock Interview: published interview questions from existing library, max 10 random items, optional exact role filter. Free/premium policy enforced server-side. Reveal model answer and self-score; score is session-local, no AI or voice capture.
+6. Directory: explicit opt-in, user-entered fields only, registered viewers; no contact details. Approval required after each edit; hide immediately. Verify second account cannot see pending/hidden and cannot modify another profile. Account deletion cascades. Admin approval is moderation, not professional verification.
+7. Verify API unauthenticated 401, invalid actions 422, pagination and empty states. Test actual APK and live DB before release. No production data seeded.

@@ -11,6 +11,7 @@ import 'saved_notes_page.dart';
 import 'notification_preferences_page.dart';
 import 'notification_inbox_page.dart';
 import 'premium_page.dart';
+import 'career_page.dart';
 
 // Private colours: other files can not clash with these names.
 const Color _maroon = Color(0xFF650D18);
@@ -892,6 +893,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 _sectionHeading(
                   _tr(context, 'অ্যাপ ও অ্যাকাউন্ট', 'App & account'),
                   Icons.tune_rounded,
+                ),
+                _menuTile(
+                  icon: Icons.work_outline,
+                  title: _tr(context, 'ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
+                  subtitle: _tr(context, 'চাকরি, ইন্টারভিউ ও প্রশিক্ষণ', 'Jobs, interviews and training'),
+                  onTap: () => CareerPage.open(context),
                 ),
                 _menuTile(
                   icon: Icons.workspace_premium_outlined,
