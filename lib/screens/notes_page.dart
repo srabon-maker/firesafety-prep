@@ -29,6 +29,7 @@ class _NotesPageState extends State<NotesPage> {
   bool _loading = true;
   int? _selectedCategory;
   int _page = 1;
+  int _requestEpoch = 0;
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _loadNotes({bool showLoader = true}) async {
+    final epoch=++_requestEpoch;
     if (showLoader && mounted) {
       setState(() {
         _loading = true;
@@ -56,7 +58,7 @@ class _NotesPageState extends State<NotesPage> {
         categoryId: _selectedCategory,
         page: _page,
       );
-      if (!mounted) return;
+      if (!mounted || epoch!=_requestEpoch) return;
       setState(() {
         _result = result;
         _page = result.page;
@@ -64,7 +66,7 @@ class _NotesPageState extends State<NotesPage> {
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || epoch!=_requestEpoch) return;
       setState(() {
         _error = error;
         _loading = false;
@@ -75,6 +77,7 @@ class _NotesPageState extends State<NotesPage> {
   void _onSearchChanged(String value) {
     setState(() {});
     _searchDebounce?.cancel();
+    _requestEpoch++;
     _searchDebounce = Timer(const Duration(milliseconds: 450), () {
       _page = 1;
       _loadNotes();
@@ -153,6 +156,7 @@ class _NotesPageState extends State<NotesPage> {
                             : IconButton(
                                 tooltip: 'সার্চ মুছুন',
                                 onPressed: () {
+                                  _searchDebounce?.cancel();
                                   _searchController.clear();
                                   _page = 1;
                                   _loadNotes();

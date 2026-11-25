@@ -39,7 +39,11 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
               leading: const Icon(Icons.quiz_outlined),
               title: Text(HomepageService.text(row, 'category')),
               subtitle: Text('${row['question_count']}টি প্রকাশিত প্রশ্ন'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: IconButton(
+                tooltip:'এই বিভাগের প্রশ্ন দেখুন',
+                icon:const Icon(Icons.list_alt),
+                onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(category:HomepageService.text(row,'category')))),
+              ),
               onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => SubjectPracticePage(subject: HomepageService.text(row, 'category')))),
             )),
           if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('কোনো বিভাগ পাওয়া যায়নি।')),
