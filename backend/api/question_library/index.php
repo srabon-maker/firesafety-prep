@@ -34,9 +34,14 @@ try {
     if(!in_array($method,['GET','POST'],true)){header('Allow: GET, POST');ql_reply(405,['success'=>false,'message'=>'Method not allowed']);}
     require_once __DIR__.'/../../db.php';
     $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+    require_once __DIR__.'/../../premium_learning.php';
     $uid=ql_user($pdo);
+    $active=premium_active($pdo,$uid)!==null;
+    $marked=premium_question_marked();
+    $locked=$active?'0':$marked;
     $eligible="q.status='published' AND q.is_archived=0 AND q.correct_answer IN ('A','B','C','D')";
     if($method==='POST'){
+        if(!$active)$eligible.=" AND NOT ($marked)";
         $raw=file_get_contents('php://input',false,null,0,4097);
         if($raw===false||strlen($raw)>4096) ql_reply(413,['success'=>false,'message'=>'Request too large']);
         $data=json_decode($raw,true);
@@ -76,18 +81,19 @@ try {
         if(!$matched) ql_reply(200,['success'=>true,'data'=>[],'has_more'=>false,'related_match'=>false,'category'=>$category]);
     }
     $where=$eligible;$args=[$uid];
+    if(!$active&&($_GET['premium_preview']??'')!=='1')$where.=" AND NOT ($marked)";
     if($category!==''){$where.=' AND q.category=?';$args[]=$category;}
     if($difficulty!=='all'){$where.=' AND q.difficulty=?';$args[]=$difficulty;}
-    if($search!==''){$where.=' AND (LOCATE(?,q.question)>0 OR LOCATE(?,q.category)>0 OR LOCATE(?,COALESCE(q.explanation,\'\'))>0 OR LOCATE(?,COALESCE(q.reference,\'\'))>0)';array_push($args,$search,$search,$search,$search);}
+    if($search!==''){$where.=' AND (LOCATE(?,q.question)>0 OR LOCATE(?,q.category)>0 OR (NOT ('.$locked.') AND (LOCATE(?,COALESCE(q.explanation,\'\'))>0 OR LOCATE(?,COALESCE(q.reference,\'\'))>0)))';array_push($args,$search,$search,$search,$search);}
     if($saved==='1')$where.=' AND b.question_id IS NOT NULL';
     $offset=($page-1)*20;
-    $q=$pdo->prepare("SELECT q.id,q.category,q.question,q.option_a,q.option_b,q.option_c,q.option_d,q.correct_answer,q.explanation,q.difficulty,q.reference,q.language,(b.question_id IS NOT NULL) AS saved
+    $q=$pdo->prepare("SELECT q.id,q.category,q.question,CASE WHEN $locked THEN NULL ELSE q.option_a END AS option_a,CASE WHEN $locked THEN NULL ELSE q.option_b END AS option_b,CASE WHEN $locked THEN NULL ELSE q.option_c END AS option_c,CASE WHEN $locked THEN NULL ELSE q.option_d END AS option_d,CASE WHEN $locked THEN NULL ELSE q.correct_answer END AS correct_answer,CASE WHEN $locked THEN NULL ELSE q.explanation END AS explanation,q.difficulty,CASE WHEN $locked THEN NULL ELSE q.reference END AS reference,q.language,$marked AS premium_only,$locked AS locked,(b.question_id IS NOT NULL) AS saved
         FROM questions q LEFT JOIN student_question_bookmarks b ON b.question_id=q.id AND b.user_id=?
         WHERE $where ORDER BY q.id DESC LIMIT 21 OFFSET $offset");
     $q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
     $more=count($rows)>20;if($more)array_pop($rows);
     foreach($rows as &$row){
-        $row['id']=(string)$row['id'];$row['saved']=(bool)$row['saved'];
+        $row['id']=(string)$row['id'];$row['saved']=(bool)$row['saved'];$row['premium_only']=(bool)$row['premium_only'];$row['locked']=(bool)$row['locked'];
         $row['options']=['A'=>$row['option_a'],'B'=>$row['option_b'],'C'=>$row['option_c'],'D'=>$row['option_d']];
         unset($row['option_a'],$row['option_b'],$row['option_c'],$row['option_d']);
     }unset($row);

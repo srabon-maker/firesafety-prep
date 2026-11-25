@@ -14,7 +14,9 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
     $action=$_GET['action']??'home';
     if ($action==='question_categories') {
-        $rows=$pdo->query("SELECT category,COUNT(*) AS question_count FROM questions WHERE status='published' AND correct_answer IN ('A','B','C','D') AND category IS NOT NULL AND TRIM(category)<>'' GROUP BY category ORDER BY category LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
+        require_once __DIR__.'/../../premium_learning.php';
+        $scope=premium_has_access($pdo)?'':' AND NOT ('.premium_question_marked().')';
+        $rows=$pdo->query("SELECT category,COUNT(*) AS question_count FROM questions q WHERE status='published' AND q.is_archived=0 AND correct_answer IN ('A','B','C','D') AND category IS NOT NULL AND TRIM(category)<>'' $scope GROUP BY category ORDER BY category LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
         hp_reply(200,['success'=>true,'data'=>array_map(static fn($r)=>['category'=>$r['category'],'question_count'=>(int)$r['question_count']],$rows)]);
     }
     if ($action==='home') {
