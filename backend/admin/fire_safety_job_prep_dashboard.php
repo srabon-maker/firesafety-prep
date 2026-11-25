@@ -1275,6 +1275,10 @@ tr:last-child td {
             <span class="ico">♙</span> ব্যবহারকারী
         </a>
 
+        <a href="homepage_admin.php">
+            <span class="ico">⌂</span> হোমপেজ ও ইন্টারভিউ
+        </a>
+
         <a href="admin_operations.php?tab=notifications">
             <span class="ico">♧</span> নোটিফিকেশন
         </a>

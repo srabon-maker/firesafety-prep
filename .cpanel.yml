@@ -44,3 +44,5 @@ deployment:
     - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
     - /bin/cp -p backend/admin_operations.php "$DEPLOYPATH/admin_operations.php"
     - /bin/cp -p backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
+    # Dynamic homepage: apply migration before deployment; preserve config and uploads.
+    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/homepage_admin.php; /bin/test -f backend/api/homepage/index.php; /bin/mkdir -p "$DEPLOYPATH/api/homepage"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/homepage"; for f in homepage_admin.php api/homepage/index.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'

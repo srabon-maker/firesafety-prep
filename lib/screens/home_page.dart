@@ -1,13 +1,19 @@
-
 import 'package:flutter/material.dart';
-
+import '../models/job_circular.dart';
+import '../models/study_note.dart';
 import '../services/auth_guard.dart';
+import '../services/homepage_service.dart';
+import '../services/job_circular_service.dart';
+import '../services/notes_service.dart';
+import '../settings/app_settings.dart';
 import 'jobs_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
 import 'topic_page.dart';
 import 'marketplace_page.dart';
+import 'community_page.dart';
 import 'notification_inbox_page.dart';
+import 'learning_library_page.dart';
 
 const Color maroon = Color(0xFF650D18);
 const Color deepMaroon = Color(0xFF36060D);
@@ -15,523 +21,218 @@ const Color red = Color(0xFFE32636);
 const Color cream = Color(0xFFFFF8F4);
 const Color ink = Color(0xFF27191B);
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
-  final categories = const [
-    ('চাকরির সার্কুলার', Icons.work_outline, Color(0xFFFFE7DD), Color(0xFFB83228)),
-    ('মডেল টেস্ট', Icons.assignment_turned_in_outlined, Color(0xFFFFE8E8), Color(0xFF9E1630)),
-    ('ফায়ার', Icons.local_fire_department, Color(0xFFFFE2DF), Color(0xFFD92735)),
-    ('সেইফটি', Icons.health_and_safety_outlined, Color(0xFFE4F4E7), Color(0xFF20834B)),
-    ('কমপ্লায়েন্স', Icons.verified_user_outlined, Color(0xFFF0E7FF), Color(0xFF7142B8)),
-    ('টেকনিক্যাল', Icons.settings_outlined, Color(0xFFE2F3FA), Color(0xFF14799A)),
-  ];
-
-  Future<void> _openCategory(BuildContext context, int i) async {
-    // Published job circulars are public; login is needed only to submit.
-    if (i != 0) {
-      final authenticated =
-          await AuthGuard.ensureAuthenticated(context);
-      if (!context.mounted || !authenticated) return;
-    }
-
-    final c = categories[i];
-
-    Widget page;
-
-    if (i == 0) {
-      page = const JobsPage();
-    } else if (i == 1) {
-      page = const TestsPage();
-    } else {
-      page = TopicPage(
-        title: c.$1,
-        icon: c.$2,
-        color: c.$4,
-      );
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
-
-  Future<void> _openNotes(BuildContext context) async {
-    final authenticated =
-        await AuthGuard.ensureAuthenticated(context);
-
-    if (!context.mounted || !authenticated) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NotesPage(),
-      ),
-    );
-  }
-
-  Future<void> _openTests(BuildContext context) async {
-    final authenticated =
-        await AuthGuard.ensureAuthenticated(context);
-
-    if (!context.mounted || !authenticated) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const TestsPage(),
-      ),
-    );
-  }
-
-  void _openMarketplace(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MarketplacePage(),
-      ),
-    );
-  }
-
   @override
-  Widget build(BuildContext context) => CustomScrollView(
-    slivers: [
-      // Header
-      SliverToBoxAdapter(
-        child: Container(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            MediaQuery.of(context).padding.top + 12,
-            20,
-            22,
-          ),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [deepMaroon, maroon, Color(0xFF8D1723)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.circular(30),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        'assets/fire_safety_job_prep_logo.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Fire Safety BD',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'নোটিফিকেশন',
-                    onPressed: () async {
-                      final authenticated = await AuthGuard.ensureAuthenticated(context);
-                      if (!context.mounted || !authenticated) return;
-                      Navigator.of(context).push(MaterialPageRoute<void>(
-                        builder: (_) => const NotificationInboxPage(),
-                      ));
-                    },
-                    icon: const Icon(
-                      Icons.notifications_none,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                decoration: const InputDecoration(
-                  hintText: 'প্রশ্ন, টপিক বা বিষয় খুঁজুন...',
-                  prefixIcon: Icon(Icons.search),
-                  fillColor: Colors.white,
-                ),
-                onSubmitted: (v) {},
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // Categories heading
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
-        sliver: SliverToBoxAdapter(
-          child: Row(
-            children: [
-              const Icon(
-                Icons.grid_view_rounded,
-                color: maroon,
-                size: 24,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  'ক্যাটাগরি',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              Text(
-                '৬টি বিষয়',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // Categories grid
-      SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        sliver: SliverGrid(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) {
-              final c = categories[i];
-
-              return InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => _openCategory(context, i),
-                child: Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: c.$3,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: c.$4.withOpacity(.12),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(.8),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          c.$2,
-                          color: c.$4,
-                          size: 25,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              c.$1,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: ink,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 14,
-                            color: c.$4,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            childCount: categories.length,
-          ),
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.45,
-          ),
-        ),
-      ),
-
-      // Marketplace section
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 5),
-        sliver: SliverToBoxAdapter(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () => _openMarketplace(context),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [deepMaroon, maroon],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(.15),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Icon(
-                      Icons.storefront,
-                      color: Colors.white,
-                      size: 29,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Fire Safety Marketplace',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 5),
-                        Text(
-                          'ফায়ার সেফটি পণ্য ও সার্ভিস দেখুন',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 17,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-
-      // Quick preparation heading
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
-        sliver: SliverToBoxAdapter(
-          child: Row(
-            children: [
-              Icon(Icons.bolt, color: Theme.of(context).colorScheme.primary),
-              SizedBox(width: 8),
-              Text(
-                'দ্রুত প্রস্তুতি',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // Quick buttons
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _quickButton(
-                  'মডেল টেস্ট শুরু',
-                  Icons.play_circle_fill,
-                  () => _openTests(context),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _quickButton(
-                  'নোট পড়ুন',
-                  Icons.menu_book,
-                  () => _openNotes(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // Recent updates heading
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(18, 24, 18, 10),
-        sliver: SliverToBoxAdapter(
-          child: Row(
-            children: [
-              Icon(Icons.campaign_outlined, color: Theme.of(context).colorScheme.primary),
-              SizedBox(width: 8),
-              Text(
-                'সাম্প্রতিক আপডেট',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // Recent updates
-      SliverList(
-        delegate: SliverChildListDelegate([
-          _updateTile(
-            context,
-            Icons.local_fire_department,
-            red,
-            'ফায়ার সেফটি প্রস্তুতি',
-            'গুরুত্বপূর্ণ টপিক ও ইন্টারভিউ প্রশ্ন',
-          ),
-          _updateTile(
-            context,
-            Icons.assignment_outlined,
-            Colors.blue,
-            'মডেল টেস্ট',
-            'নিজের প্রস্তুতি যাচাই করুন',
-          ),
-          _updateTile(
-            context,
-            Icons.menu_book_outlined,
-            Colors.green,
-            'নতুন নোট',
-            'NFPA ও BNBC বিষয়ভিত্তিক নোট',
-          ),
-          const SizedBox(height: 20),
-        ]),
-      ),
-    ],
-  );
-
-  static Widget _quickButton(
-    String title,
-    IconData icon,
-    VoidCallback onTap,
-  ) =>
-      FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: maroon,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        onPressed: onTap,
-        icon: Icon(icon, size: 19),
-        label: FlexibleText(title),
-      );
-
-  static Widget _updateTile(
-    BuildContext context,
-    IconData icon,
-    Color color,
-    String title,
-    String subtitle,
-  ) =>
-      Container(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).dividerColor,
-          ),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(.1),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
-          ],
-        ),
-      );
+  State<HomePage> createState() => _HomePageState();
 }
 
-class FlexibleText extends StatelessWidget {
-  const FlexibleText(this.text, {super.key});
-
-  final String text;
-
+class _HomePageState extends State<HomePage> {
+  final _search = TextEditingController();
+  late Future<Map<String,dynamic>> _home;
+  late Future<List<JobCircular>> _jobs;
+  late Future<StudyNotesPage> _notes;
+  static const _quick = [
+    ('jobs','চাকরির খবর','Jobs',Icons.work_outline,Color(0xFFB83228)),
+    ('questions','প্রশ্ন ব্যাংক','Question bank',Icons.quiz_outlined,Color(0xFF7142B8)),
+    ('notes','স্টাডি নোট','Study notes',Icons.menu_book_outlined,Color(0xFF20834B)),
+    ('tests','মডেল টেস্ট','Model tests',Icons.assignment_outlined,Color(0xFF9E1630)),
+    ('interview','ইন্টারভিউ','Interview',Icons.forum_outlined,Color(0xFFB36A14)),
+    ('progress','আমার প্রস্তুতি','My preparation',Icons.insights,Color(0xFF14799A)),
+  ];
+  static const _topics = [
+    ('ফায়ার',Icons.local_fire_department,Color(0xFFD92735)),
+    ('সেইফটি',Icons.health_and_safety_outlined,Color(0xFF20834B)),
+    ('কমপ্লায়েন্স',Icons.verified_user_outlined,Color(0xFF7142B8)),
+    ('টেকনিক্যাল',Icons.settings_outlined,Color(0xFF14799A)),
+  ];
   @override
-  Widget build(BuildContext context) => Flexible(
-        child: Text(
-          text,
-          overflow: TextOverflow.ellipsis,
+  void initState() { super.initState(); _load(); }
+  void _load() {
+    _home=HomepageService.fetch('home');
+    _jobs=JobCircularService.instance.fetchCirculars();
+    _notes=NotesService.instance.fetchNotes();
+    // Hidden optional sections may have no FutureBuilder subscriber.
+    // Attach an error listener immediately, without replacing the original future.
+    _home.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _jobs.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _notes.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+  }
+  @override
+  void dispose() { _search.dispose(); super.dispose(); }
+  Future<void> _refresh() async {
+    setState(_load);
+    await Future.wait<void>([
+      _home.then<void>((_) {},onError:(Object _,StackTrace __){}),
+      _jobs.then<void>((_) {},onError:(Object _,StackTrace __){}),
+      _notes.then<void>((_) {},onError:(Object _,StackTrace __){}),
+    ]);
+  }
+  Future<void> _open(String target, {String search=''}) async {
+    if (!['jobs','shop','questions','notes','tests','interview','progress','community','notifications'].contains(target)) return;
+    if (target!='jobs' && target!='shop') {
+      if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    }
+    if (!mounted) return;
+    final Widget page = switch(target) {
+      'jobs'=>JobsPage(initialSearch:search),
+      'questions'=>QuestionBankPage(initialSearch:search),
+      'notes'=>NotesPage(initialSearch:search),
+      'tests'=>const TestsPage(),
+      'interview'=>InterviewPage(initialSearch:search),
+      'progress'=>const PracticeDashboardPage(),
+      'shop'=>const MarketplacePage(),
+      'community'=>const CommunityPage(),
+      _=>const NotificationInboxPage(),
+    };
+    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>page));
+  }
+  Future<void> _searchFor(String value) async {
+    final query=value.trim();
+    if(query.isEmpty) return;
+    final target=await showModalBottomSheet<String>(context:context,builder:(sheet)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Padding(padding:const EdgeInsets.all(16),child:Text('কোথায় খুঁজবেন: $query',maxLines:2,overflow:TextOverflow.ellipsis)),
+      for(final item in const [('jobs','চাকরি'),('notes','স্টাডি নোট'),('questions','প্রশ্নের বিভাগ'),('interview','ইন্টারভিউ')])
+        ListTile(title:Text(item.$2),trailing:const Icon(Icons.search),onTap:()=>Navigator.pop(sheet,item.$1)),
+    ])));
+    if(mounted&&target!=null) await _open(target,search:query);
+  }
+  Future<void> _topic((String,IconData,Color) item) async {
+    if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
+    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>TopicPage(title:item.$1,icon:item.$2,color:item.$3)));
+  }
+  Widget _heading(String title,{String? target})=>Padding(padding:const EdgeInsets.fromLTRB(2,18,2,6),child:Row(children:[
+    Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w800))),
+    if(target!=null) TextButton(onPressed:()=>_open(target),child:const Text('সব দেখুন')),
+  ]));
+  Widget _tile(String title,IconData icon,Color color,VoidCallback action)=>Card(
+    margin:EdgeInsets.zero,
+    child:InkWell(borderRadius:BorderRadius.circular(12),onTap:action,child:Padding(padding:const EdgeInsets.all(8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      CircleAvatar(backgroundColor:color.withValues(alpha:.13),child:Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).colorScheme.primary:color)),
+      const SizedBox(height:7),
+      Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+    ]))),
+  );
+  Widget _link(String title,String subtitle,IconData icon,String target)=>Card(child:ListTile(
+    leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:()=>_open(target)));
+  Widget _content(Map<String,dynamic> row,{bool banner=false}) {
+    final image=HomepageService.text(row,'image_url');
+    final target=HomepageService.text(row,'target');
+    final title=AppText.of(context,HomepageService.text(row,'title'),HomepageService.text(row,'title_en').isEmpty?HomepageService.text(row,'title'):HomepageService.text(row,'title_en'));
+    final body=AppText.of(context,HomepageService.text(row,'body'),HomepageService.text(row,'body_en').isEmpty?HomepageService.text(row,'body'):HomepageService.text(row,'body_en'));
+    return Card(clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>showDialog<void>(context:context,builder:(dialog)=>AlertDialog(title:Text(title),content:SingleChildScrollView(child:Text(body)),actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('বন্ধ করুন')),
+      if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:const Text('দেখুন')),
+    ])),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+      if(banner&&HomepageService.safeImage(image)) Image.network(image,height:88,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+      Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+        const SizedBox(height:5),Text(body,maxLines:2,overflow:TextOverflow.ellipsis),
+      ])),
+    ])));
+  }
+  Widget _section(String key,Map<String,dynamic>? data) {
+    switch(key) {
+      case 'banners':
+        final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['banners']);
+        if(rows.isEmpty)return const SizedBox.shrink();
+        return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          _heading('গুরুত্বপূর্ণ ঘোষণা'),
+          SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[for(final row in rows) SizedBox(width:260,child:_content(row,banner:true))])),
+        ]);
+      case 'progress':return _link('আজকের প্রস্তুতি','দৈনিক লক্ষ্য, অনুশীলন ও অগ্রগতি',Icons.track_changes,'progress');
+      case 'jobs':return Column(children:[_heading('সর্বশেষ চাকরির বিজ্ঞপ্তি',target:'jobs'),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const LinearProgressIndicator();
+        if(snapshot.hasError)return const Text('চাকরির খবর লোড হয়নি।');
+        final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
+        if(jobs.isEmpty)return const Text('বর্তমানে কোনো প্রকাশিত চলমান বিজ্ঞপ্তি নেই।');
+        return Column(children:[for(final job in jobs.take(3)) Card(child:ListTile(leading:const Icon(Icons.work_outline),title:Text(job.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(job.organization),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('jobs',search:job.title)))]);
+      })]);
+      case 'topics':return Column(children:[_heading('বিষয়ভিত্তিক প্রস্তুতি'),GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:104,children:[for(final item in _topics)_tile(item.$1,item.$2,item.$3,()=>_topic(item))])]);
+      case 'notes':return Column(children:[_heading('নতুন স্টাডি নোট',target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const LinearProgressIndicator();
+        if(snapshot.hasError)return const Text('নোট লোড হয়নি।');
+        final notes=snapshot.data?.notes??[];
+        if(notes.isEmpty)return const Text('কোনো প্রকাশিত নোট নেই।');
+        return Column(children:[for(final note in notes.take(3)) Card(child:ListTile(leading:const Icon(Icons.menu_book_outlined),title:Text(note.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(note.categoryName??''),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('notes',search:note.title)))]);
+      })]);
+      case 'marketplace':return Padding(
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [deepMaroon, maroon, Color(0xFF8D1723)]),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: InkWell(
+              onTap: () => _open('shop'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  Container(
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(14)),
+                    child: const Icon(Icons.storefront, color: Colors.white, size: 30),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Fire Safety Marketplace', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 5),
+                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Text(AppText.of(context, 'শপে প্রবেশ করুন', 'Explore shop'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                  ])),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: Colors.white),
+                ]),
+              ),
+            ),
+          ),
         ),
       );
+      case 'community':return _link('ফায়ার সেফটি কমিউনিটি','অভিজ্ঞতা, প্রশ্ন ও আলোচনা',Icons.groups_outlined,'community');
+      case 'tips':
+        final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['tips']);
+        return rows.isEmpty?const SizedBox.shrink():Column(children:[_heading('সেফটি টিপস'),for(final row in rows)_content(row)]);
+      default:return const SizedBox.shrink();
+    }
+  }
+  @override
+  Widget build(BuildContext context)=>RefreshIndicator(onRefresh:_refresh,child:ListView(
+    padding:EdgeInsets.zero,physics:const AlwaysScrollableScrollPhysics(),children:[
+      Container(padding:EdgeInsets.fromLTRB(18,MediaQuery.paddingOf(context).top+14,18,22),
+        decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(28))),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Row(children:[
+            Container(width:48,height:48,padding:const EdgeInsets.all(2),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
+            const SizedBox(width:12),
+            const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w800)),
+              Text('Learn • Prepare • Connect',style:TextStyle(color:Colors.white70,fontSize:11)),
+            ])),
+            IconButton(tooltip:'নোটিফিকেশন',onPressed:()=>_open('notifications'),icon:const Icon(Icons.notifications_none,color:Colors.white)),
+          ]),
+          const SizedBox(height:16),
+          const Text('স্বাগতম! আজকের প্রস্তুতি শুরু করুন।',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+          const SizedBox(height:12),
+          TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:'প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...',hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
+        ])),
+      Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
+        final data=snapshot.hasData?snapshot.data:null;
+        final sections=data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']);
+        // Quick access and the bottom navigation cannot be hidden by remote configuration.
+        final top=sections.isNotEmpty&&sections.first=='banners';
+        return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          if(top)_section('banners',data),
+          _heading('দ্রুত সেবা'),
+          LayoutBuilder(builder:(context,box)=>GridView.count(crossAxisCount:box.maxWidth<320?2:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:110,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          if(snapshot.hasError) const Padding(padding:EdgeInsets.only(top:10),child:Text('হোমপেজ আপডেট এখন পাওয়া যাচ্ছে না। মূল সেবা ব্যবহার করুন।')),
+          for(final key in sections) if(!top||key!='banners')_section(key,data),
+        ]);
+      })),
+    ],
+  ));
 }

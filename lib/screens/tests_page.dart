@@ -631,7 +631,7 @@ class _ExamResult extends StatelessWidget{
                               ? q['category'].toString().trim() : 'অন্যান্য') == subject
                         ).toList();
                         Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => _SmartSubjectPracticePage(
+                          builder: (_) => SubjectPracticePage(
                             subject: subject,
                           ),
                         ));
@@ -661,15 +661,15 @@ class _ExamResult extends StatelessWidget{
 }
 
 
-class _SmartSubjectPracticePage extends StatefulWidget {
+class SubjectPracticePage extends StatefulWidget {
   final String subject;
-  const _SmartSubjectPracticePage({required this.subject});
+  const SubjectPracticePage({super.key, required this.subject});
 
   @override
-  State<_SmartSubjectPracticePage> createState() => _SmartSubjectPracticePageState();
+  State<SubjectPracticePage> createState() => _SubjectPracticePageState();
 }
 
-class _SmartSubjectPracticePageState extends State<_SmartSubjectPracticePage> {
+class _SubjectPracticePageState extends State<SubjectPracticePage> {
   List<Map<String, dynamic>> _questions = [];
   String _difficulty = 'all';
   bool _loading = true;
