@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/admin_helpers.php';
 require_admin();
 require_once __DIR__.'/db.php';
+require_once __DIR__.'/premium_learning.php';
 header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
 $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
@@ -23,6 +24,29 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
             $limit=pm_id($_POST['daily_fullscreen_limit']??null,0,2);
             $q=$pdo->prepare('UPDATE premium_ads_settings SET ads_requested=?,home_native=?,question_native=?,results_interstitial=?,rewarded=?,daily_fullscreen_limit=? WHERE id=1');
             $q->execute([...$flags,$limit]);
+        }elseif($action==='integration'){
+            // Public identifiers only; no service-account keys, no activation flag.
+            $keys=$isAds?['admob_app_id','home_native_id','question_native_id','interstitial_id','rewarded_id']:['monthly_product_id','quarterly_product_id','annual_product_id'];
+            $args=[];foreach($keys as $k){
+                $v=$_POST[$k]??'';if(!is_string($v))throw new DomainException('আইডি সঠিক নয়।');$v=trim($v);
+                $pattern=$isAds?($k==='admob_app_id'?'~^ca-app-pub-[0-9]{16}~D':'~^ca-app-pub-[0-9]{16}/[0-9]{10}$~D'):'~^[a-z0-9][a-z0-9_.]{0,149}$~D';
+                if($k==='admob_app_id')$pattern='/^ca-app-pub-[0-9]{16}~[0-9]{10}$/D';
+                if($v!==''&&!preg_match($pattern,$v))throw new DomainException('আইডি ফরম্যাট সঠিক নয়: '.$k);
+                $args[]=$v;
+            }
+            $q=$pdo->prepare('UPDATE premium_integration_config SET '.implode('=?,',$keys).'=? WHERE id=1');$q->execute($args);
+        }elseif(!$isAds&&$action==='learning'){
+            $type=$_POST['type']??'';$id=pm_id($_POST['content_id']??null);
+            $map=['question'=>['questions','premium_question_items','question_id'],'note'=>['notes','premium_note_items','note_id'],'test'=>['model_tests','premium_test_items','test_id']];
+            if(!is_string($type)||!isset($map[$type]))throw new DomainException('কনটেন্টের ধরন সঠিক নয়।');
+            [$source,$target,$column]=$map[$type];
+            $pdo->beginTransaction();
+            $q=$pdo->prepare("SELECT * FROM $source WHERE id=? FOR UPDATE");$q->execute([$id]);$row=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$row)throw new DomainException('কনটেন্ট পাওয়া যায়নি।');
+            $lock=($_POST['locked']??'')==='1';
+            if($lock&&$type==='note'&&trim((string)($row['file_url']??''))!=='')throw new DomainException('পুরোনো পাবলিক ফাইল যুক্ত নোট লক করা যাবে না। আগে নিরাপদ ফাইল ব্যবস্থায় স্থানান্তর প্রয়োজন।');
+            if($lock&&$type==='note'&&preg_match('/(?:https?:|uploads\/|<\s*(?:img|iframe|object|embed|video|audio|a)\b)/i',(string)($row['content']??'')))throw new DomainException('পাবলিক লিংক বা মিডিয়া যুক্ত নোট আগে পরিষ্কার করুন।');
+            $q=$pdo->prepare($lock?"INSERT IGNORE INTO $target($column) VALUES (?)":"DELETE FROM $target WHERE $column=?");$q->execute([$id]);$pdo->commit();
         }elseif(!$isAds&&in_array($action,['grant','revoke'],true)){
             $id=pm_id($_POST['user_id']??null);
             $reason=$_POST['reason']??'';
@@ -60,10 +84,22 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
     header('Location: '.$url,true,303);exit;
 }
 $flash=$_SESSION[$flashKey]??'';unset($_SESSION[$flashKey]);$ready=true;$plans=[];$members=[];$events=[];$items=[];$ads=[];$more=false;
+$integration=[];$memberStats=[];$learning=[];$learningMore=false;
+$learningType=$_GET['learning_type']??'question';if(!is_string($learningType)||!in_array($learningType,['question','note','test'],true))$learningType='question';
+$learningPage=filter_var($_GET['learning_page']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>10000]])?:1;
 $page=filter_var($_GET['page']??1,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>10000]])?:1;
 try{
+    $integration=$pdo->query('SELECT * FROM premium_integration_config WHERE id=1')->fetch(PDO::FETCH_ASSOC);if(!$integration)throw new RuntimeException('Missing integration settings');
     if($isAds){$ads=$pdo->query('SELECT * FROM premium_ads_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);if(!$ads)throw new RuntimeException('Missing settings');}
     else{
+        $memberStats=$pdo->query("SELECT COUNT(*) AS total,COALESCE(SUM(expires_at>UTC_TIMESTAMP()),0) AS active,COALESCE(SUM(expires_at<=UTC_TIMESTAMP()),0) AS expired FROM premium_memberships")->fetch(PDO::FETCH_ASSOC);
+        $learningOffset=($learningPage-1)*25;
+        $sql=match($learningType){
+            'question'=>"SELECT q.id,q.question AS title,q.status,".premium_question_marked()." AS marked,0 AS inherited FROM questions q WHERE q.is_archived=0 ORDER BY q.id DESC",
+            'note'=>"SELECT n.id,n.title,n.status,".premium_note_marked()." AS marked,0 AS inherited FROM notes n ORDER BY n.id DESC",
+            'test'=>"SELECT mt.id,mt.title,mt.status,EXISTS(SELECT 1 FROM premium_test_items p WHERE p.test_id=mt.id) AS marked,".premium_test_marked()." AS inherited FROM model_tests mt ORDER BY mt.id DESC"
+        };
+        $learning=$pdo->query($sql." LIMIT 26 OFFSET ".$learningOffset)->fetchAll(PDO::FETCH_ASSOC);$learningMore=count($learning)>25;if($learningMore)array_pop($learning);
         $plans=$pdo->query('SELECT * FROM premium_plans ORDER BY months')->fetchAll(PDO::FETCH_ASSOC);
         $members=$pdo->query("SELECT m.user_id,u.full_name,m.expires_at,(m.expires_at>UTC_TIMESTAMP()) AS active FROM premium_memberships m JOIN users u ON u.id=m.user_id ORDER BY m.updated_at DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
         $events=$pdo->query('SELECT user_id,action,expires_at,reason,created_at FROM premium_membership_events ORDER BY id DESC LIMIT 50')->fetchAll(PDO::FETCH_ASSOC);
@@ -90,8 +126,12 @@ function pm_nav(array $nav,string $url):void{?><nav class="pm-nav" aria-label="�
 <form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="ads">
 <?php foreach(['ads_requested'=>'বিজ্ঞাপন চালুর অনুরোধ','home_native'=>'হোমপেজ Native Ad','question_native'=>'প্রশ্ন তালিকা Native Ad','results_interstitial'=>'ফলাফলের পর Interstitial','rewarded'=>'ঐচ্ছিক Rewarded Ad'] as $k=>$label):?><label><input type="checkbox" name="<?=h($k)?>" value="1" <?=!empty($ads[$k])?'checked':''?>> <?=h($label)?></label><?php endforeach;?>
 <label>দৈনিক Full-screen বিজ্ঞাপনের সীমা (০–২)<input type="number" name="daily_fullscreen_limit" min="0" max="2" value="<?=(int)$ads['daily_fullscreen_limit']?>" required></label><button>পরিকল্পনা সংরক্ষণ করুন</button></form></section>
+<section class="pm-panel"><h2>AdMob আইডি (পরবর্তীতে)</h2><p class="pm-muted">শুধু আইডি সংরক্ষণ হবে। SDK বন্ধ আছে।</p><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="integration"><?php foreach(['admob_app_id'=>'AdMob App ID','home_native_id'=>'Home Native Ad Unit ID','question_native_id'=>'Question Native Ad Unit ID','interstitial_id'=>'Interstitial Ad Unit ID','rewarded_id'=>'Rewarded Ad Unit ID'] as $k=>$label):?><label><?=h($label)?><input name="<?=h($k)?>" maxlength="100" value="<?=h($integration[$k])?>"></label><?php endforeach;?><button>আইডি সংরক্ষণ</button></form></section>
 <?php else:?>
 <p class="pm-note">এই ধাপে শুধু পরীক্ষামূলক/সৌজন্যমূলক সদস্যপদ। Google Play Billing যাচাই না হওয়া পর্যন্ত কেনাকাটা বন্ধ। কোনো টাকা গ্রহণ বা বিক্রয় রেকর্ড করা হচ্ছে না।</p>
+<section class="pm-panel"><h2>সদস্যপদের রিপোর্ট</h2><div class="pm-grid"><div>মোট সদস্যপদ: <strong><?=(int)$memberStats['total']?></strong></div><div>সক্রিয়: <strong><?=(int)$memberStats['active']?></strong></div><div>মেয়াদ শেষ: <strong><?=(int)$memberStats['expired']?></strong></div></div><p class="pm-muted">এটি সৌজন্যমূলক/পরীক্ষামূলক সদস্যপদ। যাচাইকৃত বিক্রয় বা আয়ের তথ্য এখন নেই।</p></section>
+<section class="pm-panel"><h2>Google Play Billing — নিষ্ক্রিয়</h2><p class="pm-muted">শুধু Product ID সংরক্ষণ। কোনো পেমেন্ট চালু হবে না।</p><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="integration"><?php foreach(['monthly_product_id'=>'Monthly Product ID','quarterly_product_id'=>'Quarterly Product ID','annual_product_id'=>'Annual Product ID'] as $k=>$label):?><label><?=h($label)?><input name="<?=h($k)?>" maxlength="150" value="<?=h($integration[$k])?>"></label><?php endforeach;?><button>আইডি সংরক্ষণ</button></form></section>
+<section class="pm-panel"><h2>প্রশ্ন / নোট / মডেল টেস্ট — Free / Premium</h2><p class="pm-muted">সব কনটেন্ট শুরুতে Free। পুরোনো পাবলিক PDF বা লিংকসহ নোট লক করা যাবে না। জরুরি নিরাপত্তা নির্দেশনা Free রাখুন। Premium প্রশ্ন যুক্ত টেস্ট স্বয়ংক্রিয়ভাবে Premium হবে। চলমান পরীক্ষার ফলাফল অক্ষত থাকবে।</p><div class="pm-grid"><a href="?learning_type=question">প্রশ্ন ব্যাংক</a><a href="?learning_type=note">স্টাডি নোট</a><a href="?learning_type=test">মডেল টেস্ট</a></div><p>নির্বাচিত: <?=h($learningType)?></p><div class="pm-scroll"><table><thead><tr><th>ID</th><th>কনটেন্ট</th><th>অবস্থা</th><th>অ্যাক্সেস</th></tr></thead><tbody><?php foreach($learning as $item):?><tr><td><?=h((string)$item['id'])?></td><td><?=h($item['title'])?></td><td><?=h($item['status'])?></td><td><form method="post" class="pm-fields"><?php pm_csrf();?><input type="hidden" name="action" value="learning"><input type="hidden" name="type" value="<?=h($learningType)?>"><input type="hidden" name="content_id" value="<?=h((string)$item['id'])?>"><select name="locked"><option value="0" <?=$item['marked']?'':'selected'?>>Free</option><option value="1" <?=$item['marked']?'selected':''?>>Premium</option></select><?php if($learningType==='test'&&!$item['marked']&&$item['inherited']):?><small>Premium প্রশ্ন থাকার কারণে লক</small><?php endif;?><button>সংরক্ষণ</button></form></td></tr><?php endforeach;?></tbody></table></div><?php if(!$learning):?><p>কোনো কনটেন্ট নেই।</p><?php endif;?><?php if($learningPage>1):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage-1?>">আগের পেজ</a> <?php endif;?><?php if($learningMore):?><a href="?learning_type=<?=h($learningType)?>&amp;learning_page=<?=$learningPage+1?>">পরের পেজ</a><?php endif;?></section>
 <div class="pm-grid"><section class="pm-panel"><h2>সদস্যপদ প্রদান / বাতিল</h2><form method="post" class="pm-fields"><?php pm_csrf();?>
 <label>নিবন্ধিত ব্যবহারকারীর আইডি<input name="user_id" type="number" min="1" required></label><label>মেয়াদ (আজ থেকে ১–৩৬৫ দিন)<input name="days" type="number" min="1" max="365" value="30"></label>
 <label>কারণ<input name="reason" maxlength="240" required></label><label><input type="checkbox" name="confirm" value="1" required> মেয়াদ নতুন করে নির্ধারণ বা বাতিল করার অনুমোদন দিচ্ছি।</label>
