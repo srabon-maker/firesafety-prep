@@ -70,7 +70,8 @@ try {
     $matched=true;
     if($related){
         $noteId=ql_id($_GET['note_id']);
-        $n=$pdo->prepare("SELECT c.name FROM notes n JOIN categories c ON c.id=n.category_id AND c.category_type='note' WHERE n.id=? AND n.status='published'");
+        $noteScope=$active?'':' AND NOT ('.premium_note_marked().')';
+        $n=$pdo->prepare("SELECT c.name FROM notes n JOIN categories c ON c.id=n.category_id AND c.category_type='note' WHERE n.id=? AND n.status='published' $noteScope");
         $n->execute([$noteId]);$name=$n->fetchColumn();
         $category=is_string($name)?trim($name):'';
         $matched=$category!=='';

@@ -19,5 +19,5 @@ try {
     foreach($plans as &$p){$p['months']=(int)$p['months'];$p['proposed_price_bdt']=(int)$p['proposed_price_bdt'];}unset($p);
     // Until Play verification and AdMob SDK are implemented, neither can be activated.
     premium_reply(200,['success'=>true,'premium'=>$expiry!==null,'expires_at'=>$expiry,
-        'plans'=>$plans,'purchase_available'=>false,'ads_active'=>false,'features'=>['premium_interviews'=>$expiry!==null]]);
+        'plans'=>$plans,'purchase_available'=>false,'ads_active'=>false,'features'=>['premium_interviews'=>$expiry!==null,'premium_questions'=>$expiry!==null,'premium_notes'=>$expiry!==null,'premium_tests'=>$expiry!==null,'premium_pdfs'=>$expiry!==null]]);
 }catch(Throwable $e){error_log('Premium API: '.$e->getMessage());premium_reply(503,['success'=>false,'message'=>'Membership temporarily unavailable']);}

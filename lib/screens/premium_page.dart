@@ -41,7 +41,8 @@ class _PremiumPageState extends State<PremiumPage> {
           ])),
         const SizedBox(height:18),
         const ListTile(leading:Icon(Icons.check_circle_outline),title:Text('চিহ্নিত Premium ইন্টারভিউ প্রশ্নের সম্পূর্ণ উত্তর')),
-        const ListTile(leading:Icon(Icons.info_outline),title:Text('প্রশ্ন ব্যাংক, স্টাডি নোট ও মডেল টেস্টের অতিরিক্ত Premium সুবিধা পরবর্তী ধাপে আসবে।')),
+        const ListTile(leading:Icon(Icons.check_circle_outline),title:Text('চিহ্নিত Premium প্রশ্ন, স্টাডি নোট, সুরক্ষিত PDF ও মডেল টেস্ট')),
+        const ListTile(leading:Icon(Icons.info_outline),title:Text('বিজ্ঞাপন ও অনলাইন কেনাকাটা বর্তমানে বন্ধ।')),
         const SizedBox(height:12),
         Text('পরিকল্পিত প্যাকেজ',style:Theme.of(context).textTheme.titleLarge),
         for(final p in plans) Card(child:ListTile(
