@@ -7,7 +7,23 @@ header('Cache-Control: no-store, private');
 header('X-Content-Type-Options: nosniff');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $tabs = ['analytics'=>'অ্যানালিটিক্স','notifications'=>'নোটিফিকেশন','settings'=>'সেটিংস'];
-$tab = is_string($_GET['tab'] ?? null) && isset($tabs[$_GET['tab']]) ? $_GET['tab'] : 'analytics';
+$fixedTab = defined('FSBD_OPS_TAB') ? FSBD_OPS_TAB : null;
+if ($fixedTab !== null && !isset($tabs[$fixedTab])) { http_response_code(404); exit; }
+$tab = $fixedTab ?? (is_string($_GET['tab'] ?? null) && isset($tabs[$_GET['tab']]) ? $_GET['tab'] : 'analytics');
+function ao_page(string $tab): string {
+    return match($tab) {
+        'analytics'=>'analytics_admin.php',
+        'notifications'=>'notifications_admin.php',
+        'settings'=>'settings_admin.php',
+    };
+}
+if ($fixedTab===null && ($_SERVER['REQUEST_METHOD']??'GET')==='GET') {
+    $params=[];
+    $key=$tab==='analytics'?'days':($tab==='notifications'?'page':null);
+    if ($key!==null && isset($_GET[$key]) && is_string($_GET[$key])) $params[$key]=$_GET[$key];
+    header('Location: '.ao_page($tab).($params?'?'.http_build_query($params):''),true,302);
+    exit;
+}
 $types = ['general'=>'সাধারণ','study'=>'পড়াশোনা','app_update'=>'অ্যাপ আপডেট','community'=>'কমিউনিটি','marketplace'=>'মার্কেটপ্লেস'];
 $audiences = ['single'=>'একজন নিবন্ধিত ব্যবহারকারী','all'=>'সব নিবন্ধিত ব্যবহারকারী','Employed'=>'চাকরিজীবী','Job Seeker'=>'চাকরিপ্রার্থী','Student'=>'শিক্ষার্থী','Other'=>'অন্যান্য'];
 $statusLabels = ['pending'=>'অপেক্ষমাণ','confirmed'=>'নিশ্চিত','processing'=>'প্রক্রিয়াধীন','shipped'=>'পাঠানো হয়েছে','delivered'=>'সরবরাহ সম্পন্ন','cancelled'=>'বাতিল','approved'=>'অনুমোদিত','rejected'=>'প্রত্যাখ্যাত','hidden'=>'লুকানো','reviewing'=>'পর্যালোচনাধীন','completed'=>'সম্পন্ন','Employed'=>'চাকরিজীবী','Job Seeker'=>'চাকরিপ্রার্থী','Student'=>'শিক্ষার্থী','Other'=>'অন্যান্য'];
@@ -30,12 +46,16 @@ function ao_settings(PDO $pdo,bool $lock=false): array {
 }
 function ao_redirect(string $tab,string $message): never {
     $_SESSION['admin_ops_flash']=$message;
-    header('Location: admin_operations.php?tab='.$tab, true,303);
+    header('Location: '.ao_page($tab), true,303);
     exit;
 }
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
+    if ($fixedTab!==null && !(($tab==='settings' && $action==='save_settings') || ($tab==='notifications' && $action==='publish'))) {
+        http_response_code(403);
+        exit('অনুরোধটি এই পেজের জন্য অনুমোদিত নয়।');
+    }
     try {
         if ($action === 'save_settings') {
             $enabled = ($_POST['broadcast_enabled'] ?? '') === '1' ? 1 : 0;
@@ -134,7 +154,7 @@ if($tab==='notifications'){
     } catch(Throwable $e){$historyError='প্রকাশের ইতিহাস পাওয়া যাচ্ছে না। মাইগ্রেশন পরীক্ষা করুন।';}
 }
 ?>
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>অ্যাডমিন ব্যবস্থাপনা | Fire Safety BD</title>
+<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=h($tabs[$tab])?> | Fire Safety BD</title>
 <style>
 :root{--maroon:#510d18;--maroon-dark:#450b15;--orange:#ffa400;--paper:#fff8f5;--ink:#30191b;--muted:#776468;--line:#f1ddd6;--surface:#fff;--shadow:0 7px 25px #4419230d}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Noto Sans Bengali","SolaimanLipi",Arial,sans-serif}a{color:inherit;text-decoration:none}.ops-shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh}
@@ -161,10 +181,10 @@ $opsNav = [
  ['users.php','♙','ব্যবহারকারী',''],
  ['homepage_admin.php','⌂','হোমপেজ ব্যবস্থাপনা',''],
  ['interview_admin.php','▤','ইন্টারভিউ ব্যবস্থাপনা',''],
- ['admin_operations.php?tab=notifications','♧','নোটিফিকেশন','notifications'],
+ ['notifications_admin.php','♧','নোটিফিকেশন','notifications'],
  ['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি',''],
- ['admin_operations.php?tab=settings','☼','সেটিংস','settings'],
- ['admin_operations.php?tab=analytics','▥','অ্যানালিটিক্স','analytics'],
+ ['settings_admin.php','☼','সেটিংস','settings'],
+ ['analytics_admin.php','▥','অ্যানালিটিক্স','analytics'],
  ['logout.php','↪','লগ আউট',''],
 ];
 $opsDescriptions = ['analytics'=>'ব্যবহারকারী, শিক্ষা, কমিউনিটি ও মার্কেটপ্লেসের বিস্তারিত পরিসংখ্যান।','notifications'=>'নির্বাচিত ব্যবহারকারীদের জন্য নোটিফিকেশন তৈরি ও প্রকাশের ইতিহাস দেখুন।','settings'=>'নোটিফিকেশন প্রকাশের সীমা এবং অ্যানালিটিক্সের সময়সীমা নিয়ন্ত্রণ করুন।'];
@@ -183,11 +203,10 @@ function ao_nav(array $links,string $tab): void { ?>
 <details class="mobile-nav"><summary>☰ Fire Safety BD · অ্যাডমিন মেনু</summary><?php ao_nav($opsNav,$tab); ?></details>
 <div class="topbar"><div class="crumb"><a href="fire_safety_job_prep_dashboard.php">ড্যাশবোর্ড</a> / <?= h($tabs[$tab]) ?></div><span class="admin-label">● শুধু অ্যাডমিন</span></div>
 <div class="heading"><h1><?= h($tabs[$tab]) ?></h1><p class="subtitle"><?= h($opsDescriptions[$tab]) ?></p></div>
-<nav class="tabs" aria-label="অ্যাডমিন ব্যবস্থাপনা"><?php foreach($tabs as $key=>$label): ?><a href="?tab=<?= h($key) ?>" <?= $key===$tab?'aria-current="page"':'' ?>><?= h($label) ?></a><?php endforeach; ?></nav>
 <?php if($flash!==''): ?><p class="notice" role="status"><?= h((string)$flash) ?></p><?php endif; ?>
 <?php if($migrationError!=='' && $tab!=='analytics'): ?><p class="notice"><?= h($migrationError) ?></p><?php endif; ?>
 <?php if($tab==='analytics'): ?>
-<form method="get" class="panel report-filter"><input type="hidden" name="tab" value="analytics"><label>রিপোর্টের সময়সীমা<select name="days"><?php foreach([7,30,90] as $d): ?><option value="<?= $d ?>" <?= $d===$days?'selected':'' ?>>গত <?= $d ?> দিন</option><?php endforeach; ?></select></label><button>প্রয়োগ করুন</button><p class="muted">আজসহ ডাটাবেজ সার্ভারের সময় অনুযায়ী হিসাব করা হয়েছে। বর্তমানে সংরক্ষিত তথ্য দেখানো হচ্ছে। পরিশোধিত ও সরবরাহকৃত অর্ডারের মূল্য নির্বাচিত সময়ে করা অর্ডারের বর্তমান মূল্য; এটি নগদ প্রবাহ বা লাভ নয়।</p></form>
+<form method="get" action="analytics_admin.php" class="panel report-filter"><label>রিপোর্টের সময়সীমা<select name="days"><?php foreach([7,30,90] as $d): ?><option value="<?= $d ?>" <?= $d===$days?'selected':'' ?>>গত <?= $d ?> দিন</option><?php endforeach; ?></select></label><button>প্রয়োগ করুন</button><p class="muted">আজসহ ডাটাবেজ সার্ভারের সময় অনুযায়ী হিসাব করা হয়েছে। বর্তমানে সংরক্ষিত তথ্য দেখানো হচ্ছে। পরিশোধিত ও সরবরাহকৃত অর্ডারের মূল্য নির্বাচিত সময়ে করা অর্ডারের বর্তমান মূল্য; এটি নগদ প্রবাহ বা লাভ নয়।</p></form>
 <div class="grid metric-grid"><?php foreach($metrics as $label=>$value): ?><div class="metric"><small><?= h($label) ?></small><strong><?= h($value??'তথ্য পাওয়া যাচ্ছে না') ?></strong></div><?php endforeach; ?></div>
 <div class="grid"><?php foreach($series as $label=>$rows): ?><section class="panel"><h2><?= h($label) ?> · দৈনিক</h2><?php if($rows===null): ?><p>তথ্য পাওয়া যাচ্ছে না</p><?php elseif(!$rows): ?><p>নির্বাচিত সময়ে কোনো তথ্য নেই।</p><?php else: $max=max(1,...array_map(fn($x)=>(int)$x['total'],$rows)); ?><div class="trend"><?php foreach($rows as $row): ?><div class="day"><span><?= h($row['day']) ?></span><progress value="<?= (int)$row['total'] ?>" max="<?= $max ?>" aria-label="<?= h($row['day']) ?>"></progress><span><?= (int)$row['total'] ?></span></div><?php endforeach; ?></div><small>শুধু তথ্য থাকা দিনগুলো দেখানো হয়েছে; বাদ পড়া দিনগুলোতে কোনো কার্যক্রম নেই।</small><?php endif; ?></section><?php endforeach; ?></div>
 <div class="grid"><?php foreach($groups as $label=>$rows): ?><section class="panel"><h2><?= h($label) ?></h2><?php if($rows===null): ?><p>তথ্য পাওয়া যাচ্ছে না</p><?php elseif(!$rows): ?><p>কোনো তথ্য নেই।</p><?php else: ?><table><thead><tr><th>অবস্থা</th><th>সংখ্যা</th></tr></thead><tbody><?php foreach($rows as $row): ?><tr><td><?= h($statusLabels[$row['label']] ?? $row['label']) ?></td><td><?= (int)$row['total'] ?></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></section><?php endforeach; ?></div>
@@ -200,7 +219,7 @@ function ao_nav(array $links,string $tab): void { ?>
 <label class="wide">নিবন্ধিত ব্যবহারকারীর আইডি (শুধু একজন প্রাপকের জন্য)<input type="number" min="1" name="target_user_id"></label>
 <p>প্রাপকের সর্বোচ্চ সীমা: <?= (int)($settings['broadcast_limit']??0) ?> জন। সীমা অতিক্রম করলে সম্পূর্ণ অনুরোধ বাতিল হবে।</p>
 <label class="checkline"><input type="checkbox" name="confirm_publish" value="1" required> নির্বাচিত প্রাপকদের জন্য নোটিফিকেশন তৈরির অনুমোদন দিচ্ছি।</label><button <?= !$settings?'disabled':'' ?>>প্রকাশ করুন</button></form></section>
-<section class="panel"><h2>নোটিফিকেশন প্রকাশের ইতিহাস</h2><p class="muted">মূল প্রাপকের সংখ্যা ও বর্তমানে পড়া হয়েছে এমন রেকর্ডের সংখ্যা; মোবাইলে পৌঁছানোর হিসাব নয়।</p><?php if($historyError!==''): ?><p><?= h($historyError) ?></p><?php else: ?><div class="scroll"><table class="history-table"><thead><tr><th>আইডি</th><th>শিরোনাম</th><th>ধরন</th><th>প্রাপক শ্রেণি</th><th>প্রাপক</th><th>পড়েছেন</th><th>তৈরির সময়</th></tr></thead><tbody><?php foreach($history as $row): ?><tr><td><?= (int)$row['id'] ?></td><td><?= h($row['title']) ?></td><td><?= h($types[$row['notification_type']] ?? $row['notification_type']) ?></td><td><?= h($audiences[$row['audience']] ?? $row['audience']) ?></td><td><?= (int)$row['recipient_count'] ?></td><td><?= (int)$row['read_count'] ?></td><td><?= h($row['created_at']) ?></td></tr><?php endforeach; ?><?php if(!$history): ?><tr><td colspan="7">এই পেজে কোনো প্রকাশের ইতিহাস নেই।</td></tr><?php endif; ?></tbody></table></div><?php if($page>1): ?><a class="btn" href="?tab=notifications&amp;page=<?= $page-1 ?>">আগের পেজ</a><?php endif; ?> <?php if($hasNext): ?><a class="btn" href="?tab=notifications&amp;page=<?= $page+1 ?>">পরের পেজ</a><?php endif; ?><?php endif; ?></section>
+<section class="panel"><h2>নোটিফিকেশন প্রকাশের ইতিহাস</h2><p class="muted">মূল প্রাপকের সংখ্যা ও বর্তমানে পড়া হয়েছে এমন রেকর্ডের সংখ্যা; মোবাইলে পৌঁছানোর হিসাব নয়।</p><?php if($historyError!==''): ?><p><?= h($historyError) ?></p><?php else: ?><div class="scroll"><table class="history-table"><thead><tr><th>আইডি</th><th>শিরোনাম</th><th>ধরন</th><th>প্রাপক শ্রেণি</th><th>প্রাপক</th><th>পড়েছেন</th><th>তৈরির সময়</th></tr></thead><tbody><?php foreach($history as $row): ?><tr><td><?= (int)$row['id'] ?></td><td><?= h($row['title']) ?></td><td><?= h($types[$row['notification_type']] ?? $row['notification_type']) ?></td><td><?= h($audiences[$row['audience']] ?? $row['audience']) ?></td><td><?= (int)$row['recipient_count'] ?></td><td><?= (int)$row['read_count'] ?></td><td><?= h($row['created_at']) ?></td></tr><?php endforeach; ?><?php if(!$history): ?><tr><td colspan="7">এই পেজে কোনো প্রকাশের ইতিহাস নেই।</td></tr><?php endif; ?></tbody></table></div><?php if($page>1): ?><a class="btn" href="?page=<?= $page-1 ?>">আগের পেজ</a><?php endif; ?> <?php if($hasNext): ?><a class="btn" href="?page=<?= $page+1 ?>">পরের পেজ</a><?php endif; ?><?php endif; ?></section>
 <?php else: ?>
 <section class="panel"><h2>পরিচালনাগত সেটিংস</h2><p class="muted">এই সেটিংস শুধু অ্যাডমিন নোটিফিকেশন প্রকাশ ও অ্যানালিটিক্সের ডিফল্ট সময়সীমা নিয়ন্ত্রণ করে। অ্যাপের থিম, ভাষা, লগইন বা পেমেন্ট কনফিগারেশন পরিবর্তন করে না।</p><form method="post" class="fields"><input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="save_settings"><label class="checkline"><input type="checkbox" name="broadcast_enabled" value="1" <?= ($settings['broadcast_enabled']??0)?'checked':'' ?>> একাধিক ব্যবহারকারীকে নোটিফিকেশন পাঠানো চালু করুন</label><label>প্রতি নোটিফিকেশনে সর্বোচ্চ প্রাপক (১–৫০০০)<input name="broadcast_limit" type="number" min="1" max="5000" value="<?= (int)($settings['broadcast_limit']??500) ?>" required></label><label>অ্যানালিটিক্সের ডিফল্ট সময়সীমা<select name="analytics_days"><?php foreach([7,30,90] as $d): ?><option value="<?= $d ?>" <?= $d===(int)($settings['analytics_days']??30)?'selected':'' ?>><?= $d ?> দিন</option><?php endforeach; ?></select></label><button <?= !$settings?'disabled':'' ?>>সেটিংস সংরক্ষণ করুন</button></form></section>
 <?php endif; ?>

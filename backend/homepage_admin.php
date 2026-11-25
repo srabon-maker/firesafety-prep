@@ -149,10 +149,10 @@ $hpNav=[
  ['fire_safety_job_prep_dashboard.php?section=marketplace','🛒','মার্কেটপ্লেস'],
  ['category_management.php','⊞','ক্যাটাগরি'],
  ['users.php','♙','ব্যবহারকারী'],
- ['admin_operations.php?tab=notifications','♧','নোটিফিকেশন'],
+ ['notifications_admin.php','♧','নোটিফিকেশন'],
  ['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি'],
- ['admin_operations.php?tab=settings','☼','সেটিংস'],
- ['admin_operations.php?tab=analytics','▥','অ্যানালিটিক্স'],
+ ['settings_admin.php','☼','সেটিংস'],
+ ['analytics_admin.php','▥','অ্যানালিটিক্স'],
  ['logout.php','↪','লগ আউট'],
 ];
 function hp_nav(array $links,string $active): void { ?>

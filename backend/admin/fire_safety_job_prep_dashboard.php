@@ -1283,7 +1283,7 @@ tr:last-child td {
             <span class="ico">▤</span> ইন্টারভিউ ব্যবস্থাপনা
         </a>
 
-        <a href="admin_operations.php?tab=notifications">
+        <a href="notifications_admin.php">
             <span class="ico">♧</span> নোটিফিকেশন
         </a>
 
@@ -1291,11 +1291,11 @@ tr:last-child td {
             <span class="ico">▱</span> কমিউনিটি
         </a>
 
-        <a href="admin_operations.php?tab=settings">
+        <a href="settings_admin.php">
             <span class="ico">☼</span> সেটিংস
         </a>
 
-        <a href="admin_operations.php?tab=analytics">
+        <a href="analytics_admin.php">
             <span class="ico">▥</span> অ্যানালিটিক্স
         </a>
 
