@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/_common.php';
+require_once __DIR__ . '/_orders.php';
 $method = $_SERVER['REQUEST_METHOD'] ?? '';
 if (!in_array($method, ['GET','POST'], true)) market_reply(405, ['success'=>false,'message'=>'GET or POST required']);
 try {
@@ -34,9 +35,9 @@ try {
     $stmt = $pdo->prepare("SELECT c.product_id, c.quantity, p.name, p.price, p.stock_quantity, p.image_url, (c.quantity*p.price) AS line_total FROM market_cart c JOIN market_products p ON p.id=c.product_id WHERE c.user_id=? AND p.status='published' ORDER BY c.id");
     $stmt->execute([$userId]);
     $items = $stmt->fetchAll();
-    $subtotal = '0.00';
-    $sum = 0;
-    foreach ($items as $item) $sum += (int)$item['quantity'] * (int)round((float)$item['price'] * 100);
-    $subtotal = number_format($sum / 100, 2, '.', '');
-    market_reply(200, ['success'=>true,'data'=>['items'=>$items,'subtotal'=>$subtotal]]);
+    $sum=0;
+    foreach ($items as $item) $sum+=(int)$item['quantity']*market_order_cents($item['price']);
+    $fee=$items?market_delivery_fee($pdo):0;
+    market_reply(200,['success'=>true,'data'=>['items'=>$items,'subtotal'=>market_order_money($sum),
+        'delivery_charge'=>market_order_money($fee),'total_amount'=>market_order_money($sum+$fee)]]);
 } catch (Throwable $e) { market_error($e); }
