@@ -76,7 +76,7 @@ function pm_csrf():void{?><input type="hidden" name="csrf_token" value="<?=h(csr
 $nav=[
  ['fire_safety_job_prep_dashboard.php','▦','ড্যাশবোর্ড'],['questions.php','ⓘ','প্রশ্ন ব্যাংক'],['model_tests.php','☑','মডেল টেস্ট'],['notes.php','◫','নোট'],['job_circulars.php','▣','চাকরির সার্কুলার'],
  ['fire_safety_job_prep_dashboard.php?section=marketplace','🛒','মার্কেটপ্লেস'],['category_management.php','⊞','ক্যাটাগরি'],['users.php','♙','ব্যবহারকারী'],['homepage_admin.php','⌂','হোমপেজ ব্যবস্থাপনা'],['interview_admin.php','▤','ইন্টারভিউ ব্যবস্থাপনা'],
- ['notifications_admin.php','♧','নোটিফিকেশন'],['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি'],['settings_admin.php','☼','সেটিংস'],['analytics_admin.php','▥','অ্যানালিটিক্স'],['premium_admin.php','♛','প্রিমিয়াম ব্যবস্থাপনা'],['ads_admin.php','▧','বিজ্ঞাপন ব্যবস্থাপনা'],['logout.php','↪','লগ আউট']
+ ['notifications_admin.php','♧','নোটিফিকেশন'],['fire_safety_job_prep_dashboard.php?section=community','▱','কমিউনিটি'],['settings_admin.php','☼','সেটিংস'],['analytics_admin.php','▥','অ্যানালিটিক্স'],['premium_admin.php','♛','প্রিমিয়াম ব্যবস্থাপনা'],['ads_admin.php','▧','বিজ্ঞাপন ব্যবস্থাপনা'],['support_admin.php','✉','গ্রাহক সহায়তা'],['logout.php','↪','লগ আউট']
 ];
 function pm_nav(array $nav,string $url):void{?><nav class="pm-nav" aria-label="অ্যাডমিন মেনু"><?php foreach($nav as [$link,$icon,$name]):?><a href="<?=h($link)?>" class="<?=$link===$url?'active':''?>" <?=$link===$url?'aria-current="page"':''?>><span aria-hidden="true"><?=h($icon)?></span> <?=h($name)?></a><?php endforeach;?></nav><?php }
 ?><!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=h($title)?> | Fire Safety BD</title>
