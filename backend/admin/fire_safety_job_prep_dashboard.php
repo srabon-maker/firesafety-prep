@@ -1310,6 +1310,8 @@ tr:last-child td {
             <span class="ico">▥</span> অ্যানালিটিক্স
         </a>
 
+        <a href="premium_admin.php"><span class="ico">♛</span> প্রিমিয়াম ব্যবস্থাপনা</a>
+        <a href="ads_admin.php"><span class="ico">▧</span> বিজ্ঞাপন ব্যবস্থাপনা</a>
         <a href="logout.php" class="logout">
             <span class="ico">↪</span> লগ আউট
         </a>
