@@ -8,21 +8,24 @@ function pp_reply(int $code,array $data):never{
 }
 try{
  require_once __DIR__.'/../../db.php';
- require_once __DIR__.'/../../premium_access.php';
+ require_once __DIR__.'/../../premium_learning.php';
  require_once __DIR__.'/../../premium_pdf_storage.php';
  $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
  $method=$_SERVER['REQUEST_METHOD']??'GET';
  if($method==='POST'){
   $uid=premium_bearer_user($pdo);
   if($uid===null)pp_reply(401,['success'=>false,'message'=>'Login required']);
-  if(premium_active($pdo,$uid)===null)pp_reply(403,['success'=>false,'message'=>'Premium required']);
+
   $raw=file_get_contents('php://input',false,null,0,1025);if($raw===false||strlen($raw)>1024)pp_reply(413,['success'=>false]);
   $body=json_decode($raw,true);$id=filter_var(is_array($body)?($body['note_id']??null):null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if($id===false)pp_reply(422,['success'=>false,'message'=>'Invalid note']);
   $pdo->beginTransaction();
   $q=$pdo->prepare('SELECT id FROM users WHERE id=? AND is_registered=1 FOR UPDATE');$q->execute([$uid]);if(!$q->fetchColumn()){$pdo->rollBack();pp_reply(401,['success'=>false]);}
-  $q=$pdo->prepare("SELECT p.storage_name FROM premium_note_pdfs p JOIN premium_note_items i ON i.note_id=p.note_id JOIN notes n ON n.id=p.note_id WHERE p.note_id=? AND n.status='published'");$q->execute([$id]);$name=$q->fetchColumn();
+  $q=$pdo->prepare("SELECT p.storage_name FROM premium_note_pdfs p JOIN notes n ON n.id=p.note_id WHERE p.note_id=? AND n.status='published'");$q->execute([$id]);$name=$q->fetchColumn();
   if(!$name){$pdo->rollBack();pp_reply(404,['success'=>false,'message'=>'PDF unavailable']);}
+  $mode=premium_policy($pdo)['effective_mode'];
+  $q=$pdo->prepare('SELECT '.premium_effective_note($mode).' FROM notes n WHERE n.id=?');$q->execute([$id]);
+  if((bool)$q->fetchColumn()&&premium_active($pdo,$uid)===null){$pdo->rollBack();pp_reply(403,['success'=>false,'message'=>'Premium required']);}
   premium_pdf_path((string)$name);
   $pdo->prepare('DELETE FROM premium_pdf_downloads WHERE user_id=? AND expires_at<=UTC_TIMESTAMP()')->execute([$uid]);
   $q=$pdo->prepare('SELECT COUNT(*) FROM premium_pdf_downloads WHERE user_id=?');$q->execute([$uid]);
@@ -35,9 +38,12 @@ try{
  $token=$_GET['download']??'';
  if(!is_string($token)||!preg_match('/^[a-f0-9]{64}$/D',$token))pp_reply(404,['success'=>false]);
  $pdo->beginTransaction();
- $q=$pdo->prepare("SELECT d.user_id,d.note_id,p.storage_name,p.size_bytes FROM premium_pdf_downloads d JOIN premium_note_pdfs p ON p.note_id=d.note_id JOIN premium_note_items i ON i.note_id=d.note_id JOIN notes n ON n.id=d.note_id JOIN users u ON u.id=d.user_id WHERE d.token_hash=? AND d.expires_at>UTC_TIMESTAMP() AND n.status='published' AND u.is_registered=1 FOR UPDATE");
+ $q=$pdo->prepare("SELECT d.user_id,d.note_id,p.storage_name,p.size_bytes FROM premium_pdf_downloads d JOIN premium_note_pdfs p ON p.note_id=d.note_id JOIN notes n ON n.id=d.note_id JOIN users u ON u.id=d.user_id WHERE d.token_hash=? AND d.expires_at>UTC_TIMESTAMP() AND n.status='published' AND u.is_registered=1 FOR UPDATE");
  $hash=hash('sha256',$token);$q->execute([$hash]);$row=$q->fetch(PDO::FETCH_ASSOC);
- if(!$row||premium_active($pdo,(int)$row['user_id'])===null){$pdo->rollBack();pp_reply(404,['success'=>false]);}
+ if(!$row){$pdo->rollBack();pp_reply(404,['success'=>false]);}
+ $mode=premium_policy($pdo)['effective_mode'];
+ $q=$pdo->prepare('SELECT '.premium_effective_note($mode).' FROM notes n WHERE n.id=?');$q->execute([$row['note_id']]);
+ if((bool)$q->fetchColumn()&&premium_active($pdo,(int)$row['user_id'])===null){$pdo->rollBack();pp_reply(404,['success'=>false]);}
  $path=premium_pdf_path($row['storage_name']);$size=filesize($path);
  if($size===false||$size!==(int)$row['size_bytes']||$size>PREMIUM_PDF_MAX)throw new RuntimeException('Invalid private file size');
  $stream=fopen($path,'rb');if($stream===false)throw new RuntimeException('Unable to read file');

@@ -111,7 +111,7 @@ try {
         if($category==='' || mb_strlen($category)>100)exam_reply(422,['success'=>false,'message'=>'সঠিক বিষয় নির্বাচন করুন।']);
         if(!in_array($difficulty,['all','easy','medium','hard'],true))exam_reply(422,['success'=>false,'message'=>'সঠিক Difficulty নির্বাচন করুন।']);
         $where="q.status='published' AND q.is_archived=0 AND q.category=? AND q.correct_answer IN ('A','B','C','D')";
-        if(premium_active($pdo,premium_bearer_user($pdo))===null)$where.=' AND NOT ('.premium_question_marked().')';
+        if(premium_active($pdo,premium_bearer_user($pdo))===null)$where.=' AND NOT ('.premium_effective_question(premium_policy($pdo)['effective_mode']).')';
         $params=[$category];
         if($difficulty!=='all'){$where.=' AND difficulty=?';$params[]=$difficulty;}
         $q=$pdo->prepare("SELECT id,category,question,option_a,option_b,option_c,option_d,correct_answer,explanation,difficulty FROM questions q WHERE ".$where." ORDER BY RAND() LIMIT ".$limit);
@@ -142,7 +142,7 @@ try {
     }
 
     if($method==='GET' && $action==='list'){
-        $active=premium_has_access($pdo);$marked=premium_test_marked();$locked=$active?'0':$marked;
+        $active=premium_has_access($pdo);$marked=premium_effective_test(premium_policy($pdo)['effective_mode']);$locked=$active?'0':$marked;
         $scope=(!$active&&($_GET['premium_preview']??'')!=='1')?" AND NOT ($marked)":'';
         $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
         $hasNegative=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'negative_marks_per_question'")->fetch(PDO::FETCH_ASSOC);

@@ -37,7 +37,8 @@ try {
     require_once __DIR__.'/../../premium_learning.php';
     $uid=ql_user($pdo);
     $active=premium_active($pdo,$uid)!==null;
-    $marked=premium_question_marked();
+    $mode=premium_policy($pdo)['effective_mode'];
+    $marked=premium_effective_question($mode);
     $locked=$active?'0':$marked;
     $eligible="q.status='published' AND q.is_archived=0 AND q.correct_answer IN ('A','B','C','D')";
     if($method==='POST'){
@@ -70,7 +71,7 @@ try {
     $matched=true;
     if($related){
         $noteId=ql_id($_GET['note_id']);
-        $noteScope=$active?'':' AND NOT ('.premium_note_marked().')';
+        $noteScope=$active?'':' AND NOT ('.premium_effective_note($mode).')';
         $n=$pdo->prepare("SELECT c.name FROM notes n JOIN categories c ON c.id=n.category_id AND c.category_type='note' WHERE n.id=? AND n.status='published' $noteScope");
         $n->execute([$noteId]);$name=$n->fetchColumn();
         $category=is_string($name)?trim($name):'';

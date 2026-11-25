@@ -10,14 +10,16 @@ function premium_reply(int $status,array $data): never{
 try {
     if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET'){header('Allow: GET');premium_reply(405,['success'=>false,'message'=>'GET required']);}
     require_once __DIR__.'/../../db.php';
-    require_once __DIR__.'/../../premium_access.php';
+    require_once __DIR__.'/../../premium_learning.php';
     $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
     $uid=premium_bearer_user($pdo);
     if($uid===null)premium_reply(401,['success'=>false,'message'=>'Login required']);
     $expiry=premium_active($pdo,$uid);
+    $policy=premium_policy_public(premium_policy($pdo));
+    $unrestricted=$expiry!==null||$policy['mode']==='free';
     $plans=$pdo->query("SELECT code,months,proposed_price_bdt FROM premium_plans ORDER BY months")->fetchAll(PDO::FETCH_ASSOC);
     foreach($plans as &$p){$p['months']=(int)$p['months'];$p['proposed_price_bdt']=(int)$p['proposed_price_bdt'];}unset($p);
     // Until Play verification and AdMob SDK are implemented, neither can be activated.
     premium_reply(200,['success'=>true,'premium'=>$expiry!==null,'expires_at'=>$expiry,
-        'plans'=>$plans,'purchase_available'=>false,'ads_active'=>false,'features'=>['premium_interviews'=>$expiry!==null,'premium_questions'=>$expiry!==null,'premium_notes'=>$expiry!==null,'premium_tests'=>$expiry!==null,'premium_pdfs'=>$expiry!==null]]);
+        'access_policy'=>$policy,'plans'=>$plans,'purchase_available'=>false,'ads_active'=>false,'features'=>['premium_interviews'=>$unrestricted,'premium_questions'=>$unrestricted,'premium_notes'=>$unrestricted,'premium_tests'=>$unrestricted,'premium_pdfs'=>$unrestricted]]);
 }catch(Throwable $e){error_log('Premium API: '.$e->getMessage());premium_reply(503,['success'=>false,'message'=>'Membership temporarily unavailable']);}

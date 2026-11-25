@@ -43,11 +43,12 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     require_once __DIR__.'/../premium_learning.php';
     $active=premium_has_access($pdo);
-    $marked=premium_note_marked();
+    $mode=premium_policy($pdo)['effective_mode'];
+    $marked=premium_effective_note($mode);
     $locked=$active?'0':$marked;
     $preview=($_GET['premium_preview']??'')==='1';
     $action = (string)($_GET['action'] ?? 'list');
-    $select = "SELECT n.id,n.category_id,n.title,CASE WHEN $locked THEN NULL ELSE n.summary END AS summary,CASE WHEN $locked THEN NULL ELSE n.content END AS content,CASE WHEN $locked THEN NULL ELSE n.file_url END AS file_url,CASE WHEN $locked THEN 'none' ELSE n.file_type END AS file_type,$marked AS premium_only,$locked AS locked,CASE WHEN NOT ($locked) AND ($marked) THEN EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) ELSE 0 END AS private_pdf,
+    $select = "SELECT n.id,n.category_id,n.title,CASE WHEN $locked THEN NULL ELSE n.summary END AS summary,CASE WHEN $locked THEN NULL ELSE n.content END AS content,CASE WHEN $locked THEN NULL ELSE n.file_url END AS file_url,CASE WHEN $locked THEN 'none' ELSE n.file_type END AS file_type,$marked AS premium_only,$locked AS locked,CASE WHEN NOT ($locked) THEN EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) ELSE 0 END AS private_pdf,
         DATE_FORMAT(n.published_at,'%Y-%m-%d %H:%i:%s') AS published_at,
         c.name AS category_name
         FROM notes n LEFT JOIN categories c ON c.id=n.category_id AND c.category_type='note'";

@@ -42,3 +42,12 @@ CREATE TABLE IF NOT EXISTS premium_pdf_downloads (
  CONSTRAINT fk_ppd_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
  CONSTRAINT fk_ppd_note FOREIGN KEY(note_id) REFERENCES premium_note_pdfs(note_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Master policy. Existing item selections are retained while free mode is active.
+CREATE TABLE IF NOT EXISTS premium_access_policy (
+ id TINYINT UNSIGNED PRIMARY KEY,
+ mode ENUM('free','selected','all') NOT NULL DEFAULT 'free',
+ starts_at DATETIME NULL COMMENT 'UTC',
+ updated_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT IGNORE INTO premium_access_policy(id,mode,starts_at,updated_at) VALUES (1,'free',NULL,UTC_TIMESTAMP());
