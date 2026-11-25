@@ -11,14 +11,15 @@ import '../services/saved_notes_service.dart';
 const Color notesMaroon = Color(0xFF650D18);
 
 class NotesPage extends StatefulWidget {
-  const NotesPage({super.key});
+  const NotesPage({super.key, this.initialSearch = ''});
+  final String initialSearch;
 
   @override
   State<NotesPage> createState() => _NotesPageState();
 }
 
 class _NotesPageState extends State<NotesPage> {
-  final TextEditingController _searchController = TextEditingController();
+  late final TextEditingController _searchController = TextEditingController(text: widget.initialSearch);
   Timer? _searchDebounce;
   StudyNotesPage? _result;
   Object? _error;

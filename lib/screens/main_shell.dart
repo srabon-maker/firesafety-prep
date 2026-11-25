@@ -20,8 +20,8 @@ class _MainShellState extends State<MainShell> {
 
   late final List<Widget> pages = [
     const HomePage(),
-    const MarketplacePage(),
     const CommunityPage(),
+    const MarketplacePage(),
     ProfilePage(
       onLogout: _goToHome,
     ),
@@ -37,7 +37,7 @@ class _MainShellState extends State<MainShell> {
 
   Future<void> _onDestinationSelected(int i) async {
     // Home ও Marketplace সবার জন্য উন্মুক্ত
-    if (i == 0 || i == 1) {
+    if (i == 0 || i == 2) {
       setState(() => index = i);
       return;
     }
@@ -70,14 +70,14 @@ class _MainShellState extends State<MainShell> {
               label: AppText.of(context, 'হোম', 'Home'),
             ),
             NavigationDestination(
-              icon: Icon(Icons.storefront_outlined),
-              selectedIcon: Icon(Icons.storefront),
-              label: AppText.of(context, 'মার্কেট', 'Market'),
-            ),
-            NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
               label: AppText.of(context, 'কমিউনিটি', 'Community'),
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.storefront_outlined),
+              selectedIcon: Icon(Icons.storefront),
+              label: AppText.of(context, 'শপ', 'Shop'),
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

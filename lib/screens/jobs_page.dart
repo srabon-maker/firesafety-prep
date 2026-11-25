@@ -45,7 +45,8 @@ Future<void> _openOfficialLink(BuildContext context, String? url) async {
 }
 
 class JobsPage extends StatefulWidget {
-  const JobsPage({super.key});
+  const JobsPage({super.key, this.initialSearch = ''});
+  final String initialSearch;
 
   @override
   State<JobsPage> createState() => _JobsPageState();
@@ -53,7 +54,7 @@ class JobsPage extends StatefulWidget {
 
 class _JobsPageState extends State<JobsPage> {
   late Future<List<JobCircular>> _jobs;
-  final _search = TextEditingController();
+  late final _search = TextEditingController(text: widget.initialSearch);
   bool _pinnedOnly = false;
   String _deadline = 'active';
 
