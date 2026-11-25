@@ -1275,7 +1275,7 @@ tr:last-child td {
             <span class="ico">♙</span> ব্যবহারকারী
         </a>
 
-        <a href="questions.php">
+        <a href="admin_operations.php?tab=notifications">
             <span class="ico">♧</span> নোটিফিকেশন
         </a>
 
@@ -1283,8 +1283,12 @@ tr:last-child td {
             <span class="ico">▱</span> কমিউনিটি
         </a>
 
-        <a href="questions.php">
+        <a href="admin_operations.php?tab=settings">
             <span class="ico">☼</span> সেটিংস
+        </a>
+
+        <a href="admin_operations.php?tab=analytics">
+            <span class="ico">▥</span> অ্যানালিটিক্স
         </a>
 
         <a href="logout.php" class="logout">
