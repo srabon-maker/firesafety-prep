@@ -454,6 +454,7 @@ class NoteDetailPage extends StatefulWidget {
 
 class _NoteDetailPageState extends State<NoteDetailPage> {
   late Future<StudyNote> _noteFuture;
+  double _readingSize = 16;
 
   @override
   void initState() {
@@ -480,7 +481,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('নোটের বিস্তারিত')),
+        appBar: AppBar(title: const Text('নোটের বিস্তারিত'), actions: [
+          IconButton(tooltip: 'Decrease reading text size', onPressed: _readingSize <= 14 ? null : () => setState(() => _readingSize -= 2), icon: const Icon(Icons.text_decrease)),
+          IconButton(tooltip: 'Increase reading text size', onPressed: _readingSize >= 24 ? null : () => setState(() => _readingSize += 2), icon: const Icon(Icons.text_increase)),
+        ]),
         body: FutureBuilder<StudyNote>(
           future: _noteFuture,
           builder: (context, snapshot) {
@@ -533,8 +537,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   const SizedBox(height: 18),
                   Text(
                     note.summary!,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: _readingSize,
                       fontWeight: FontWeight.w600,
                       height: 1.7,
                     ),
@@ -548,34 +552,37 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       await _openFile(url);
                       return true;
                     },
-                    textStyle: const TextStyle(
-                      fontSize: 16,
+                    textStyle: TextStyle(
+                      fontSize: _readingSize,
                       height: 1.7,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     customStylesBuilder: (element) {
+                      final dark = Theme.of(context).brightness == Brightness.dark;
+                      final accent = dark ? '#FFB3BC' : '#650D18';
                       switch (element.localName) {
                         case 'h1':
                         case 'h2':
                           return {
-                            'color': '#650D18',
+                            'color': accent,
                             'font-weight': '800',
                           };
                         case 'h3':
                           return {'font-weight': '700'};
                         case 'a':
                           return {
-                            'color': '#650D18',
+                            'color': accent,
                             'text-decoration': 'underline',
                           };
                         case 'th':
                           return {
-                            'background-color': '#FFFFE8E8',
+                            'background-color': dark ? '#383037' : '#FFFFE8E8',
                             'font-weight': '700',
                           };
                         case 'blockquote':
                           return {
-                            'background-color': '#FFFFF5F3',
-                            'border-left': '3px solid #650D18',
+                            'background-color': dark ? '#383037' : '#FFFFF5F3',
+                            'border-left': '3px solid $accent',
                             'padding': '8px 12px',
                           };
                         default:

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_guard.dart';
+import '../settings/app_settings.dart';
+import '../widgets/ui_loading.dart';
 import '../services/auth_service.dart';
 import '../services/career_service.dart';
 
@@ -14,26 +16,60 @@ class CareerPage extends StatelessWidget {
   }
   @override
   Widget build(BuildContext context) {
+    String tr(String bn, String en) => AppText.of(context, bn, en);
+    final scheme = Theme.of(context).colorScheme;
     final entries = [
-      ('alerts', Icons.notifications_active_outlined, 'Job Alert', 'পদ, যোগ্যতার শব্দ ও কর্মস্থল অনুযায়ী চাকরি'),
-      ('mock', Icons.record_voice_over_outlined, 'Mock Interview', 'উত্তর বলুন, নমুনা দেখুন, নিজেকে মূল্যায়ন করুন'),
-      ('courses', Icons.school_outlined, 'Training & Courses', 'প্রকাশিত প্রশিক্ষণ ও কোর্সের তথ্য'),
-      ('directory', Icons.groups_outlined, 'Professional Directory', 'পেশাজীবীদের ঐচ্ছিক পরিচিতি'),
+      ('alerts', Icons.notifications_active_outlined, tr('চাকরির অ্যালার্ট','Job alerts'), tr('পদ ও কর্মস্থল অনুযায়ী বিজ্ঞপ্তি','Find matching published jobs')),
+      ('mock', Icons.record_voice_over_outlined, tr('মক ইন্টারভিউ','Mock interview'), tr('নিজে উত্তর বলুন ও অনুশীলন করুন','Practice and self-assess')),
+      ('courses', Icons.school_outlined, tr('প্রশিক্ষণ ও কোর্স','Training & courses'), tr('প্রকাশিত কোর্সের তথ্য','Browse published training')),
+      ('directory', Icons.groups_outlined, tr('পেশাজীবী পরিচিতি','Professional directory'), tr('ঐচ্ছিক পেশাগত পরিচিতি','Opt-in professional profiles')),
     ];
-    return Scaffold(appBar: AppBar(title: const Text('ক্যারিয়ার ডেভেলপমেন্ট')),
+    return Scaffold(
+      appBar: AppBar(title: Text(tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        Card(color: Theme.of(context).colorScheme.primaryContainer, child: const Padding(
-          padding: EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Career Growth', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 6), Text('চাকরি • দক্ষতা • প্রশিক্ষণ • পেশাগত পরিচিতি'),
-          ]))),
-        const SizedBox(height: 10),
-        for (final e in entries) Card(child: ListTile(
-          leading: Icon(e.$2), title: Text(e.$3), subtitle: Text(e.$4),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CareerSection(section: e.$1))),
-        )),
-      ]));
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF36060D), Color(0xFF8D1723)]),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.trending_up_rounded, size: 32, color: Colors.white),
+            const SizedBox(height: 12),
+            Text(tr('ক্যারিয়ার গড়ুন','Build your career'), style: const TextStyle(color: Colors.white,fontSize: 24,fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text(tr('চাকরি • দক্ষতা • প্রশিক্ষণ • পেশাগত পরিচিতি','Jobs • skills • training • professional connections'), style: const TextStyle(color: Colors.white70)),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        LayoutBuilder(builder: (context, constraints) {
+          final two = constraints.maxWidth >= 330 && MediaQuery.textScalerOf(context).scale(14) <= 18;
+          final width = two ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
+          return Wrap(spacing: 12, runSpacing: 12, children: [
+            for (final e in entries)
+              SizedBox(width: width, child: Card(
+                margin: EdgeInsets.zero, clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CareerSection(section: e.$1))),
+                  child: Padding(padding: const EdgeInsets.all(16), child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(
+                        color: scheme.primaryContainer, borderRadius: BorderRadius.circular(14)),
+                        child: Icon(e.$2, color: scheme.onPrimaryContainer, size: 25)),
+                      const SizedBox(height: 12),
+                      Text(e.$3, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 6),
+                      Text(e.$4, style: TextStyle(color: scheme.onSurfaceVariant)),
+                      const SizedBox(height: 8),
+                      Icon(Icons.arrow_forward_rounded, color: scheme.primary),
+                    ],
+                  )),
+                ),
+              )),
+          ]);
+        }),
+      ]),
+    );
   }
 }
 
@@ -175,7 +211,7 @@ class _CareerSectionState extends State<CareerSection> {
       IconButton(onPressed:_busy?null:()=>_load(),icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ'),
     ]),
     body: ListView(padding:const EdgeInsets.all(16),children:[
-      if(_busy) const LinearProgressIndicator(),
+      if(_busy) const UiLoading(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
       if(!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),

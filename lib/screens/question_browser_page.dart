@@ -100,7 +100,7 @@ class _LibraryQuestionCardState extends State<_LibraryQuestionCard> {
     final options=Map<String,dynamic>.from(q['options'] as Map? ?? {});
     final correct=q['correct_answer']?.toString()??'';
     final colors=Theme.of(context).colorScheme;
-    return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return Card(clipBehavior: Clip.antiAlias, child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
         Expanded(child:Text('${q['category']??''} • ${q['difficulty']??''}',style:Theme.of(context).textTheme.labelMedium)),
         IconButton(tooltip:_saved?'বুকমার্ক সরান':'বুকমার্ক করুন',onPressed:_busy?null:_toggle,

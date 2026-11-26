@@ -61,10 +61,13 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         bottomNavigationBar: NavigationBar(
-          height: 70,
+          height: 76,
+          animationDuration: const Duration(milliseconds: 240),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           selectedIndex: index,
           backgroundColor: Theme.of(context).colorScheme.surface,
           indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+          indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           onDestinationSelected: _onDestinationSelected,
           destinations: [
             NavigationDestination(
@@ -74,7 +77,7 @@ class _MainShellState extends State<MainShell> {
             ),
             NavigationDestination(
               icon: Icon(Icons.forum_outlined),
-              selectedIcon: Icon(Icons.forum),
+              selectedIcon: Icon(Icons.forum_rounded),
               label: AppText.of(context, 'কমিউনিটি', 'Community'),
             ),
             NavigationDestination(
