@@ -27,6 +27,7 @@ class CareerService {
   static List<Map<String, dynamic>> rows(Map<String, dynamic> data) =>
       (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   static String text(Map<String, dynamic> row, String key) => row[key]?.toString() ?? '';
+  static String photoUrl(String path) => 'https://fire.manobikishwarganj.com/$path';
   static Uri? safeLink(String value) {
     final uri = Uri.tryParse(value);
     return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty && uri.userInfo.isEmpty ? uri : null;
