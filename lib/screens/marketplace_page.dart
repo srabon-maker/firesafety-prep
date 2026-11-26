@@ -771,18 +771,50 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
   Widget _headerAction({
     required String tooltip,
+    required String label,
+    required String englishLabel,
     required VoidCallback onPressed,
     required IconData icon,
-  }) => IconButton(
-    tooltip: tooltip,
-    onPressed: onPressed,
-    style: IconButton.styleFrom(
-      backgroundColor: Colors.white.withValues(alpha: .12),
-      foregroundColor: Colors.white,
-      minimumSize: const Size(48, 48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  }) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 58,
+          height: 62,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 21, color: Colors.white),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                AppText.of(context, label, englishLabel),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     ),
-    icon: Icon(icon, size: 22),
   );
 
   IconData _categoryIcon(String name) {
@@ -852,8 +884,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                _tr(context, 'ফায়ার সেইফটি মার্কেটপ্লেস',
-                    'Fire Safety Marketplace'),
+                _tr(context, 'মার্কেটপ্লেস', 'Marketplace'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -870,8 +901,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
           _headerAction(
             tooltip: _tr(context, 'অর্ডার ও বুকিং ইতিহাস',
                 'Orders & booking history'),
+            label: 'অর্ডার',
+            englishLabel: 'Orders',
             onPressed: _showHistory,
-            icon: Icons.inventory_2_outlined,
+            icon: Icons.receipt_long_outlined,
           ),
           const SizedBox(width: 5),
           Badge(
@@ -879,6 +912,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
             label: Text('$_cartCount'),
             child: _headerAction(
               tooltip: _tr(context, 'কার্ট', 'Cart'),
+              label: 'কার্ট',
+              englishLabel: 'Cart',
               onPressed: _showCart,
               icon: Icons.shopping_cart_rounded,
             ),
