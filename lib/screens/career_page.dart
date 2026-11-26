@@ -60,7 +60,8 @@ class _CareerSectionState extends State<CareerSection> {
   final _directorySearch = TextEditingController();
   final _keyword = TextEditingController(), _location = TextEditingController(),
       _name = TextEditingController(), _role = TextEditingController(),
-      _organization = TextEditingController(), _city = TextEditingController();
+      _organization = TextEditingController(), _city = TextEditingController(),
+      _bio = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
   bool _busy = true, _enabled = false, _consent = false, _revealed = false, _editingProfile = false;
   Uint8List? _selectedPhoto;
@@ -75,7 +76,7 @@ class _CareerSectionState extends State<CareerSection> {
   void initState() { super.initState(); _load(); }
   @override
   void dispose() {
-    for (final c in [_directorySearch,_keyword,_location,_name,_role,_organization,_city]) { c.dispose(); }
+    for (final c in [_directorySearch,_keyword,_location,_name,_role,_organization,_city,_bio]) { c.dispose(); }
     super.dispose();
   }
   Future<void> _load({bool more = false}) async {
@@ -105,6 +106,7 @@ class _CareerSectionState extends State<CareerSection> {
           final p = profile ?? <String,dynamic>{};
           _name.text = CareerService.text(p,'display_name'); _role.text = CareerService.text(p,'role_name');
           _organization.text = CareerService.text(p,'organization'); _city.text = CareerService.text(p,'city');
+          _bio.text = CareerService.text(p,'bio');
           _status = CareerService.text(p,'status'); _photoPath = CareerService.text(p,'photo_path'); _consent = false; _selectedPhoto = null; _removePhoto = false;
         }
         if (_section == 'mock') { _index = 0; _score = 0; _revealed = false; }
@@ -261,10 +263,29 @@ class _CareerSectionState extends State<CareerSection> {
         _field(_role,'পদ / পেশা',120),
         _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),
         _field(_city,'শহর (ঐচ্ছিক)',100),
+        TextField(
+          controller: _bio,
+          enabled: !_busy,
+          minLines: 4,
+          maxLines: 7,
+          maxLength: 2000,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: AppText.of(context, 'বিস্তারিত পরিচিতি (ঐচ্ছিক)', 'Professional summary (optional)'),
+            hintText: AppText.of(context,
+              'অভিজ্ঞতা, দক্ষতা, কাজের ক্ষেত্র ও অর্জন সম্পর্কে লিখুন',
+              'Describe your experience, skills, work areas and achievements'),
+            helperText: AppText.of(context, 'সর্বোচ্চ ২,০০০ অক্ষর। ফোন, ইমেইল বা ব্যক্তিগত লিংক লিখবেন না।', 'Up to 2,000 characters. Do not include phone numbers, email or personal links.'),
+            alignLabelWithHint: true,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
         CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
           title:const Text('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।')),
         SizedBox(width: double.infinity, child: FilledButton.icon(
-          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
+          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,'bio':_bio.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
           icon: const Icon(Icons.send_outlined), label:const Text('জমা দিন'))),
         if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
           onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
@@ -409,6 +430,7 @@ class _ProfessionalProfileDetailsSheet extends StatelessWidget {
     final role = CareerService.text(profile, 'role_name');
     final organization = CareerService.text(profile, 'organization');
     final city = CareerService.text(profile, 'city');
+    final bio = CareerService.text(profile, 'bio');
     final photoKey = CareerService.text(profile, 'photo_path');
     final theme = Theme.of(context);
 
@@ -437,6 +459,20 @@ class _ProfessionalProfileDetailsSheet extends StatelessWidget {
           _detail(context, Icons.work_outline, tr('পদ / পেশা', 'Position / Profession'), role),
           _detail(context, Icons.business_outlined, tr('প্রতিষ্ঠান', 'Organization'), organization),
           _detail(context, Icons.location_on_outlined, tr('শহর', 'City'), city),
+          if (bio.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(tr('বিস্তারিত পরিচিতি', 'Professional summary'),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SelectableText(bio, textAlign: TextAlign.start,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.55)),
+            ),
+          ],
           const Divider(),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Icon(Icons.verified_outlined, color: Colors.green, size: 20),
