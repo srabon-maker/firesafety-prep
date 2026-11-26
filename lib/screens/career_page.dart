@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/design_system.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_guard.dart';
@@ -60,6 +63,8 @@ class _CareerSectionState extends State<CareerSection> {
       _organization = TextEditingController(), _city = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
   bool _busy = true, _enabled = false, _consent = false, _revealed = false, _editingProfile = false;
+  Uint8List? _selectedPhoto;
+  String _photoPath = '';
   String? _error, _next;
   String _status = '';
   int _index = 0, _score = 0;
@@ -98,12 +103,26 @@ class _CareerSectionState extends State<CareerSection> {
           final p = profile ?? <String,dynamic>{};
           _name.text = CareerService.text(p,'display_name'); _role.text = CareerService.text(p,'role_name');
           _organization.text = CareerService.text(p,'organization'); _city.text = CareerService.text(p,'city');
-          _status = CareerService.text(p,'status'); _consent = false;
+          _status = CareerService.text(p,'status'); _photoPath = CareerService.text(p,'photo_path'); _consent = false;
         }
         if (_section == 'mock') { _index = 0; _score = 0; _revealed = false; }
       });
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
+  }
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 82, maxWidth: 720, maxHeight: 720);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (bytes.length > 2097152) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবির আকার ২ MB-এর মধ্যে রাখুন')));
+        return;
+      }
+      if (mounted) setState(() => _selectedPhoto = bytes);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবি নির্বাচন করা যায়নি')));
+    }
   }
   Future<void> _write(String action, Map<String,dynamic> body) async {
     setState(() { _busy = true; _error = null; });
@@ -206,6 +225,11 @@ class _CareerSectionState extends State<CareerSection> {
       )),
       if (_editingProfile) ...[
         const SizedBox(height: 8),
+        Center(child: Column(children: [
+          CircleAvatar(radius: 46, backgroundImage: _selectedPhoto != null ? MemoryImage(_selectedPhoto!) : (_photoPath.isNotEmpty ? NetworkImage(CareerService.photoUrl(_photoPath)) : null) as ImageProvider?, child: _selectedPhoto == null && _photoPath.isEmpty ? const Icon(Icons.person_outline,size:42) : null),
+          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:const Text('প্রোফাইল ছবি নির্বাচন করুন')),
+          const Text('JPG, PNG বা WebP · সর্বোচ্চ ২ MB',style:TextStyle(fontSize:12)),
+        ])),
         Text('প্রোফাইল তথ্য', style: Theme.of(context).textTheme.titleMedium),
         const Text('নিজের সম্মতিতে তথ্য জমা দিন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা ব্যক্তিগত লিংক দেবেন না। প্রকাশিত পরিচিতি পেশাগত সনদ যাচাই নয়।'),
         const SizedBox(height: 12),
@@ -216,7 +240,7 @@ class _CareerSectionState extends State<CareerSection> {
         CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
           title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
         SizedBox(width: double.infinity, child: FilledButton.icon(
-          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text}),
+          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!)}),
           icon: const Icon(Icons.send_outlined), child:const Text('অনুমোদনের জন্য জমা দিন'))),
         if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
           onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
@@ -238,9 +262,8 @@ class _CareerSectionState extends State<CareerSection> {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            CircleAvatar(radius: 27, child: Text(
-              CareerService.text(row,'display_name').trim().isEmpty ? 'FS' :
-                CareerService.text(row,'display_name').trim().substring(0,1),
+            CircleAvatar(radius: 30, backgroundImage: CareerService.text(row,'photo_path').isNotEmpty ? NetworkImage(CareerService.photoUrl(CareerService.text(row,'photo_path'))) : null, child: CareerService.text(row,'photo_path').isNotEmpty ? null : Text(
+              CareerService.text(row,'display_name').trim().isEmpty ? 'FS' : CareerService.text(row,'display_name').trim().substring(0,1),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
