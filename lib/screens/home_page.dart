@@ -104,12 +104,25 @@ class _HomePageState extends State<HomePage> {
     Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w800))),
     if(target!=null) TextButton(onPressed:()=>_open(target),child:Text(_tr('সব দেখুন','View all'))),
   ]));
+  // Keep each shortcut's semantic colour, with lighter tones on dark cards.
+  Color _shortcutIconColor(Color color) {
+    if (Theme.of(context).brightness != Brightness.dark) return color;
+    return const <Color, Color>{
+      Color(0xFFB83228): Color(0xFFF29B91),
+      Color(0xFF7142B8): Color(0xFFBBA1F5),
+      Color(0xFF20834B): Color(0xFF80CDA4),
+      Color(0xFF9E1630): Color(0xFFF5A1B8),
+      Color(0xFFB36A14): Color(0xFFE5B16C),
+      Color(0xFF14799A): Color(0xFF80C4E6),
+    }[color] ?? Theme.of(context).colorScheme.primary;
+  }
+
   Widget _tile(String title,IconData icon,Color color,VoidCallback action)=>Card(
     margin:EdgeInsets.zero,
-    child:InkWell(borderRadius:BorderRadius.circular(12),onTap:action,child:Padding(padding:const EdgeInsets.all(8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Container(width:44,height:44,decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).colorScheme.primary:color)),
-      const SizedBox(height:7),
-      Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+    child:InkWell(borderRadius:BorderRadius.circular(18),onTap:action,child:Padding(padding:const EdgeInsets.all(7),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Container(width:40,height:40,decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(13)),child:Icon(icon,color:_shortcutIconColor(color),size:23)),
+      const SizedBox(height:6),
+      Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w600,fontSize:13,height:1.2)),
     ]))),
   );
   Widget _careerTile(String title, IconData icon, Color color, VoidCallback action) => Card(
@@ -127,13 +140,12 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 19,
-              color: Theme.of(context).brightness == Brightness.dark
-                ? Theme.of(context).colorScheme.primary : color),
+              color: _shortcutIconColor(color)),
           ),
           const SizedBox(height: 5),
           Text(title, textAlign: TextAlign.center, maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w600)),
         ]),
       ),
     ),
@@ -236,14 +248,14 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context)=>RefreshIndicator(onRefresh:_refresh,child:ListView(
     padding:EdgeInsets.zero,physics:const AlwaysScrollableScrollPhysics(),children:[
-      Container(padding:EdgeInsets.fromLTRB(18,MediaQuery.paddingOf(context).top+14,18,22),
+      Container(padding:EdgeInsets.fromLTRB(18,MediaQuery.paddingOf(context).top+10,18,16),
         decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(28))),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Row(children:[
             Container(width:48,height:48,padding:const EdgeInsets.all(2),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
             const SizedBox(width:12),
             const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w800)),
+              Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w700)),
               Text('Learn • Prepare • Connect',style:TextStyle(color:Colors.white70,fontSize:11)),
             ])),
             Container(
@@ -259,8 +271,41 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ]),
-          const SizedBox(height:16),
-          TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:_tr('প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...','Search questions, notes, jobs...'),hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
+          const SizedBox(height:12),
+          Builder(builder: (context) {
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            final scheme = Theme.of(context).colorScheme;
+            final iconColor = dark ? scheme.primary : maroon;
+            final border = OutlineInputBorder(
+              borderRadius: BorderRadius.circular(17),
+              borderSide: BorderSide(color: dark ? scheme.outlineVariant : Colors.transparent),
+            );
+            return TextField(
+              controller: _search,
+              textInputAction: TextInputAction.search,
+              maxLength: 120,
+              onSubmitted: _searchFor,
+              style: TextStyle(color: dark ? scheme.onSurface : ink),
+              cursorColor: iconColor,
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: _tr('প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...', 'Search questions, notes, jobs...'),
+                hintStyle: TextStyle(color: dark ? scheme.onSurfaceVariant : Colors.black54, fontSize: 13),
+                filled: true,
+                fillColor: dark ? scheme.surface : Colors.white,
+                border: border,
+                enabledBorder: border,
+                focusedBorder: border.copyWith(borderSide: BorderSide(color: iconColor, width: 1.5)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                prefixIcon: Icon(Icons.search, color: iconColor),
+                suffixIcon: IconButton(
+                  tooltip: _tr('খুঁজুন', 'Search'),
+                  onPressed: () => _searchFor(_search.text),
+                  icon: Icon(Icons.arrow_forward, color: iconColor),
+                ),
+              ),
+            );
+          }),
         ])),
       Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
         final data=snapshot.hasData?snapshot.data:null;
@@ -276,7 +321,7 @@ class _HomePageState extends State<HomePage> {
           if(pending&&activation!=null)Card(child:ListTile(leading:const Icon(Icons.campaign_outlined,color:maroon),title:const Text('Premium সুবিধা চালুর আগাম নোটিশ'),subtitle:Text('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।'))),
           if(top)_section('banners',data),
           const SizedBox(height: 12),
-          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:118,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:105,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -297,7 +342,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
                       Container(
                         width: double.infinity,
