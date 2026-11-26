@@ -286,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 4),
                 Container(
                   width: double.infinity,
-                  height: 1.5,
+                  height: 1,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(2),
