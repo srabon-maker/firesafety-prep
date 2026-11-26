@@ -276,49 +276,66 @@ class _HomePageState extends State<HomePage> {
           if(top)_section('banners',data),
           const SizedBox(height: 12),
           LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:118,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: .65),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Container(
-                  width: double.infinity,
-                  height: 1,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(2),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        height: 1,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                LayoutBuilder(builder: (context, box) {
+                  final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
+                  // Four compact shortcuts in one row at normal phone widths.
+                  final columns = box.maxWidth < 260 || largeText ? 2 : 4;
+                  return GridView.count(
+                    padding: EdgeInsets.zero,
+                    crossAxisCount: columns,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 6,
+                    mainAxisExtent: largeText ? 128 : 92,
+                    children: [
+                      for (final item in const [
+                        ('alerts', 'চাকরির এলার্ট', 'Job alerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
+                        ('mock', 'মক ইন্টারভিউ', 'Mock interview', Icons.record_voice_over_outlined, Color(0xFF7142B8)),
+                        ('courses', 'প্রশিক্ষণ ও কোর্স', 'Training & courses', Icons.school_outlined, Color(0xFF20834B)),
+                        ('directory', 'পেশাজীবী ডিরেক্টরি', 'Professional directory', Icons.groups_outlined, Color(0xFF14799A)),
+                      ])
+                        _careerTile(_tr(item.$2, item.$3), item.$4, item.$5,
+                          () => CareerPage.open(context, section: item.$1)),
+                    ],
+                  );
+                }),
               ],
             ),
           ),
-          LayoutBuilder(builder: (context, box) {
-            final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
-            // Four compact shortcuts in one row at normal phone widths.
-            final columns = box.maxWidth < 260 || largeText ? 2 : 4;
-            return GridView.count(
-              padding: EdgeInsets.zero,
-              crossAxisCount: columns,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 6,
-              mainAxisSpacing: 6,
-              mainAxisExtent: largeText ? 128 : 92,
-              children: [
-                for (final item in const [
-                  ('alerts', 'চাকরির এলার্ট', 'Job alerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
-                  ('mock', 'মক ইন্টারভিউ', 'Mock interview', Icons.record_voice_over_outlined, Color(0xFF7142B8)),
-                  ('courses', 'প্রশিক্ষণ ও কোর্স', 'Training & courses', Icons.school_outlined, Color(0xFF20834B)),
-                  ('directory', 'পেশাজীবী ডিরেক্টরি', 'Professional directory', Icons.groups_outlined, Color(0xFF14799A)),
-                ])
-                  _careerTile(_tr(item.$2, item.$3), item.$4, item.$5,
-                    () => CareerPage.open(context, section: item.$1)),
-              ],
-            );
-          }),
           if(snapshot.hasError) const Padding(padding:EdgeInsets.only(top:10),child:Text('হোমপেজ আপডেট এখন পাওয়া যাচ্ছে না। মূল সেবা ব্যবহার করুন।')),
           for(final key in sections) if(!top||key!='banners')_section(key,data),
         ]);
