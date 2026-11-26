@@ -241,7 +241,7 @@ class _CareerSectionState extends State<CareerSection> {
           title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
         SizedBox(width: double.infinity, child: FilledButton.icon(
           onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!)}),
-          icon: const Icon(Icons.send_outlined), child:const Text('অনুমোদনের জন্য জমা দিন'))),
+          icon: const Icon(Icons.send_outlined), label:const Text('অনুমোদনের জন্য জমা দিন'))),
         if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
           onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
       ],
