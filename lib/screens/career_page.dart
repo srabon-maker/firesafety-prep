@@ -160,6 +160,16 @@ class _CareerSectionState extends State<CareerSection> {
       Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
       const SizedBox(height: 6), Text(detail), _link(link),
     ])));
+  void _showProfileDetails(Map<String, dynamic> profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ProfessionalProfileDetailsSheet(profile: profile),
+    );
+  }
+
   void _rate(bool correct) => setState(() { if (correct) _score++; _index++; _revealed = false; });
   List<Widget> _content() {
     if (_section == 'alerts') return [
@@ -273,35 +283,45 @@ class _CareerSectionState extends State<CareerSection> {
       ),
       for (final row in visibleProfiles) Card(
         margin: const EdgeInsets.only(bottom: 10),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _PrivateProfileAvatar(key: ValueKey(CareerService.text(row,'id')), photoKey: CareerService.text(row,'photo_path'), radius: 30),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(CareerService.text(row,'display_name'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 3),
-              Text(CareerService.text(row,'role_name'),
-                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
-              if (CareerService.text(row,'organization').isNotEmpty) ...[
-                const SizedBox(height: 5),
-                Row(children: [const Icon(Icons.business_outlined,size:16),const SizedBox(width:5),
-                  Expanded(child: Text(CareerService.text(row,'organization')))]),
-              ],
-              if (CareerService.text(row,'city').isNotEmpty) ...[
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _showProfileDetails(row),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              _PrivateProfileAvatar(
+                key: ValueKey(CareerService.text(row,'id')),
+                photoKey: CareerService.text(row,'photo_path'),
+                radius: 30,
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(CareerService.text(row,'display_name'),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 3),
-                Row(children: [const Icon(Icons.location_on_outlined,size:16),const SizedBox(width:5),
-                  Expanded(child: Text(CareerService.text(row,'city')))]),
-              ],
-              const SizedBox(height: 5),
-              const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-                SizedBox(width: 4),
-                Text('অ্যাডমিন অনুমোদিত পরিচিতি', style: TextStyle(fontSize: 11)),
-              ]),
-            ])),
-          ]),
+                Text(CareerService.text(row,'role_name'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                if (CareerService.text(row,'organization').isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Row(children: [const Icon(Icons.business_outlined,size:16),const SizedBox(width:5),
+                    Expanded(child: Text(CareerService.text(row,'organization')))]),
+                ],
+                if (CareerService.text(row,'city').isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(children: [const Icon(Icons.location_on_outlined,size:16),const SizedBox(width:5),
+                    Expanded(child: Text(CareerService.text(row,'city')))]),
+                ],
+                const SizedBox(height: 5),
+                const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+                  SizedBox(width: 4),
+                  Text('অ্যাডমিন অনুমোদিত পরিচিতি', style: TextStyle(fontSize: 11)),
+                ]),
+              ])),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
+            ]),
+          ),
         ),
       ),
     ];
@@ -359,6 +379,84 @@ class _CareerSectionState extends State<CareerSection> {
   }
 }
 
+
+class _ProfessionalProfileDetailsSheet extends StatelessWidget {
+  const _ProfessionalProfileDetailsSheet({required this.profile});
+  final Map<String, dynamic> profile;
+
+  Widget _detail(BuildContext context, IconData icon, String label, String value) {
+    if (value.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 21, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 2),
+          Text(value, style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w600)),
+        ])),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String tr(String bn, String en) => AppText.of(context, bn, en);
+    final name = CareerService.text(profile, 'display_name');
+    final role = CareerService.text(profile, 'role_name');
+    final organization = CareerService.text(profile, 'organization');
+    final city = CareerService.text(profile, 'city');
+    final photoKey = CareerService.text(profile, 'photo_path');
+    final theme = Theme.of(context);
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.82),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Container(width: 42, height: 4,
+            decoration: BoxDecoration(color: theme.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: 22),
+          _PrivateProfileAvatar(photoKey: photoKey, radius: 54),
+          const SizedBox(height: 14),
+          Text(name, textAlign: TextAlign.center,
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 5),
+          Text(role, textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 18),
+          const Divider(),
+          _detail(context, Icons.work_outline, tr('পদ / পেশা', 'Position / Profession'), role),
+          _detail(context, Icons.business_outlined, tr('প্রতিষ্ঠান', 'Organization'), organization),
+          _detail(context, Icons.location_on_outlined, tr('শহর', 'City'), city),
+          const Divider(),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.verified_outlined, color: Colors.green, size: 20),
+            const SizedBox(width: 9),
+            Expanded(child: Text(
+              tr('অ্যাডমিন অনুমোদিত পরিচিতি। এটি পেশাগত সনদ যাচাইয়ের বিকল্প নয়।',
+                'Admin-approved profile. This is not a verification of professional certificates.'),
+              style: theme.textTheme.bodySmall,
+            )),
+          ]),
+          const SizedBox(height: 16),
+          SizedBox(width: double.infinity, child: OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('বন্ধ করুন', 'Close')),
+          )),
+        ]),
+      ),
+    );
+  }
+}
 
 class _PrivateProfileAvatar extends StatefulWidget {
   const _PrivateProfileAvatar({super.key, required this.photoKey, required this.radius});
