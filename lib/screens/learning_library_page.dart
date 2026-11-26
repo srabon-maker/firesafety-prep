@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui_loading.dart';
 import '../services/homepage_service.dart';
 import 'tests_page.dart';
 import '../services/premium_service.dart';
@@ -26,7 +27,7 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
     body: FutureBuilder<Map<String, dynamic>>(
       future: _data,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) return const UiLoading();
         if (snapshot.hasError || !snapshot.hasData) return const Center(child: Text('প্রশ্নের বিভাগ লোড হয়নি। রিফ্রেশ করুন।'));
         final rows = HomepageService.rows(snapshot.data!['data']);
         final query = _search.text.trim().toLowerCase();

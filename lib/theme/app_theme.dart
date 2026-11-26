@@ -4,103 +4,87 @@ class AppColors {
   static const Color maroon = Color(0xFF650D18);
   static const Color deepMaroon = Color(0xFF36060D);
   static const Color red = Color(0xFFE32636);
-  static const Color cream = Color(0xFFFFF8F4);
+  static const Color cream = Color(0xFFF8F9FC);
   static const Color ink = Color(0xFF27191B);
 }
 
 class AppTheme {
-  static ThemeData get darkTheme {
-    const surface = Color(0xFF211D21);
-    const background = Color(0xFF151417);
-    const foreground = Color(0xFFF8F0F2);
-    const muted = Color(0xFFD3C3C8);
-    const accent = Color(0xFFFFB3BC);
+  static ThemeData get lightTheme => _build(Brightness.light);
+  static ThemeData get darkTheme => _build(Brightness.dark);
 
+  static ThemeData _build(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.maroon,
-      brightness: Brightness.dark,
+      brightness: brightness,
     ).copyWith(
-      primary: accent,
-      onPrimary: const Color(0xFF400811),
-      surface: surface,
-      onSurface: foreground,
-      onSurfaceVariant: muted,
-      outlineVariant: const Color(0xFF55474D),
-      surfaceContainerHighest: const Color(0xFF383037),
+      primary: dark ? const Color(0xFFFFB3BC) : AppColors.maroon,
+      onPrimary: dark ? const Color(0xFF400811) : Colors.white,
+      surface: dark ? const Color(0xFF211D21) : Colors.white,
+      onSurface: dark ? const Color(0xFFF8F0F2) : AppColors.ink,
+      onSurfaceVariant: dark ? const Color(0xFFD3C3C8) : const Color(0xFF655B60),
+      outlineVariant: dark ? const Color(0xFF55474D) : const Color(0xFFE3DDE0),
     );
-
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: background,
-      colorScheme: scheme,
-      cardColor: surface,
+    final base = ThemeData(useMaterial3: true, brightness: brightness, colorScheme: scheme);
+    // Use platform fallback for Bengali; no network font downloads at runtime.
+    final typography = base.textTheme.apply(
+      bodyColor: scheme.onSurface,
+      displayColor: scheme.onSurface,
+      fontFamilyFallback: const ['Noto Sans Bengali', 'sans-serif'],
+    );
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+    OutlineInputBorder inputBorder(Color color) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: color),
+    );
+    return base.copyWith(
+      scaffoldBackgroundColor: dark ? const Color(0xFF151417) : AppColors.cream,
+      textTheme: typography.copyWith(
+        titleLarge: typography.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.3),
+        titleMedium: typography.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        bodyMedium: typography.bodyMedium?.copyWith(height: 1.45),
+      ),
+      cardColor: scheme.surface,
       dividerColor: scheme.outlineVariant,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF27171B),
-        foregroundColor: Colors.white,
+      appBarTheme: AppBarTheme(
+        backgroundColor: dark ? const Color(0xFF27171B) : AppColors.maroon,
+        foregroundColor: Colors.white, centerTitle: false, elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        color: scheme.surface, elevation: 0, surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: scheme.outlineVariant)),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: surface,
-        indicatorColor: scheme.primaryContainer,
+        backgroundColor: scheme.surface, indicatorColor: scheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+          fontSize: 12, fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+          color: states.contains(WidgetState.selected) ? scheme.primary : scheme.onSurfaceVariant,
+        )),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFF342C32),
+        filled: true, fillColor: dark ? const Color(0xFF342C32) : const Color(0xFFF3F0F2),
         hintStyle: TextStyle(color: scheme.onSurfaceVariant),
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        prefixIconColor: scheme.onSurfaceVariant,
-        suffixIconColor: scheme.onSurfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+        prefixIconColor: scheme.onSurfaceVariant, suffixIconColor: scheme.onSurfaceVariant,
+        border: inputBorder(scheme.outlineVariant),
+        enabledBorder: inputBorder(scheme.outlineVariant),
+        focusedBorder: inputBorder(scheme.primary),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-    );
-  }
-
-  static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.cream,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.maroon,
-        primary: AppColors.maroon,
+      filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 48), shape: shape,
+      )),
+      elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(
+        minimumSize: const Size(48, 48), shape: shape,
+      )),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48), shape: shape,
+      )),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary, linearTrackColor: scheme.primaryContainer,
+        linearMinHeight: 6,
       ),
-      fontFamily: null,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.maroon,
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        elevation: 0,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF6ECE8),
-        hintStyle: const TextStyle(
-          color: Color(0xFF8C7777),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-      ),
+      snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: shape),
     );
   }
 }

@@ -344,7 +344,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                         ),
@@ -354,7 +354,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Text(
                           subtitle,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),

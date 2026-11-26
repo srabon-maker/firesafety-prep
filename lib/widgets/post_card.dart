@@ -252,7 +252,7 @@ class PostCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(15, 9, 15, 13),
               child: Text(post.text,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     height: 1.65,
                     color: scheme.onSurface,
                   )),
@@ -303,13 +303,13 @@ class PostCard extends StatelessWidget {
                   Icon(Icons.favorite_rounded,
                       size: 13, color: scheme.primary),
                   const SizedBox(width: 5),
-                  Text('${post.likes} লাইক',
+                  Text(_tr(context, '${post.likes} লাইক', '${post.likes} likes'),
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       )),
                   const Spacer(),
-                  Text('${post.commentCount} মন্তব্য',
+                  Text(_tr(context, '${post.commentCount} মন্তব্য', '${post.commentCount} comments'),
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.onSurfaceVariant,

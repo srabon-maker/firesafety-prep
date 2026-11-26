@@ -7,6 +7,8 @@ import '../services/job_circular_service.dart';
 import '../services/notes_service.dart';
 import '../settings/app_settings.dart';
 import 'jobs_page.dart';
+import 'career_page.dart';
+import '../widgets/ui_loading.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
 import 'topic_page.dart';
@@ -70,7 +72,7 @@ class _HomePageState extends State<HomePage> {
     ]);
   }
   Future<void> _open(String target, {String search=''}) async {
-    if (!['jobs','shop','questions','notes','tests','interview','progress','community','notifications'].contains(target)) return;
+    if (!['jobs','shop','questions','notes','tests','interview','progress','community','notifications','career'].contains(target)) return;
     if (target!='jobs' && target!='shop') {
       if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
     }
@@ -84,6 +86,7 @@ class _HomePageState extends State<HomePage> {
       'progress'=>const PracticeDashboardPage(),
       'shop'=>const MarketplacePage(),
       'community'=>const CommunityPage(),
+      'career'=>const CareerPage(),
       _=>const NotificationInboxPage(),
     };
     await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>page));
@@ -102,14 +105,15 @@ class _HomePageState extends State<HomePage> {
     if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
     await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>TopicPage(title:item.$1,icon:item.$2,color:item.$3)));
   }
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
   Widget _heading(String title,{String? target})=>Padding(padding:const EdgeInsets.fromLTRB(2,18,2,6),child:Row(children:[
     Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w800))),
-    if(target!=null) TextButton(onPressed:()=>_open(target),child:const Text('সব দেখুন')),
+    if(target!=null) TextButton(onPressed:()=>_open(target),child:Text(_tr('সব দেখুন','See all'))),
   ]));
   Widget _tile(String title,IconData icon,Color color,VoidCallback action)=>Card(
     margin:EdgeInsets.zero,
-    child:InkWell(borderRadius:BorderRadius.circular(12),onTap:action,child:Padding(padding:const EdgeInsets.all(8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      CircleAvatar(backgroundColor:color.withValues(alpha:.13),child:Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).colorScheme.primary:color)),
+    child:InkWell(borderRadius:BorderRadius.circular(18),onTap:action,child:Padding(padding:const EdgeInsets.all(8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Container(width:44,height:44,decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(14)),child:Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).colorScheme.primary:color)),
       const SizedBox(height:7),
       Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
     ]))),
@@ -151,17 +155,17 @@ class _HomePageState extends State<HomePage> {
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['banners']);
         if(rows.isEmpty)return const SizedBox.shrink();
         return HomeHeroBanner(items: rows, onOpen: _openBanner);
-      case 'progress':return _link('আজকের প্রস্তুতি','দৈনিক লক্ষ্য, অনুশীলন ও অগ্রগতি',Icons.track_changes,'progress');
-      case 'jobs':return Column(children:[_heading('সর্বশেষ চাকরির বিজ্ঞপ্তি',target:'jobs'),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const LinearProgressIndicator();
+      case 'progress':return _link(_tr('আজকের প্রস্তুতি','Today’s preparation'),_tr('দৈনিক লক্ষ্য, অনুশীলন ও অগ্রগতি','Daily goals, practice and progress'),Icons.track_changes,'progress');
+      case 'jobs':return Column(children:[_heading(_tr('সর্বশেষ চাকরির বিজ্ঞপ্তি','Latest jobs'),target:'jobs'),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const UiLoading();
         if(snapshot.hasError)return const Text('চাকরির খবর লোড হয়নি।');
         final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
         if(jobs.isEmpty)return const Text('বর্তমানে কোনো প্রকাশিত চলমান বিজ্ঞপ্তি নেই।');
         return Column(children:[for(final job in jobs.take(3)) Card(child:ListTile(leading:const Icon(Icons.work_outline),title:Text(job.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(job.organization),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('jobs',search:job.title)))]);
       })]);
-      case 'topics':return Column(children:[_heading('বিষয়ভিত্তিক প্রস্তুতি'),GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:104,children:[for(final item in _topics)_tile(item.$1,item.$2,item.$3,()=>_topic(item))])]);
-      case 'notes':return Column(children:[_heading('নতুন স্টাডি নোট',target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const LinearProgressIndicator();
+      case 'topics':return Column(children:[_heading(_tr('বিষয়ভিত্তিক প্রস্তুতি','Study by subject')),GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:104,children:[for(final item in _topics)_tile(item.$1,item.$2,item.$3,()=>_topic(item))])]);
+      case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','Latest study notes'),target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
+        if(snapshot.connectionState==ConnectionState.waiting)return const UiLoading();
         if(snapshot.hasError)return const Text('নোট লোড হয়নি।');
         final notes=snapshot.data?.notes??[];
         if(notes.isEmpty)return const Text('কোনো প্রকাশিত নোট নেই।');
@@ -207,7 +211,7 @@ class _HomePageState extends State<HomePage> {
       case 'community':return _link('ফায়ার সেফটি কমিউনিটি','অভিজ্ঞতা, প্রশ্ন ও আলোচনা',Icons.groups_outlined,'community');
       case 'tips':
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['tips']);
-        return rows.isEmpty?const SizedBox.shrink():Column(children:[_heading('সেফটি টিপস'),for(final row in rows)_content(row)]);
+        return rows.isEmpty?const SizedBox.shrink():Column(children:[_heading(_tr('সেফটি টিপস','Safety tips')),for(final row in rows)_content(row)]);
       default:return const SizedBox.shrink();
     }
   }
@@ -224,12 +228,12 @@ class _HomePageState extends State<HomePage> {
               Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w800)),
               Text('Learn • Prepare • Connect',style:TextStyle(color:Colors.white70,fontSize:11)),
             ])),
-            IconButton(tooltip:'নোটিফিকেশন',onPressed:()=>_open('notifications'),icon:const Icon(Icons.notifications_none,color:Colors.white)),
+            IconButton(tooltip:_tr('নোটিফিকেশন','Notifications'),onPressed:()=>_open('notifications'),icon:const Icon(Icons.notifications_none,color:Colors.white)),
           ]),
           const SizedBox(height:16),
-          const Text('স্বাগতম! আজকের প্রস্তুতি শুরু করুন।',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+          Text(_tr('স্বাগতম! আজকের প্রস্তুতি শুরু করুন।','Welcome! Start your preparation today.'),style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
           const SizedBox(height:12),
-          TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:'প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...',hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
+          TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:_tr('প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...','Search questions, notes, jobs...'),hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
         ])),
       Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
         final data=snapshot.hasData?snapshot.data:null;
@@ -242,8 +246,12 @@ class _HomePageState extends State<HomePage> {
         return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(pending&&activation!=null)Card(child:ListTile(leading:const Icon(Icons.campaign_outlined,color:maroon),title:const Text('Premium সুবিধা চালুর আগাম নোটিশ'),subtitle:Text('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।'))),
           if(top)_section('banners',data),
-          _heading('দ্রুত সেবা'),
-          LayoutBuilder(builder:(context,box)=>GridView.count(crossAxisCount:box.maxWidth<320?2:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:110,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          _heading(_tr('দ্রুত সেবা','Quick access')),
+
+          LayoutBuilder(builder:(context,box)=>GridView.count(crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>18?2:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>18?142:116,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          const SizedBox(height: 12),
+          _link(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'),_tr('চাকরির অ্যালার্ট, ইন্টারভিউ, প্রশিক্ষণ','Job alerts, interviews, training'),Icons.work_history_outlined,'career'),
+          if(snapshot.connectionState==ConnectionState.waiting) const UiLoading(),
           if(snapshot.hasError) const Padding(padding:EdgeInsets.only(top:10),child:Text('হোমপেজ আপডেট এখন পাওয়া যাচ্ছে না। মূল সেবা ব্যবহার করুন।')),
           for(final key in sections) if(!top||key!='banners')_section(key,data),
         ]);

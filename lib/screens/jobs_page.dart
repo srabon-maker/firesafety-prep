@@ -541,7 +541,7 @@ class _JobCard extends StatelessWidget {
     final location = _displayLocation(job);
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 1,
+      elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
@@ -630,8 +630,8 @@ class _JobCard extends StatelessWidget {
                   const Text(
                     'বিস্তারিত দেখুন',
                     style: TextStyle(
-                      color: _maroon,
-                      fontSize: 12,
+                      color: scheme.primary,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

@@ -375,16 +375,16 @@ class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
     return PopScope(canPop:false,onPopInvokedWithResult:(didPop,result){if(!didPop)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('পরীক্ষা জমা দিতে Submit বাটন ব্যবহার করুন।')));},child:Scaffold(
       appBar:AppBar(title:Text(widget.attempt['title']?.toString()??'পরীক্ষা'),automaticallyImplyLeading:false,actions:[Padding(padding:const EdgeInsets.symmetric(horizontal:14),child:Center(child:Text(_clock,style:TextStyle(fontWeight:FontWeight.bold,color:_remaining<60?Colors.red:null))))]),
       body:Column(children:[
-        LinearProgressIndicator(value:(_index+1)/_questions.length),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value:(_index+1)/_questions.length, minHeight: 8, semanticsLabel: 'Question progress'))),
         if((widget.attempt['instructions']??'').toString().isNotEmpty)
           Container(
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF5F3),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFF0D7D3)),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             ),
             child: Text(widget.attempt['instructions'].toString()),
           ),
@@ -400,7 +400,7 @@ class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
         Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
           Text(q['question']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),
           const SizedBox(height:18),
-          for(final letter in ['A','B','C','D'])Card(child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
+          for(final letter in ['A','B','C','D'])Card(color: _answers[(q['id'] as num).toInt()] == letter ? Theme.of(context).colorScheme.primaryContainer : null, child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
           if(!_cacheReady)
             const Padding(padding:EdgeInsets.all(8),child:LinearProgressIndicator()),
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),

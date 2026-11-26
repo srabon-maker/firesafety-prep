@@ -63,7 +63,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
       color: p.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: p.border, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
@@ -153,7 +153,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: p.text,
+                                  color: p.accent,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                 ),
