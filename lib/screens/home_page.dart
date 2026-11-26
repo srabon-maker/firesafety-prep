@@ -218,7 +218,7 @@ class _HomePageState extends State<HomePage> {
             child: InkWell(
               onTap: () => _open('shop'),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                 child: Row(children: [
                   Container(
                     width: 40, height: 40,
