@@ -8,6 +8,7 @@ require_once __DIR__.'/../../premium_learning.php';
 function career_reply(int $status,array $body):never{
  http_response_code($status);echo json_encode($body,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE);exit;
 }
+$newPhoto=null;$oldPhoto=null;
 try{
  $method=$_SERVER['REQUEST_METHOD']??'GET';
  if(!in_array($method,['GET','POST'],true)){header('Allow: GET, POST');career_reply(405,['success'=>false,'message'=>'GET or POST required']);}
@@ -22,8 +23,8 @@ try{
   if($action==='photo'){
    $key=$_GET['key']??'';
    if(!is_string($key)||!preg_match('/^[a-f0-9]{32}$/D',$key))career_reply(404,['success'=>false,'message'=>'Photo unavailable']);
-   $q=$pdo->prepare("SELECT ph.photo_data FROM career_profile_photos ph JOIN career_profiles p ON p.user_id=ph.user_id AND p.photo_path=ph.photo_key JOIN users u ON u.id=p.user_id WHERE ph.photo_key=? AND u.is_registered=1 AND (p.user_id=? OR p.status='approved')");
-   $q->execute([$key,$uid]);$bytes=$q->fetchColumn();
+   $q=$pdo->prepare("SELECT p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.photo_path=? AND u.is_registered=1 AND (p.user_id=? OR p.status='approved')");
+   $q->execute([$key,$uid]);$allowed=$q->fetchColumn();$bytes=is_string($allowed)?career_photo_read($allowed):null;
    if(!is_string($bytes)||$bytes==='')career_reply(404,['success'=>false,'message'=>'Photo unavailable']);
    header('Content-Type: image/jpeg');header('Content-Length: '.strlen($bytes));echo $bytes;exit;
   }
@@ -102,19 +103,20 @@ try{
    if(strlen($jpeg)>204800)throw new DomainException('Photo could not be compressed; choose another image');
    $photoPath=bin2hex(random_bytes(16));
   }
+  $q=$pdo->prepare('SELECT photo_path FROM career_profiles WHERE user_id=?');$q->execute([$uid]);$previous=$q->fetchColumn();
   $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,status,updated_at) VALUES(?,?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
   $q->execute([$uid,$name,$role,$org,$city]);
   if($photoPath!==null){
-   $q=$pdo->prepare('INSERT INTO career_profile_photos(user_id,photo_key,photo_data) VALUES(?,?,?) ON DUPLICATE KEY UPDATE photo_key=VALUES(photo_key),photo_data=VALUES(photo_data)');
-   $q->bindValue(1,$uid,PDO::PARAM_INT);$q->bindValue(2,$photoPath);$q->bindValue(3,$jpeg,PDO::PARAM_LOB);$q->execute();
+   career_photo_write($photoPath,$jpeg);$newPhoto=$photoPath;
    $q=$pdo->prepare('UPDATE career_profiles SET photo_path=? WHERE user_id=?');$q->execute([$photoPath,$uid]);
+   $oldPhoto=is_string($previous)?$previous:null;
   }elseif($remove){
    $q=$pdo->prepare("UPDATE career_profiles SET photo_path='' WHERE user_id=?");$q->execute([$uid]);
-   $q=$pdo->prepare('DELETE FROM career_profile_photos WHERE user_id=?');$q->execute([$uid]);
+   $oldPhoto=is_string($previous)?$previous:null;
   }
  }elseif($action==='hide_profile'){
   $q=$pdo->prepare("UPDATE career_profiles SET status='hidden',revision=revision+1,updated_at=UTC_TIMESTAMP() WHERE user_id=?");$q->execute([$uid]);
  }else throw new DomainException('Unknown action');
- $pdo->commit();career_reply(200,['success'=>true,'new_alerts'=>$count]);
-}catch(DomainException $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();career_reply(422,['success'=>false,'message'=>$e->getMessage()]);}
-catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();error_log('Career API: '.$e->getMessage());career_reply(500,['success'=>false,'message'=>'Career service unavailable']);}
+ $pdo->commit();$newPhoto=null;if($oldPhoto!==null)career_photo_delete($oldPhoto);career_reply(200,['success'=>true,'new_alerts'=>$count]);
+}catch(DomainException $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();if($newPhoto!==null)career_photo_delete($newPhoto);career_reply(422,['success'=>false,'message'=>$e->getMessage()]);}
+catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();if($newPhoto!==null)career_photo_delete($newPhoto);error_log('Career API: '.$e->getMessage());career_reply(500,['success'=>false,'message'=>'Career service unavailable']);}
