@@ -1,11 +1,13 @@
+import '../models/category_labels.dart';
 import 'package:flutter/material.dart';
 import '../widgets/design_system.dart';
 import '../services/question_library_service.dart';
 import 'premium_page.dart';
 
 class QuestionBrowserPage extends StatefulWidget {
-  const QuestionBrowserPage({super.key,this.initialSearch='',this.category='',this.savedOnly=false,this.noteId});
+  const QuestionBrowserPage({super.key,this.initialSearch='',this.category='',this.categoryLabel,this.savedOnly=false,this.noteId});
   final String initialSearch,category;
+  final String? categoryLabel;
   final bool savedOnly;
   final int? noteId;
   @override
@@ -34,8 +36,8 @@ class _QuestionBrowserPageState extends State<QuestionBrowserPage> {
       return ListView(padding:const EdgeInsets.all(16),children:[
         TextField(controller:_search,maxLength:120,textInputAction:TextInputAction.search,onSubmitted:(_)=>_reload(),
           decoration:InputDecoration(hintText:'প্রশ্ন, বিষয় বা রেফারেন্স খুঁজুন',suffixIcon:IconButton(onPressed:()=>_reload(),icon:const Icon(Icons.search)))),
-        if(widget.category.isNotEmpty) Text('বিভাগ: ${widget.category}'),
-        if(widget.noteId!=null&&data?['related_match']==true) Text('মিল পাওয়া প্রশ্নের বিভাগ: ${data?['category']}'),
+        if(widget.category.isNotEmpty) Text('বিভাগ: ${widget.categoryLabel ?? widget.category}'),
+        if(widget.noteId!=null&&data?['related_match']==true) Text('মিল পাওয়া প্রশ্নের বিভাগ: ${categoryDisplayFromRow(data!,'category',Localizations.localeOf(context).languageCode)}'),
         DropdownButtonFormField<String>(initialValue:_difficulty,
           decoration:const InputDecoration(labelText:'কঠিনতার মাত্রা'),
           items:const [
@@ -103,7 +105,7 @@ class _LibraryQuestionCardState extends State<_LibraryQuestionCard> {
     final colors=Theme.of(context).colorScheme;
     return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
-        Expanded(child:Text('${q['category']??''} • ${q['difficulty']??''}',style:Theme.of(context).textTheme.labelMedium)),
+        Expanded(child:Text('${categoryDisplayFromRow(q,'category',Localizations.localeOf(context).languageCode)} • ${q['difficulty']??''}',style:Theme.of(context).textTheme.labelMedium)),
         IconButton(tooltip:_saved?'বুকমার্ক সরান':'বুকমার্ক করুন',onPressed:_busy?null:_toggle,
           icon:Icon(_saved?Icons.bookmark:Icons.bookmark_border,color:colors.primary)),
       ]),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../widgets/design_system.dart';
+import '../models/category_labels.dart';
 import '../services/auth_guard.dart';
 import '../services/model_test_service.dart';
 import 'premium_page.dart';
@@ -21,8 +22,9 @@ class _TestsPageState extends State<TestsPage> {
   String? _categoryFilter;
   String _categoryKey(Map<String,dynamic> test) => test['category_id']?.toString() ?? 'mixed';
   String _categoryLabel(Map<String,dynamic> test) {
-    final name = (test['category_name'] ?? '').toString().trim();
-    return name.isNotEmpty ? name : 'সমন্বিত / অন্যান্য';
+    final language = Localizations.localeOf(context).languageCode;
+    final name = categoryDisplayFromRow(test,'category_name',language).trim();
+    return name.isNotEmpty ? name : (language == 'en' ? 'Mixed / Other' : 'সমন্বিত / অন্যান্য');
   }
   Map<int, Map<String, dynamic>> _activeAttempts = {};
   bool _loadingActiveAttempts = false;
@@ -694,7 +696,8 @@ class _ExamResult extends StatelessWidget{
 
 class SubjectPracticePage extends StatefulWidget {
   final String subject;
-  const SubjectPracticePage({super.key, required this.subject});
+  final String? subjectLabel;
+  const SubjectPracticePage({super.key, required this.subject,this.subjectLabel});
 
   @override
   State<SubjectPracticePage> createState() => _SubjectPracticePageState();
@@ -795,13 +798,13 @@ class _SubjectPracticePageState extends State<SubjectPracticePage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        appBar: AppBar(title: Text('${widget.subjectLabel ?? widget.subject} অনুশীলন')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (_loadError != null) {
       return Scaffold(
-        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        appBar: AppBar(title: Text('${widget.subjectLabel ?? widget.subject} অনুশীলন')),
         body: Center(child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -814,7 +817,7 @@ class _SubjectPracticePageState extends State<SubjectPracticePage> {
     }
     if (_questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+        appBar: AppBar(title: Text('${widget.subjectLabel ?? widget.subject} অনুশীলন')),
         body: const Center(child: Text('এই বিষয়ে Question Bank-এ প্রকাশিত প্রশ্ন পাওয়া যায়নি।')),
       );
     }
@@ -824,7 +827,7 @@ class _SubjectPracticePageState extends State<SubjectPracticePage> {
     final explanation = q['explanation']?.toString() ?? '';
     final isLast = _index == _questions.length - 1;
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.subject} অনুশীলন')),
+      appBar: AppBar(title: Text('${widget.subjectLabel ?? widget.subject} অনুশীলন')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

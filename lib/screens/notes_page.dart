@@ -193,7 +193,7 @@ class _NotesPageState extends State<NotesPage> {
                           ...categories.map(
                             (category) => DropdownMenuItem<int?>(
                               value: category.id,
-                              child: Text(category.name),
+                              child: Text(category.displayName(Localizations.localeOf(context).languageCode),overflow: TextOverflow.ellipsis),
                             ),
                           ),
                         ],
@@ -370,7 +370,7 @@ class _NoteCardState extends State<_NoteCard> {
           child: Text(
             [
               if(widget.note.locked) '🔒 Premium',
-              if (widget.note.categoryName != null) widget.note.categoryName!,
+              if (widget.note.categoryName != null) widget.note.displayCategory(Localizations.localeOf(context).languageCode),
               if (widget.note.summary != null) widget.note.summary!,
               'বিস্তারিত পড়তে ট্যাপ করুন',
             ].join(' • '),
@@ -540,7 +540,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Chip(
-                      label: Text(note.categoryName!),
+                      label: Text(note.displayCategory(Localizations.localeOf(context).languageCode)),
                       backgroundColor: const Color(0xFFFFE8E8),
                       labelStyle: const TextStyle(
                         color: notesMaroon,

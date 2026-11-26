@@ -83,7 +83,7 @@ class _SavedNotesPageState extends State<SavedNotesPage> {
                 child: ListTile(
                   leading: const Icon(Icons.bookmark, color: Color(0xFF650D18)),
                   title: Text(note.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(note.categoryName ?? 'স্টাডি নোট'),
+                  subtitle: Text(note.categoryName == null ? 'স্টাডি নোট' : note.displayCategory(Localizations.localeOf(context).languageCode)),
                   trailing: IconButton(
                     tooltip: 'সংরক্ষণ থেকে সরান',
                     icon: const Icon(Icons.bookmark_remove_outlined),

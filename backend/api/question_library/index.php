@@ -35,6 +35,7 @@ try {
     require_once __DIR__.'/../../db.php';
     $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
     require_once __DIR__.'/../../premium_learning.php';
+    require_once __DIR__.'/../../category_labels.php';
     $uid=ql_user($pdo);
     $active=premium_active($pdo,$uid)!==null;
     $mode=premium_policy($pdo)['effective_mode'];
@@ -86,7 +87,12 @@ try {
     if(!$active&&($_GET['premium_preview']??'')!=='1')$where.=" AND NOT ($marked)";
     if($category!==''){$where.=' AND q.category=?';$args[]=$category;}
     if($difficulty!=='all'){$where.=' AND q.difficulty=?';$args[]=$difficulty;}
-    if($search!==''){$where.=' AND (LOCATE(?,q.question)>0 OR LOCATE(?,q.category)>0 OR (NOT ('.$locked.') AND (LOCATE(?,COALESCE(q.explanation,\'\'))>0 OR LOCATE(?,COALESCE(q.reference,\'\'))>0)))';array_push($args,$search,$search,$search,$search);}
+    if($search!==''){
+        $names=category_label_matches($pdo,'question',$search);
+        $extra=$names?' OR q.category IN ('.implode(',',array_fill(0,count($names),'?')).')':'';
+        $where.=' AND (LOCATE(?,q.question)>0 OR LOCATE(?,q.category)>0 OR (NOT ('.$locked.') AND (LOCATE(?,COALESCE(q.explanation,\'\'))>0 OR LOCATE(?,COALESCE(q.reference,\'\'))>0))'.$extra.')';
+        array_push($args,$search,$search,$search,$search,...$names);
+    }
     if($saved==='1')$where.=' AND b.question_id IS NOT NULL';
     $offset=($page-1)*20;
     $q=$pdo->prepare("SELECT q.id,q.category,q.question,CASE WHEN $locked THEN NULL ELSE q.option_a END AS option_a,CASE WHEN $locked THEN NULL ELSE q.option_b END AS option_b,CASE WHEN $locked THEN NULL ELSE q.option_c END AS option_c,CASE WHEN $locked THEN NULL ELSE q.option_d END AS option_d,CASE WHEN $locked THEN NULL ELSE q.correct_answer END AS correct_answer,CASE WHEN $locked THEN NULL ELSE q.explanation END AS explanation,q.difficulty,CASE WHEN $locked THEN NULL ELSE q.reference END AS reference,q.language,$marked AS premium_only,$locked AS locked,(b.question_id IS NOT NULL) AS saved
@@ -95,11 +101,12 @@ try {
     $q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
     $more=count($rows)>20;if($more)array_pop($rows);
     foreach($rows as &$row){
+        $row+=category_label_for($pdo,'question',(string)$row['category']);
         $row['id']=(string)$row['id'];$row['saved']=(bool)$row['saved'];$row['premium_only']=(bool)$row['premium_only'];$row['locked']=(bool)$row['locked'];
         $row['options']=['A'=>$row['option_a'],'B'=>$row['option_b'],'C'=>$row['option_c'],'D'=>$row['option_d']];
         unset($row['option_a'],$row['option_b'],$row['option_c'],$row['option_d']);
     }unset($row);
-    ql_reply(200,['success'=>true,'data'=>$rows,'has_more'=>$more,'related_match'=>$matched,'category'=>$category]);
+    ql_reply(200,['success'=>true,'data'=>$rows,'has_more'=>$more,'related_match'=>$matched,'category'=>$category]+category_label_for($pdo,'question',$category));
 }catch(Throwable $e){
     error_log('Question library: '.$e->getMessage());
     ql_reply(503,['success'=>false,'message'=>'Question library temporarily unavailable']);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/admin_helpers.php';
 require_admin();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/category_labels.php';
 
 if (!isset($pdo) || !$pdo instanceof PDO) {
     http_response_code(500);
@@ -29,6 +30,7 @@ function slugify(string $value): string {
 $msg = '';
 $err = '';
 $token = csrf_token();
+$labelsReady = category_labels_ready($pdo);
 
 $type = (string)($_GET['type'] ?? 'question');
 
@@ -47,7 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string)($_POST['action'] ?? '');
         $id = (int)($_POST['id'] ?? 0);
 
-        if ($action === 'create_shared') {
+        if ($action === 'save_labels') {
+            if (!$labelsReady) throw new RuntimeException('Bilingual SQL migration আগে চালান।');
+            if ($id<1) throw new RuntimeException('সঠিক ক্যাটাগরি নির্বাচন করুন।');
+            $bn=trim((string)($_POST['name_bn']??''));
+            $en=trim((string)($_POST['name_en']??''));
+            if ($bn===''||$en===''||mb_strlen($bn,'UTF-8')>120||mb_strlen($en,'UTF-8')>120) {
+                throw new RuntimeException('বাংলা ও ইংরেজি নাম দিন (সর্বোচ্চ ১২০ অক্ষর)।');
+            }
+            $pdo->prepare('UPDATE categories SET name_bn=?,name_en=? WHERE id=?')->execute([$bn,$en,$id]);
+            $msg='বাংলা ও ইংরেজি প্রদর্শন নাম সংরক্ষিত হয়েছে।';
+        } elseif ($action === 'create_shared') {
             // Keep the legacy typed IDs and text-based question lookup. Create
             // the missing root categories together, without renaming existing ones.
             $name = trim((string)($_POST['shared_name'] ?? ''));
@@ -1288,6 +1300,22 @@ td {
                 </form>
 
 
+                <?php if ($edit && $labelsReady): ?>
+                <form method="post" style="margin-top:16px">
+                    <input type="hidden" name="csrf_token" value="<?= ch($token) ?>">
+                    <input type="hidden" name="action" value="save_labels">
+                    <input type="hidden" name="id" value="<?= (int)$edit['id'] ?>">
+                    <h3>বাংলা / English প্রদর্শন নাম</h3>
+                    <label>বাংলা নাম</label>
+                    <input name="name_bn" maxlength="120" required value="<?= ch($edit['name_bn'] ?: $edit['name']) ?>">
+                    <label>English name</label>
+                    <input name="name_en" maxlength="120" required value="<?= ch($edit['name_en'] ?: $edit['name']) ?>">
+                    <div class="form-actions"><button class="btn btn-orange" type="submit">Save display names</button></div>
+                    <p class="help-text">মূল name/ID পরিবর্তন হবে না। NFPA, BNBC, RSC-এর মতো নাম ইংরেজিতে রাখুন।</p>
+                </form>
+                <?php elseif (!$labelsReady): ?>
+                    <p class="help-text">দ্বিভাষিক নাম চালু করতে Bilingual SQL migration চালান।</p>
+                <?php endif; ?>
                 <p class="help-text">
 
                     <strong>নির্দেশনা:</strong><br>
@@ -1364,6 +1392,7 @@ td {
                                             <?= $row['parent_id'] ? '↳ ' : '' ?>
 
                                             <?= ch($row['name']) ?>
+                                            <?php if($labelsReady): ?><div class="parent-info">বাংলা: <?= ch($row['name_bn'] ?: '—') ?> · English: <?= ch($row['name_en'] ?: '—') ?></div><?php endif; ?>
 
                                         </div>
 

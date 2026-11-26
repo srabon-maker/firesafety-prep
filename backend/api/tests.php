@@ -142,6 +142,7 @@ try {
     }
 
     if($method==='GET' && $action==='list'){
+        require_once __DIR__.'/../category_labels.php';
         $active=premium_has_access($pdo);$marked=premium_effective_test(premium_policy($pdo)['effective_mode']);$locked=$active?'0':$marked;
         $scope=(!$active&&($_GET['premium_preview']??'')!=='1')?" AND NOT ($marked)":'';
         $hasRandom=(bool)$pdo->query("SHOW COLUMNS FROM model_tests LIKE 'randomize_questions'")->fetch(PDO::FETCH_ASSOC);
@@ -153,6 +154,7 @@ try {
         $q=$pdo->query("SELECT mt.id,mt.title,mt.description,mt.category_id,COALESCE(c.name,'') AS category_name,mt.exam_instructions,$marked AS premium_only,$locked AS locked,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,COUNT(mq.id) AS question_count,mt.results_released".$randomSelect.$negativeSelect." FROM model_tests mt LEFT JOIN categories c ON c.id=mt.category_id AND c.category_type='test' LEFT JOIN model_test_questions mq ON mq.test_id=mt.id WHERE mt.status='published' $scope AND (mt.starts_at IS NULL OR mt.starts_at<=NOW()) AND (mt.ends_at IS NULL OR mt.ends_at>NOW()) GROUP BY mt.id,mt.title,mt.description,mt.category_id,c.name,mt.exam_instructions,mt.duration_minutes,mt.total_marks,mt.pass_marks,mt.starts_at,mt.ends_at,mt.max_attempts,mt.results_released".$randomGroup.$negativeGroup." ORDER BY mt.starts_at IS NULL,mt.starts_at ASC,mt.id DESC LIMIT 100");
         $rows=$q->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$r){
+            $r+=category_label_for($pdo,'test',null,isset($r['category_id'])?(int)$r['category_id']:null);
             $r['locked']=(bool)$r['locked'];$r['premium_only']=(bool)$r['premium_only'];$r['id']=(int)$r['id'];$r['duration_minutes']=(int)$r['duration_minutes'];$r['question_count']=(int)$r['question_count'];$r['total_marks']=(float)$r['total_marks'];
             $r['pass_marks']=$r['pass_marks']===null?null:(float)$r['pass_marks'];
             $r['max_attempts']=(int)$r['max_attempts'];

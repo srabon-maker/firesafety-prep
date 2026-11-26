@@ -1,9 +1,13 @@
+import 'category_labels.dart';
+
 class StudyNote {
   const StudyNote({
     required this.id,
     required this.title,
     this.categoryId,
     this.categoryName,
+    this.categoryNameBn,
+    this.categoryNameEn,
     this.summary,
     this.content,
     this.fileUrl,
@@ -18,6 +22,8 @@ class StudyNote {
   final int? categoryId;
   final String title;
   final String? categoryName;
+  final String? categoryNameBn, categoryNameEn;
+  String displayCategory(String language) => categoryDisplayName(categoryName ?? '',categoryNameBn,categoryNameEn,language);
   final String? summary;
   final String? content;
   final String? fileUrl;
@@ -38,6 +44,8 @@ class StudyNote {
       categoryId: asInt(json['category_id']),
       title: asText(json['title']) ?? 'শিরোনাম নেই',
       categoryName: asText(json['category_name']),
+      categoryNameBn: asText(json['category_name_bn']),
+      categoryNameEn: asText(json['category_name_en']),
       summary: asText(json['summary']),
       content: asText(json['content']),
       fileUrl: asText(json['file_url']),
@@ -51,14 +59,18 @@ class StudyNote {
 }
 
 class StudyNoteCategory {
-  const StudyNoteCategory({required this.id, required this.name});
+  const StudyNoteCategory({required this.id, required this.name, this.nameBn, this.nameEn});
   final int id;
   final String name;
+  final String? nameBn, nameEn;
+  String displayName(String language) => categoryDisplayName(name,nameBn,nameEn,language);
 
   factory StudyNoteCategory.fromJson(Map<String, dynamic> json) =>
       StudyNoteCategory(
         id: int.tryParse(json['id'].toString()) ?? 0,
         name: json['name']?.toString() ?? '',
+        nameBn: json['category_name_bn']?.toString(),
+        nameEn: json['category_name_en']?.toString(),
       );
 }
 

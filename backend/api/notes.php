@@ -42,6 +42,7 @@ try {
     if (!isset($pdo) || !$pdo instanceof PDO) throw new RuntimeException('Database unavailable.');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     require_once __DIR__.'/../premium_learning.php';
+    require_once __DIR__.'/../category_labels.php';
     $active=premium_has_access($pdo);
     $mode=premium_policy($pdo)['effective_mode'];
     $marked=premium_effective_note($mode);
@@ -68,6 +69,7 @@ try {
         $note['private_pdf']=(bool)$note['private_pdf'];$note['locked']=(bool)$note['locked'];$note['premium_only']=(bool)$note['premium_only'];
         $note['id']=(int)$note['id'];
         $note['category_id']=$note['category_id']===null?null:(int)$note['category_id'];
+        $note+=category_label_for($pdo,'note',null,$note['category_id']);
         $note['file_url'] = notes_api_public_url(is_string($note['file_url']) ? $note['file_url'] : null);
         $note['content'] = notes_api_content_urls(is_string($note['content']) ? $note['content'] : null);
         notes_api_reply(200,['success'=>true,'data'=>$note]);
@@ -81,7 +83,12 @@ try {
     $where=["n.status='published'"];
     if(!$active&&!$preview)$where[]="NOT ($marked)";
     $params=[];
-    if($search!==''){$where[]="(n.title LIKE ? OR (NOT ($locked) AND (n.summary LIKE ? OR n.content LIKE ?)))";$term='%'.$search.'%';array_push($params,$term,$term,$term);}
+    if($search!==''){
+        $ids=category_label_matches($pdo,'note',$search,'id');
+        $extra=$ids?' OR n.category_id IN ('.implode(',',array_fill(0,count($ids),'?')).')':'';
+        $where[]="(n.title LIKE ? OR (NOT ($locked) AND (n.summary LIKE ? OR n.content LIKE ?))".$extra.")";
+        $term='%'.$search.'%';array_push($params,$term,$term,$term,...$ids);
+    }
     if($categoryId!==false){$where[]='n.category_id=?';$params[]=(int)$categoryId;}
     $whereSql=' WHERE '.implode(' AND ',$where);
     $count=$pdo->prepare('SELECT COUNT(*) FROM notes n'.$whereSql);
@@ -97,13 +104,14 @@ try {
         $row['private_pdf']=(bool)$row['private_pdf'];$row['locked']=(bool)$row['locked'];$row['premium_only']=(bool)$row['premium_only'];
         $row['id']=(int)$row['id'];
         $row['category_id']=$row['category_id']===null?null:(int)$row['category_id'];
+        $row+=category_label_for($pdo,'note',null,$row['category_id']);
         $row['file_url'] = notes_api_public_url(is_string($row['file_url']) ? $row['file_url'] : null);
         $row['content'] = notes_api_content_urls(is_string($row['content']) ? $row['content'] : null);
     }
     unset($row);
     $categoryStmt=$pdo->query("SELECT id,name FROM categories WHERE category_type='note' AND is_active=1 ORDER BY sort_order ASC,name ASC");
     $categories=$categoryStmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach($categories as &$category)$category['id']=(int)$category['id'];
+    foreach($categories as &$category){$category['id']=(int)$category['id'];$category+=category_label_for($pdo,'note',null,$category['id']);}
     unset($category);
     notes_api_reply(200,['success'=>true,'data'=>$rows,'categories'=>$categories,'pagination'=>['page'=>$page,'per_page'=>$perPage,'total'=>$total,'total_pages'=>$totalPages]]);
 } catch(Throwable $error) {

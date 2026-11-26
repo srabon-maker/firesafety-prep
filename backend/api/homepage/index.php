@@ -19,7 +19,8 @@ try {
         $hasAccess=premium_has_access($pdo);$locked=$hasAccess?'0':premium_effective_question($mode);
         $scope=($_GET['premium_preview']??'')==='1'?'':' AND NOT ('.$locked.')';
         $rows=$pdo->query("SELECT category,COUNT(*) AS question_count,SUM(CASE WHEN $locked THEN 1 ELSE 0 END) AS locked_count FROM questions q WHERE status='published' AND q.is_archived=0 AND correct_answer IN ('A','B','C','D') AND category IS NOT NULL AND TRIM(category)<>'' $scope GROUP BY category ORDER BY category LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-        hp_reply(200,['success'=>true,'data'=>array_map(static fn($r)=>['category'=>$r['category'],'question_count'=>(int)$r['question_count'],'locked_count'=>(int)$r['locked_count']],$rows)]);
+        require_once __DIR__.'/../../category_labels.php';
+        hp_reply(200,['success'=>true,'data'=>array_map(static fn($r)=>['category'=>$r['category'],'question_count'=>(int)$r['question_count'],'locked_count'=>(int)$r['locked_count']]+category_label_for($pdo,'question',(string)$r['category']),$rows)]);
     }
     if ($action==='home') {
         $order=$pdo->query('SELECT section_order FROM homepage_settings WHERE id=1')->fetchColumn();

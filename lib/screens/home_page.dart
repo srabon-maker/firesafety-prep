@@ -202,7 +202,7 @@ class _HomePageState extends State<HomePage> {
         }
         final notes=snapshot.data?.notes??[];
         if(notes.isEmpty)return const Text('কোনো প্রকাশিত নোট নেই।');
-        return Column(children:[for(final note in notes.take(3)) Card(child:ListTile(leading:const Icon(Icons.menu_book_outlined),title:Text(note.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(note.categoryName??''),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('notes',search:note.title)))]);
+        return Column(children:[for(final note in notes.take(3)) Card(child:ListTile(leading:const Icon(Icons.menu_book_outlined),title:Text(note.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(note.displayCategory(Localizations.localeOf(context).languageCode)),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('notes',search:note.title)))]);
       })]);
       case 'marketplace':return Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 4),

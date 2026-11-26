@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/design_system.dart';
+import '../models/category_labels.dart';
 import '../services/homepage_service.dart';
 import 'tests_page.dart';
 import '../services/premium_service.dart';
@@ -31,7 +32,7 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         if (snapshot.hasError || !snapshot.hasData) return const Center(child: Text('প্রশ্নের বিভাগ লোড হয়নি। রিফ্রেশ করুন।'));
         final rows = HomepageService.rows(snapshot.data!['data']);
         final query = _search.text.trim().toLowerCase();
-        final filtered = rows.where((row) => HomepageService.text(row, 'category').toLowerCase().contains(query));
+        final filtered = rows.where((row) => categoryMatches(row,'category',query));
         return ListView(padding: const EdgeInsets.all(16), children: [
           TextField(controller: _search, onChanged: (_) => setState(() {}), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'প্রশ্নের বিভাগ খুঁজুন')),
           const SizedBox(height: 12),
@@ -41,14 +42,14 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
           for (final row in filtered)
             Card(child: ListTile(
               leading: const Icon(Icons.quiz_outlined),
-              title: Text(HomepageService.text(row, 'category')),
+              title: Text(categoryDisplayFromRow(row,'category',Localizations.localeOf(context).languageCode)),
               subtitle: Text('${row['question_count']}টি প্রকাশিত প্রশ্ন${(row['locked_count'] as num? ?? 0)>0?' • ${row['locked_count']}টি Premium':''}'),
               trailing: IconButton(
                 tooltip:'এই বিভাগের প্রশ্ন দেখুন',
                 icon:const Icon(Icons.list_alt),
-                onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(category:HomepageService.text(row,'category')))),
+                onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>QuestionBrowserPage(category:HomepageService.text(row,'category'), categoryLabel: categoryDisplayFromRow(row,'category',Localizations.localeOf(context).languageCode)))),
               ),
-              onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => row['locked_count']==row['question_count']?QuestionBrowserPage(category:HomepageService.text(row,'category')):SubjectPracticePage(subject: HomepageService.text(row, 'category')))),
+              onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => row['locked_count']==row['question_count']?QuestionBrowserPage(category:HomepageService.text(row,'category'), categoryLabel: categoryDisplayFromRow(row,'category',Localizations.localeOf(context).languageCode)):SubjectPracticePage(subject: HomepageService.text(row, 'category'), subjectLabel: categoryDisplayFromRow(row,'category',Localizations.localeOf(context).languageCode)))),
             )),
           if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('কোনো বিভাগ পাওয়া যায়নি।')),
           const SizedBox(height: 12),

@@ -54,6 +54,7 @@ deployment:
     - /bin/cp -p backend/questions.php "$DEPLOYPATH/questions.php"
     - /bin/cp -p backend/notes.php "$DEPLOYPATH/notes.php"
     - /bin/cp -p backend/model_tests.php "$DEPLOYPATH/model_tests.php"
+    - 'set -e; /bin/test -f backend/category_labels.php; /bin/test ! -L "$DEPLOYPATH/category_labels.php"; if /bin/test -f "$DEPLOYPATH/category_labels.php"; then /bin/cp -p "$DEPLOYPATH/category_labels.php" "$RELEASEBACKUP/category_labels.php"; fi; /bin/cp -p backend/category_labels.php "$DEPLOYPATH/category_labels.php"'
     - /bin/cp -p backend/category_management.php "$DEPLOYPATH/category_management.php"
     - /bin/cp -p backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
     - /bin/cp -p backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
