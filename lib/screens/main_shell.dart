@@ -22,9 +22,7 @@ class _MainShellState extends State<MainShell> {
     const HomePage(),
     const CommunityPage(),
     const MarketplacePage(),
-    ProfilePage(
-      onLogout: _goToHome,
-    ),
+
   ];
 
   void _goToHome() {
@@ -58,6 +56,10 @@ class _MainShellState extends State<MainShell> {
           children: [
             TickerMode(enabled: index == 0, child: pages[0]),
             ...pages.skip(1),
+            // Mount only after AuthGuard succeeds. Discard account-specific
+            // state on leaving Profile so a new login cannot see stale data.
+            if (index == 3) ProfilePage(onLogout: _goToHome)
+            else const SizedBox.shrink(),
           ],
         ),
         bottomNavigationBar: NavigationBar(

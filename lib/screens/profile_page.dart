@@ -51,7 +51,14 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _profileFuture = _loadProfile();
-    _statsFuture = _loadStats();
+    _statsFuture = _startStats();
+  }
+
+  Future<List<dynamic>> _startStats() {
+    final future = _loadStats();
+    // Profile may fail before the stats FutureBuilder is mounted.
+    future.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return future;
   }
 
   Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
@@ -94,7 +101,7 @@ class _ProfilePageState extends State<ProfilePage> {
       }(),
     ]);
     if (error1 != null && error2 != null) {
-      throw Exception('$error1 | $error2');
+      throw Exception('শেখার অগ্রগতি লোড করা যায়নি।');
     }
     return [results, practice];
   }
@@ -102,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _refreshProfile() async {
     setState(() {
       _profileFuture = _loadProfile(forceRefresh: true);
-      _statsFuture = _loadStats();
+      _statsFuture = _startStats();
     });
 
     try {
@@ -472,7 +479,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             TextButton(
-              onPressed: () => setState(() => _statsFuture = _loadStats()),
+              onPressed: () => setState(() => _statsFuture = _startStats()),
               child: Text(_tr(context, 'আবার চেষ্টা', 'Retry')),
             ),
           ],
@@ -487,6 +494,11 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
           _lastUser = snapshot.data;
+        }
+        if (snapshot.connectionState == ConnectionState.done &&
+            (snapshot.hasError || snapshot.data == null)) {
+          _lastUser = null;
+          _lastStats = null;
         }
         final loadedUser = snapshot.data ?? _lastUser;
 
