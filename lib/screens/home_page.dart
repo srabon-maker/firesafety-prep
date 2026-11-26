@@ -133,8 +133,6 @@ class _HomePageState extends State<HomePage> {
       ),
     ),
   );
-  Widget _link(String title,String subtitle,IconData icon,String target)=>Card(child:ListTile(
-    leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:()=>_open(target)));
   void _openBanner(Map<String,dynamic> row) {
     final target=HomepageService.text(row,'target');
     final title=AppText.of(context,HomepageService.text(row,'title'),
@@ -170,10 +168,6 @@ class _HomePageState extends State<HomePage> {
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['banners']);
         if(rows.isEmpty)return const SizedBox.shrink();
         return HomeHeroBanner(items: rows, onOpen: _openBanner);
-      case 'progress':return FsFeatureCard(icon: Icons.track_changes_rounded,
-        title: _tr('আজকের প্রস্তুতি','Today’s preparation'),
-        subtitle: _tr('দৈনিক লক্ষ্য, অনুশীলন ও অগ্রগতি','Daily goals, practice and progress'),
-        onTap: () => _open('progress'));
       case 'jobs':return Column(children:[_heading(_tr('সর্বশেষ চাকরির বিজ্ঞপ্তি','Latest jobs'),target:'jobs'),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
         if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'), onRetry: _refresh);
@@ -223,7 +217,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       );
-      case 'community':return _link('ফায়ার সেফটি কমিউনিটি','অভিজ্ঞতা, প্রশ্ন ও আলোচনা',Icons.groups_outlined,'community');
       case 'tips':
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['tips']);
         return rows.isEmpty?const SizedBox.shrink():Column(children:[_heading(_tr('সেফটি টিপস','Safety tips')),for(final row in rows)_content(row)]);
@@ -263,7 +256,7 @@ class _HomePageState extends State<HomePage> {
         final data=snapshot.hasData?snapshot.data:null;
         // The retired topic shortcuts must not reappear via remote configuration.
         final sections=(data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']))
-            .where((key)=>key!='topics').toList();
+            .where((key)=>!const {'topics','progress','community'}.contains(key)).toList();
         final policy=data?['access_policy'];
         final pending=policy is Map&&policy['mode']=='free'&&policy['scheduled_mode']!='free';
         final activation=policy is Map?DateTime.tryParse(policy['starts_at']?.toString()??'')?.toUtc().add(const Duration(hours:6)):null;
