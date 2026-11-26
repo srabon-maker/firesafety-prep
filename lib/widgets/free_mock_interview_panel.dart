@@ -95,15 +95,21 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
     if (type == 'partial' || type == 'result') {
       final transcript = event['text']?.toString() ?? '';
       if (transcript.isNotEmpty) {
-        _answer.value = TextEditingValue(
-          text: transcript,
-          selection: TextSelection.collapsed(offset: transcript.length),
-        );
-      }
-      if (type == 'result') {
+        setState(() {
+          _answer.value = TextEditingValue(
+            text: transcript,
+            selection: TextSelection.collapsed(offset: transcript.length),
+          );
+          _evaluation = null;
+          if (type == 'result') {
+            _listening = false;
+            _voiceMessage = 'ভয়েস থেকে লেখা তৈরি হয়েছে। প্রয়োজন হলে সম্পাদনা করুন।';
+          }
+        });
+      } else if (type == 'result') {
         setState(() {
           _listening = false;
-          _voiceMessage = 'ভয়েস থেকে লেখা তৈরি হয়েছে। প্রয়োজন হলে সম্পাদনা করুন।';
+          _voiceMessage = 'কোনো কথা শনাক্ত হয়নি। আবার চেষ্টা করুন।';
         });
       }
     } else if (type == 'listening') {
@@ -139,9 +145,9 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
       case '11':
         return 'অফলাইন ভয়েস সেবা সংযোগ করা যায়নি।';
       case '12':
-        return 'এই ভাষার অফলাইন ভয়েস মডেল ইনস্টল নেই।';
-      case '13':
         return 'এই ভাষা অফলাইনে সমর্থিত নয়।';
+      case '13':
+        return 'এই ভাষার অফলাইন ভয়েস মডেল ইনস্টল নেই।';
       default:
         return 'অফলাইন ভয়েস কাজ করেনি। লিখে উত্তর দিতে পারেন।';
     }
@@ -450,6 +456,10 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
         _sectionTitle(context, 'আপনার উত্তর'),
         TextField(
           controller: _answer,
+          onChanged: (_) => setState(() {
+            _evaluation = null;
+            _showSample = false;
+          }),
           minLines: 4,
           maxLines: 8,
           textCapitalization: TextCapitalization.sentences,
