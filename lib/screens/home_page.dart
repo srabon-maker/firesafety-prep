@@ -107,6 +107,32 @@ class _HomePageState extends State<HomePage> {
       Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
     ]))),
   );
+  Widget _careerTile(String title, IconData icon, Color color, VoidCallback action) => Card(
+    margin: EdgeInsets.zero,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: action,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 19,
+              color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.primary : color),
+          ),
+          const SizedBox(height: 5),
+          Text(title, textAlign: TextAlign.center, maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    ),
+  );
   Widget _link(String title,String subtitle,IconData icon,String target)=>Card(child:ListTile(
     leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:()=>_open(target)));
   void _openBanner(Map<String,dynamic> row) {
@@ -253,15 +279,16 @@ class _HomePageState extends State<HomePage> {
           _heading(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development')),
           LayoutBuilder(builder: (context, box) {
             final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
-            final columns = box.maxWidth < 260 || largeText ? 1 : box.maxWidth >= 700 ? 4 : 2;
+            // Four compact shortcuts in one row at normal phone widths.
+            final columns = box.maxWidth < 260 || largeText ? 2 : 4;
             return GridView.count(
               padding: EdgeInsets.zero,
               crossAxisCount: columns,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              mainAxisExtent: largeText ? 145 : 104,
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
+              mainAxisExtent: largeText ? 128 : 92,
               children: [
                 for (final item in const [
                   ('alerts', 'চাকরির এলার্ট', 'Job alerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
@@ -269,7 +296,7 @@ class _HomePageState extends State<HomePage> {
                   ('courses', 'প্রশিক্ষণ ও কোর্স', 'Training & courses', Icons.school_outlined, Color(0xFF20834B)),
                   ('directory', 'পেশাজীবী ডিরেক্টরি', 'Professional directory', Icons.groups_outlined, Color(0xFF14799A)),
                 ])
-                  _tile(_tr(item.$2, item.$3), item.$4, item.$5,
+                  _careerTile(_tr(item.$2, item.$3), item.$4, item.$5,
                     () => CareerPage.open(context, section: item.$1)),
               ],
             );
