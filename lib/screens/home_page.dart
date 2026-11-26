@@ -303,7 +303,7 @@ class _HomePageState extends State<HomePage> {
                         width: double.infinity,
                         height: 1,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.outlineVariant,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
