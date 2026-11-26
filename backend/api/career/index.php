@@ -31,15 +31,15 @@ try{
   if($action==='courses'){
    $q=$pdo->prepare('SELECT id,title,provider,description,location,course_url,start_date FROM career_courses WHERE published=1 AND id<? ORDER BY id DESC LIMIT 26');$q->execute([$before]);
   }elseif($action==='directory'){
-   $q=$pdo->prepare("SELECT p.user_id AS id,p.display_name,p.role_name,p.organization,p.city FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.status='approved' AND u.is_registered=1 AND p.user_id<? ORDER BY p.user_id DESC LIMIT 26");$q->execute([$before]);
+   $q=$pdo->prepare("SELECT p.user_id AS id,p.display_name,p.role_name,p.organization,p.city,p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.status='approved' AND u.is_registered=1 AND p.user_id<? ORDER BY p.user_id DESC LIMIT 26");$q->execute([$before]);
   }elseif($action==='my_profile'){
-   $q=$pdo->prepare('SELECT display_name,role_name,organization,city,status FROM career_profiles WHERE user_id=?');$q->execute([$uid]);career_reply(200,['success'=>true,'profile'=>$q->fetch(PDO::FETCH_ASSOC)?:null]);
+   $q=$pdo->prepare('SELECT display_name,role_name,organization,city,status,photo_path FROM career_profiles WHERE user_id=?');$q->execute([$uid]);career_reply(200,['success'=>true,'profile'=>$q->fetch(PDO::FETCH_ASSOC)?:null]);
   }else throw new DomainException('Unknown action');
   $rows=$q->fetchAll(PDO::FETCH_ASSOC);$more=count($rows)>25;if($more)array_pop($rows);
   career_reply(200,['success'=>true,'data'=>$rows,'next_before_id'=>$more?(string)end($rows)['id']:null]);
  }
  $raw=file_get_contents('php://input',false,null,0,8193);
- if($raw===false||strlen($raw)>8192)career_reply(413,['success'=>false,'message'=>'Request too large']);
+ if($raw===false||strlen($raw)>3145728)career_reply(413,['success'=>false,'message'=>'Request too large']);
  $b=json_decode($raw,true);if(!is_array($b)||array_is_list($b))throw new DomainException('JSON object required');
  $action=$b['action']??'';
  $pdo->beginTransaction();$q=$pdo->prepare('SELECT id FROM users WHERE id=? AND is_registered=1 FOR UPDATE');$q->execute([$uid]);if(!$q->fetchColumn())throw new DomainException('Account unavailable');
@@ -64,7 +64,29 @@ try{
   if(($b['consent']??null)!==true)throw new DomainException('Explicit consent required');
   $name=career_public_text($b['display_name']??'',100,true);$role=career_public_text($b['role_name']??'',120,true);
   $org=career_public_text($b['organization']??'',120);$city=career_public_text($b['city']??'',100);
-  $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,status,updated_at) VALUES(?,?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");$q->execute([$uid,$name,$role,$org,$city]);
+  $photoPath=null;
+  if(isset($b['photo_base64'])&&$b['photo_base64']!==''){
+   if(!is_string($b['photo_base64'])||strlen($b['photo_base64'])>2800000)throw new DomainException('ছবির আকার ২ MB-এর মধ্যে রাখুন');
+   $binary=base64_decode($b['photo_base64'],true);
+   if($binary===false||strlen($binary)>2097152)throw new DomainException('অবৈধ ছবি');
+   $info=@getimagesizefromstring($binary);$mime=(new finfo(FILEINFO_MIME_TYPE))->buffer($binary);
+   if(!$info||!in_array($mime,['image/jpeg','image/png','image/webp'],true))throw new DomainException('শুধু JPG, PNG বা WebP ছবি দিন');
+   $dir=__DIR__.'/../../uploads/profiles';
+   if(!is_dir($dir)&&!mkdir($dir,0750,true)&&!is_dir($dir))throw new RuntimeException('Profile photo storage unavailable');
+   $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime];
+   $file=bin2hex(random_bytes(16)).'.'.$ext;
+   if(file_put_contents($dir.'/'.$file,$binary,LOCK_EX)!==strlen($binary))throw new RuntimeException('Profile photo save failed');
+   $photoPath='uploads/profiles/'.$file;
+  }
+  $q=$pdo->prepare("SELECT photo_path FROM career_profiles WHERE user_id=?");$q->execute([$uid]);$oldPhoto=$q->fetchColumn();
+  if($photoPath!==null){
+   $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,photo_path,status,updated_at) VALUES(?,?,?,?,?,?, 'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),photo_path=VALUES(photo_path),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
+   $q->execute([$uid,$name,$role,$org,$city,$photoPath]);
+  }else{
+   $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,status,updated_at) VALUES(?,?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
+   $q->execute([$uid,$name,$role,$org,$city]);
+  }
+  if($photoPath!==null&&is_string($oldPhoto)&&str_starts_with($oldPhoto,'uploads/profiles/'))@unlink(__DIR__.'/../../'.$oldPhoto);
  }elseif($action==='hide_profile'){
   $q=$pdo->prepare("UPDATE career_profiles SET status='hidden',revision=revision+1,updated_at=UTC_TIMESTAMP() WHERE user_id=?");$q->execute([$uid]);
  }else throw new DomainException('Unknown action');
