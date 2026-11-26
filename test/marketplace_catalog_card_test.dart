@@ -10,6 +10,7 @@ void main() {
     MarketplaceItem item, {
     VoidCallback? onDetails,
     VoidCallback? onAction,
+    double? height = 346,
   }) {
     return MaterialApp(
       locale: const Locale('bn'),
@@ -26,7 +27,7 @@ void main() {
         body: Center(
           child: SizedBox(
             width: 176,
-            height: 346,
+            height: height,
             child: MarketplaceCatalogCard(
               item: item,
               onDetails: onDetails ?? () {},
@@ -37,6 +38,19 @@ void main() {
       ),
     );
   }
+
+  testWidgets('compact card fits its content without a fixed grid height', (tester) async {
+    const item = MarketplaceItem(
+      id: 'compact', name: 'Fire Extinguisher', category: '',
+      description: '', isService: false, price: 1222, comparePrice: 1500, stock: 5,
+    );
+    await tester.pumpWidget(cardHost(item, height: null));
+    expect(tester.takeException(), isNull);
+    final card = tester.getSize(find.byType(MarketplaceCatalogCard));
+    expect(card.height, inInclusiveRange(220.0, 235.0));
+    expect(tester.getSize(find.byTooltip('কার্টে যোগ করুন')).height, greaterThanOrEqualTo(48.0));
+    expect(find.text('৳1222'), findsOneWidget);
+  });
 
   testWidgets(
     'product card shows API discount and in-stock cart action',

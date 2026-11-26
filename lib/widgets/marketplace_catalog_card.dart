@@ -66,21 +66,25 @@ class MarketplaceCatalogCard extends StatelessWidget {
       color: p.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: p.border, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onDetails,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 112,
+              height: 130,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  MarketplaceCatalogImage(item: item),
+                  ColoredBox(
+                    color: Colors.white,
+                    child: MarketplaceCatalogImage(item: item),
+                  ),
                   if (discount != null || item.isFeatured)
                     Positioned(
                       left: 7,
@@ -116,10 +120,13 @@ class MarketplaceCatalogCard extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 90),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(9, 4, 8, 5),
+                padding: const EdgeInsets.fromLTRB(9, 6, 8, 6),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -188,22 +195,32 @@ class MarketplaceCatalogCard extends StatelessWidget {
                                 : (unavailable ? onDetails : onAction),
                             padding: EdgeInsets.zero,
                             style: IconButton.styleFrom(
-                              backgroundColor: _maroon,
+                              backgroundColor: Colors.transparent,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                                  _maroon.withOpacity(0.45),
+                              disabledBackgroundColor: Colors.transparent,
                               disabledForegroundColor: Colors.white70,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            icon: Icon(
-                              item.isService
-                                  ? Icons.engineering_outlined
-                                  : unavailable
-                                      ? Icons.visibility_outlined
-                                      : Icons.shopping_cart_outlined,
-                              size: 19,
+                            // 40dp visible button, retaining a 48dp touch target.
+                            icon: Ink(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: actionBusy ? _maroon.withOpacity(0.45) : _maroon,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  item.isService
+                                      ? Icons.engineering_outlined
+                                      : unavailable
+                                          ? Icons.visibility_outlined
+                                          : Icons.shopping_cart_outlined,
+                                  size: 19,
+                                ),
+                              ),
                             ),
                           ),
                         ),

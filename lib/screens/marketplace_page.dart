@@ -540,11 +540,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final columns = width >= 950 ? 4 : width >= 650 ? 3 : 2;
-            // ফোনে বড় ফন্ট চালু থাকলে কার্ডের উচ্চতা সামান্য বাড়বে।
-            final textScale =
-                (MediaQuery.textScalerOf(context).scale(14) / 14)
-                    .clamp(1.0, 1.5);
+            final largeText = MediaQuery.textScalerOf(context).scale(14) > 21;
+            final columns = width < 290 || largeText
+                ? 1
+                : width >= 950 ? 4 : width >= 650 ? 3 : 2;
+            const gap = 10.0;
+            final cardWidth = (width - gap * (columns - 1)) / columns;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -583,33 +584,31 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filtered.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 12,
-                    mainAxisExtent: 125 + (_tab == 0 ? 115 : 95) * textScale,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    return MarketplaceCatalogCard(
-                      key: ValueKey('${item.isService}-${item.id}'),
-                      item: item,
-                      actionBusy: _adding,
-                      rating: item.isService ? null : _engagementCache?.ratings[item.id],
-                      onDetails: () => _showDetails(item),
-                      onAction: () {
-                        if (item.isService) {
-                          _bookService(item);
-                        } else {
-                          _add(item);
-                        }
-                      },
-                    );
-                  },
+                // Let each card grow for real content instead of reserving a
+                // fixed-height empty region under every product.
+                Wrap(
+                  spacing: gap,
+                  runSpacing: 12,
+                  children: [
+                    for (final item in filtered)
+                      SizedBox(
+                        key: ValueKey('${item.isService}-${item.id}'),
+                        width: cardWidth,
+                        child: MarketplaceCatalogCard(
+                          item: item,
+                          actionBusy: _adding,
+                          rating: item.isService ? null : _engagementCache?.ratings[item.id],
+                          onDetails: () => _showDetails(item),
+                          onAction: () {
+                            if (item.isService) {
+                              _bookService(item);
+                            } else {
+                              _add(item);
+                            }
+                          },
+                        ),
+                      ),
+                  ],
                 ),
               ],
             );
