@@ -884,8 +884,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                _tr(context, 'ফায়ার সেইফটি মার্কেটপ্লেস',
-                    'Fire Safety Marketplace'),
+                _tr(context, 'মার্কেটপ্লেস', 'Marketplace'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
