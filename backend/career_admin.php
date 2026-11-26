@@ -4,6 +4,14 @@ require_once __DIR__.'/admin_helpers.php';require_admin();
 require_once __DIR__.'/db.php';require_once __DIR__.'/career_common.php';
 header('Cache-Control: no-store, private');header('X-Content-Type-Options: nosniff');
 $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+if(($_SERVER['REQUEST_METHOD']??'GET')==='GET'&&isset($_GET['photo'])){
+ $key=$_GET['photo'];
+ if(!is_string($key)||!preg_match('/^[a-f0-9]{32}$/D',$key)){http_response_code(404);exit;}
+ $q=$pdo->prepare("SELECT p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.photo_path=? AND u.is_registered=1 AND p.status IN ('pending','approved')");
+ $q->execute([$key]);$allowed=$q->fetchColumn();$bytes=is_string($allowed)?career_photo_read($allowed):null;
+ if(!is_string($bytes)||$bytes===''){http_response_code(404);exit;}
+ header('Content-Type: image/jpeg');header('Content-Length: '.strlen($bytes));echo $bytes;exit;
+}
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
  verify_csrf();
  try{
@@ -47,7 +55,7 @@ try{
 <label><input type="checkbox" name="published" <?=$edit&&$edit['published']?'checked':''?>> অ্যাপে প্রকাশ করুন</label><button>সংরক্ষণ</button> <a href="career_admin.php">নতুন কোর্স</a></form>
 </section><section><h2>ট্রেনিং ও কোর্স</h2><?php foreach(array_slice($courses,0,25) as $c):?><article><strong><?=h($c['title'])?></strong> · <?=h($c['provider'])?> · <?=$c['published']?'প্রকাশিত':'ড্রাফট'?> <a href="?edit=<?=(int)$c['id']?>">সম্পাদনা</a></article><?php endforeach;?><?php if(!$courses):?><p>কোনো কোর্স নেই।</p><?php endif;?></section>
 <section><h2>Professional Directory অনুমোদন</h2><p>স্বেচ্ছায় জমা দেওয়া প্রোফাইল। যোগাযোগের তথ্য বা অসত্য দাবি অনুমোদন করবেন না। অনুমোদন পেশাগত সনদ যাচাই নয়।</p>
-<?php foreach(array_slice($profiles,0,25) as $p):?><article><strong><?=h($p['display_name'])?></strong> — <?=h($p['role_name'])?><div><?=h($p['organization'])?> · <?=h($p['city'])?> · <?=h($p['status'])?></div>
+<?php foreach(array_slice($profiles,0,25) as $p):?><article><?php if(preg_match('/^[a-f0-9]{32}$/D',(string)($p['photo_path']??''))):?><a href="?photo=<?=h($p['photo_path'])?>" target="_blank" rel="noopener"><img src="?photo=<?=h($p['photo_path'])?>" alt="Profile photo" loading="lazy" width="72" height="72" style="object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:12px"></a><?php endif;?><strong><?=h($p['display_name'])?></strong> — <?=h($p['role_name'])?><div><?=h($p['organization'])?> · <?=h($p['city'])?> · <?=h($p['status'])?></div>
 <form method="post"><input type="hidden" name="csrf_token" value="<?=h(csrf_token())?>"><input type="hidden" name="action" value="moderate"><input type="hidden" name="id" value="<?=(int)$p['user_id']?>"><input type="hidden" name="revision" value="<?=(int)$p['revision']?>"><?php if($p['status']==='pending'):?><button name="status" value="approved">অনুমোদন</button><?php endif;?> <button name="status" value="hidden">লুকান / প্রত্যাখ্যান</button></form></article><?php endforeach;?><?php if(!$profiles):?><p>কোনো প্রোফাইল নেই।</p><?php endif;?></section>
 <?php if($page>1):?><a href="?page=<?=$page-1?>">আগের পেজ</a><?php endif;?> <?php if(count($courses)>25||count($profiles)>25):?><a href="?page=<?=$page+1?>">পরের পেজ</a><?php endif;?>
 <?php endif;?></main></body></html>

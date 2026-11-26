@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/design_system.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_guard.dart';
@@ -54,11 +57,16 @@ class CareerSection extends StatefulWidget {
 }
 
 class _CareerSectionState extends State<CareerSection> {
+  final _directorySearch = TextEditingController();
   final _keyword = TextEditingController(), _location = TextEditingController(),
       _name = TextEditingController(), _role = TextEditingController(),
       _organization = TextEditingController(), _city = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
-  bool _busy = true, _enabled = false, _consent = false, _revealed = false;
+  bool _busy = true, _enabled = false, _consent = false, _revealed = false, _editingProfile = false;
+  Uint8List? _selectedPhoto;
+  String _photoPath = '';
+  String _directoryQuery = '';
+  bool _removePhoto = false;
   String? _error, _next;
   String _status = '';
   int _index = 0, _score = 0;
@@ -68,7 +76,7 @@ class _CareerSectionState extends State<CareerSection> {
   void initState() { super.initState(); _load(); }
   @override
   void dispose() {
-    for (final c in [_keyword,_location,_name,_role,_organization,_city]) { c.dispose(); }
+    for (final c in [_directorySearch,_keyword,_location,_name,_role,_organization,_city]) { c.dispose(); }
     super.dispose();
   }
   Future<void> _load({bool more = false}) async {
@@ -78,6 +86,7 @@ class _CareerSectionState extends State<CareerSection> {
       final data = await CareerService.request(_section, filters: {
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
+        if (_section == 'directory' && _directoryQuery.isNotEmpty) 'q': _directoryQuery,
       });
       Map<String, dynamic>? profile;
       if (_section == 'directory' && !more) {
@@ -97,12 +106,31 @@ class _CareerSectionState extends State<CareerSection> {
           final p = profile ?? <String,dynamic>{};
           _name.text = CareerService.text(p,'display_name'); _role.text = CareerService.text(p,'role_name');
           _organization.text = CareerService.text(p,'organization'); _city.text = CareerService.text(p,'city');
-          _status = CareerService.text(p,'status'); _consent = false;
+          _status = CareerService.text(p,'status'); _photoPath = CareerService.text(p,'photo_path'); _consent = false; _selectedPhoto = null; _removePhoto = false;
         }
         if (_section == 'mock') { _index = 0; _score = 0; _revealed = false; }
       });
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
+  }
+  void _searchDirectory() {
+    if (_busy || _editingProfile) return;
+    _directoryQuery = _directorySearch.text.trim();
+    _load();
+  }
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 82, maxWidth: 720, maxHeight: 720);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (bytes.length > 2097152) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবির আকার ২ MB-এর মধ্যে রাখুন')));
+        return;
+      }
+      if (mounted) setState(() { _selectedPhoto = bytes; _removePhoto = false; });
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবি নির্বাচন করা যায়নি')));
+    }
   }
   Future<void> _write(String action, Map<String,dynamic> body) async {
     setState(() { _busy = true; _error = null; });
@@ -111,6 +139,7 @@ class _CareerSectionState extends State<CareerSection> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'check_alerts'
           ? 'নতুন নোটিফিকেশন: ${data['new_alerts']}' : 'সংরক্ষণ হয়েছে')));
+      if (action == 'save_profile' || action == 'hide_profile') setState(() => _editingProfile = false);
       await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -165,17 +194,120 @@ class _CareerSectionState extends State<CareerSection> {
       for(final row in _rows) _card(CareerService.text(row,'title'),
         ['provider','location','start_date','description'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n'),link:CareerService.text(row,'course_url')),
     ];
+    final query = _directoryQuery;
+    final visibleProfiles = _rows;
     return [
-      const Text('নিজের সম্মতিতে পরিচিতি প্রকাশ করুন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা লিংক দেবেন না। প্রকাশিত পরিচিতি সনদ যাচাই করা নয়।'),
-      if(_status.isNotEmpty) Text('অবস্থা: ${({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status}'),
-      const SizedBox(height: 10),_field(_name,'প্রদর্শিত নাম',100),_field(_role,'পদ / পেশা',120),
-      _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),_field(_city,'শহর (ঐচ্ছিক)',100),
-      CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
-        title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
-      FilledButton(onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text}),child:const Text('অনুমোদনের জন্য জমা দিন')),
-      if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
-      const SizedBox(height: 12),const Text('অনুমোদিত পরিচিতি',style:TextStyle(fontWeight:FontWeight.bold)),
-      for(final row in _rows) _card(CareerService.text(row,'display_name'),['role_name','organization','city'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n')),
+      Card(child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('ফায়ার সেফটি পেশাজীবীদের পরিচিতি',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text('অনুমোদিত প্রোফাইল দেখুন অথবা নিজের পেশাগত পরিচিতি জমা দিন।'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _directorySearch,
+            enabled: !_busy && !_editingProfile,
+            maxLength: 160,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _searchDirectory(),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'নাম, পদবি, প্রতিষ্ঠান বা শহর খুঁজুন',
+              border: const OutlineInputBorder(),
+              counterText: '',
+              suffixIcon: IconButton(onPressed: _busy || _editingProfile ? null : _searchDirectory, icon: const Icon(Icons.search), tooltip: 'খুঁজুন'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: FilledButton.icon(
+            onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
+            icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1),
+            label: Text(_editingProfile ? 'ফর্ম বন্ধ করুন' : 'নিজের প্রোফাইল যুক্ত করুন'),
+          )),
+        ]),
+      )),
+      if (_status.isNotEmpty) Card(child: ListTile(
+        leading: Icon(_status == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
+          color: _status == 'approved' ? Colors.green : null),
+        title: const Text('আপনার প্রোফাইলের অবস্থা'),
+        subtitle: Text(({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status),
+      )),
+      if (_editingProfile) ...[
+        const SizedBox(height: 8),
+        Center(child: Column(children: [
+          if (_selectedPhoto != null)
+            CircleAvatar(radius: 46, backgroundImage: MemoryImage(_selectedPhoto!))
+          else
+            _PrivateProfileAvatar(photoKey: _removePhoto ? '' : _photoPath, radius: 46),
+          if (_selectedPhoto != null || (!_removePhoto && _photoPath.isNotEmpty))
+            TextButton.icon(onPressed: _busy ? null : () => setState(() {
+              _selectedPhoto = null;
+              _removePhoto = true;
+            }), icon: const Icon(Icons.delete_outline), label: const Text('ছবি সরান')),
+          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:const Text('প্রোফাইল ছবি নির্বাচন করুন')),
+          const Text('বড় ছবিও নির্বাচন করুন — স্বয়ংক্রিয়ভাবে ছোট করা হবে',style:TextStyle(fontSize:12)),
+        ])),
+        Text('প্রোফাইল তথ্য', style: Theme.of(context).textTheme.titleMedium),
+        const Text('নিজের সম্মতিতে তথ্য জমা দিন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা ব্যক্তিগত লিংক দেবেন না। প্রকাশিত পরিচিতি পেশাগত সনদ যাচাই নয়।'),
+        const SizedBox(height: 12),
+        _field(_name,'প্রদর্শিত নাম',100),
+        _field(_role,'পদ / পেশা',120),
+        _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),
+        _field(_city,'শহর (ঐচ্ছিক)',100),
+        CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
+          title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
+        SizedBox(width: double.infinity, child: FilledButton.icon(
+          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
+          icon: const Icon(Icons.send_outlined), label:const Text('অনুমোদনের জন্য জমা দিন'))),
+        if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
+          onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
+      ],
+      const SizedBox(height: 16),
+      Row(children: [
+        Expanded(child: Text('অনুমোদিত পেশাজীবী',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+        Text('${visibleProfiles.length} জন লোড হয়েছে', style: Theme.of(context).textTheme.bodySmall),
+      ]),
+      const SizedBox(height: 8),
+      if (visibleProfiles.isEmpty) Card(
+        child: Padding(padding: const EdgeInsets.all(20), child: Center(
+          child: Text(query.isEmpty ? 'এখনো কোনো অনুমোদিত প্রোফাইল নেই।' : 'এই নামে বা তথ্যে কোনো প্রোফাইল পাওয়া যায়নি।'),
+        )),
+      ),
+      for (final row in visibleProfiles) Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _PrivateProfileAvatar(key: ValueKey(CareerService.text(row,'id')), photoKey: CareerService.text(row,'photo_path'), radius: 30),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(CareerService.text(row,'display_name'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 3),
+              Text(CareerService.text(row,'role_name'),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+              if (CareerService.text(row,'organization').isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Row(children: [const Icon(Icons.business_outlined,size:16),const SizedBox(width:5),
+                  Expanded(child: Text(CareerService.text(row,'organization')))]),
+              ],
+              if (CareerService.text(row,'city').isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Row(children: [const Icon(Icons.location_on_outlined,size:16),const SizedBox(width:5),
+                  Expanded(child: Text(CareerService.text(row,'city')))]),
+              ],
+              const SizedBox(height: 5),
+              const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+                SizedBox(width: 4),
+                Text('অ্যাডমিন অনুমোদিত পরিচিতি', style: TextStyle(fontSize: 11)),
+              ]),
+            ])),
+          ]),
+        ),
+      ),
     ];
   }
   @override
@@ -187,7 +319,46 @@ class _CareerSectionState extends State<CareerSection> {
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
-      if(!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
+      if(_section!='directory'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
       if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:const Text('আরও দেখুন')),
     ]));
+}
+
+
+class _PrivateProfileAvatar extends StatefulWidget {
+  const _PrivateProfileAvatar({super.key, required this.photoKey, required this.radius});
+  final String photoKey;
+  final double radius;
+  @override
+  State<_PrivateProfileAvatar> createState() => _PrivateProfileAvatarState();
+}
+
+class _PrivateProfileAvatarState extends State<_PrivateProfileAvatar> {
+  late Future<Uint8List?> _photo;
+  @override
+  void initState() {
+    super.initState();
+    _photo = CareerService.photoBytes(widget.photoKey);
+  }
+  @override
+  void didUpdateWidget(covariant _PrivateProfileAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoKey != widget.photoKey) {
+      _photo = CareerService.photoBytes(widget.photoKey);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Uint8List?>(
+    future: _photo,
+    builder: (context, snapshot) {
+      final bytes = snapshot.connectionState == ConnectionState.done ? snapshot.data : null;
+      return CircleAvatar(
+        radius: widget.radius,
+        child: bytes == null
+          ? Icon(Icons.person_outline, size: widget.radius)
+          : ClipOval(child: Image.memory(bytes, width: widget.radius * 2, height: widget.radius * 2,
+            fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person_outline, size: widget.radius))),
+      );
+    },
+  );
 }
