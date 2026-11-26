@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
@@ -27,7 +28,28 @@ class CareerService {
   static List<Map<String, dynamic>> rows(Map<String, dynamic> data) =>
       (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   static String text(Map<String, dynamic> row, String key) => row[key]?.toString() ?? '';
-  static String photoUrl(String path) => 'https://fire.manobikishwarganj.com/$path';
+  static Future<Uint8List?> photoBytes(String key) async {
+    if (!RegExp(r'^[a-f0-9]{32}
+  static Uri? safeLink(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty && uri.userInfo.isEmpty ? uri : null;
+  }
+}
+).hasMatch(key)) return null;
+    try {
+      final token = await AuthService.instance.getSessionToken();
+      if (token == null || token.isEmpty) return null;
+      final uri = Uri.parse(endpoint).replace(queryParameters: {'action':'photo','key':key});
+      final response = await http.get(uri, headers: {
+        'Accept': 'image/jpeg', 'Authorization': 'Bearer $token',
+      }).timeout(const Duration(seconds: 15));
+      if (await AuthService.instance.getSessionToken() != token ||
+          response.statusCode != 200 ||
+          response.headers['content-type']?.split(';').first != 'image/jpeg' ||
+          response.bodyBytes.length > 2097152) return null;
+      return response.bodyBytes;
+    } catch (_) { return null; }
+  }
   static Uri? safeLink(String value) {
     final uri = Uri.tryParse(value);
     return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty && uri.userInfo.isEmpty ? uri : null;
