@@ -72,7 +72,7 @@ class MockInterviewEvaluation {
     final matched = expected.where(answerSet.contains).toList();
     final missing = expected.where((word) => !answerSet.contains(word)).toList();
     final coverage = matched.length / expected.length;
-    final targetWords = (expected.length * 0.65).round().clamp(12, 45);
+    final targetWords = (expected.length * 0.65).round().clamp(5, 45);
     final lengthCoverage = (answerWords.length / targetWords).clamp(0.0, 1.0);
     final score = (coverage * 75 + lengthCoverage * 25).round().clamp(0, 100);
 
