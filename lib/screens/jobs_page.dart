@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/job_circular.dart';
@@ -216,7 +217,7 @@ class _JobsPageState extends State<JobsPage> {
                 if (!snapshot.hasData && !snapshot.hasError) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 70),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: FsLoadingCards(count: 3),
                   );
                 }
                 if (snapshot.hasError) {
@@ -539,9 +540,10 @@ class _JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final location = _displayLocation(job);
+    final accent = scheme.primary;
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 1,
+      elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
@@ -593,7 +595,7 @@ class _JobCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: _maroon),
+                  Icon(Icons.chevron_right, color: accent),
                 ],
               ),
               const SizedBox(height: 12),
@@ -601,14 +603,14 @@ class _JobCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 7,
                 children: [
-                  if (job.isPinned) _tag('পিন করা', _maroon),
+                  if (job.isPinned) _tag('পিন করা', accent),
                   if (job.category.isNotEmpty)
-                    _tag(job.category, _maroon),
+                    _tag(job.category, accent),
                   if (location.isNotEmpty)
                     _tag(location, scheme.onSurfaceVariant),
                   _tag(
                     job.isExpired ? 'মেয়াদ শেষ' : 'চলমান',
-                    job.isExpired ? scheme.error : const Color(0xFF27815A),
+                    job.isExpired ? scheme.error : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8DDEB2) : const Color(0xFF176B46)),
                   ),
                 ],
               ),
@@ -627,10 +629,10 @@ class _JobCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Text(
+                  Text(
                     'বিস্তারিত দেখুন',
                     style: TextStyle(
-                      color: _maroon,
+                      color: accent,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

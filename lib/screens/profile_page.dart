@@ -289,16 +289,16 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: scheme.primary),
+          Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 19, color: scheme.onPrimaryContainer)),
           const SizedBox(width: 9),
-          Text(
+          Expanded(child: Text(
             title,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
               color: scheme.onSurface,
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -823,6 +823,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                       _tr(context, 'সঠিক উত্তর', 'Accuracy'),
                                       Icons.track_changes_outlined)),
                             ]),
+                            if (data[1] != null && questions > 0) ...[
+                              const SizedBox(height: 12),
+                              LinearProgressIndicator(
+                                value: (accuracy / 100).clamp(0.0, 1.0).toDouble(),
+                                semanticsLabel: _tr(context, 'সঠিক উত্তর','Accuracy'),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Text(
                                 _tr(

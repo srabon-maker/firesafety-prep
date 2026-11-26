@@ -9,6 +9,43 @@ class AppColors {
 }
 
 class AppTheme {
+  static ThemeData _polish(ThemeData base) {
+    final c = base.colorScheme;
+    final radius = BorderRadius.circular(18);
+    return base.copyWith(
+      textTheme: base.textTheme.copyWith(
+        titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        titleMedium: base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.45),
+        bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.45),
+      ),
+      cardTheme: CardThemeData(
+        color: base.cardColor, elevation: 0, surfaceTintColor: Colors.transparent,
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        shape: RoundedRectangleBorder(borderRadius: radius, side: BorderSide(color: c.outlineVariant)),
+        clipBehavior: Clip.antiAlias,
+      ),
+      filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      )),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      )),
+      navigationBarTheme: base.navigationBarTheme.copyWith(
+        height: 72, indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: c.primary, linearMinHeight: 5),
+      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      dividerTheme: DividerThemeData(color: c.outlineVariant, thickness: 1),
+      bottomSheetTheme: const BottomSheetThemeData(
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      ),
+    );
+  }
+
   static ThemeData get darkTheme {
     const surface = Color(0xFF211D21);
     const background = Color(0xFF151417);
@@ -29,7 +66,7 @@ class AppTheme {
       surfaceContainerHighest: const Color(0xFF383037),
     );
 
-    return ThemeData(
+    return _polish(ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: background,
@@ -68,13 +105,14 @@ class AppTheme {
           vertical: 14,
         ),
       ),
-    );
+    ));
   }
 
   static ThemeData get lightTheme {
-    return ThemeData(
+    return _polish(ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.cream,
+      scaffoldBackgroundColor: const Color(0xFFF8F9FC),
+      cardColor: Colors.white,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.maroon,
         primary: AppColors.maroon,
@@ -101,6 +139,6 @@ class AppTheme {
           vertical: 14,
         ),
       ),
-    );
+    ));
   }
 }

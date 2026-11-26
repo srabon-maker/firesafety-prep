@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/community_post.dart';
@@ -271,8 +272,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   // First load only.
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 70),
-                    child: Center(
-                        child: CircularProgressIndicator(color: accent)),
+                    child: const FsLoadingCards(count: 3),
                   );
                 }
                 final query = _search.text.trim().toLowerCase();

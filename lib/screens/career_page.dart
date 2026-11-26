@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_guard.dart';
+import '../settings/app_settings.dart';
 import '../services/auth_service.dart';
 import '../services/career_service.dart';
 
@@ -14,26 +16,33 @@ class CareerPage extends StatelessWidget {
   }
   @override
   Widget build(BuildContext context) {
+    String tr(String bn, String en) => AppText.of(context, bn, en);
     final entries = [
-      ('alerts', Icons.notifications_active_outlined, 'Job Alert', 'পদ, যোগ্যতার শব্দ ও কর্মস্থল অনুযায়ী চাকরি'),
-      ('mock', Icons.record_voice_over_outlined, 'Mock Interview', 'উত্তর বলুন, নমুনা দেখুন, নিজেকে মূল্যায়ন করুন'),
-      ('courses', Icons.school_outlined, 'Training & Courses', 'প্রকাশিত প্রশিক্ষণ ও কোর্সের তথ্য'),
-      ('directory', Icons.groups_outlined, 'Professional Directory', 'পেশাজীবীদের ঐচ্ছিক পরিচিতি'),
+      ('alerts', Icons.notifications_active_outlined, tr('চাকরির এলার্ট','Job alerts'), tr('পদ ও কর্মস্থল অনুযায়ী চাকরি','Jobs matching your preferences')),
+      ('mock', Icons.record_voice_over_outlined, tr('মক ইন্টারভিউ','Mock interview'), tr('উত্তর অনুশীলন ও মূল্যায়ন','Practice and self-assess answers')),
+      ('courses', Icons.school_outlined, tr('প্রশিক্ষণ ও কোর্স','Training & courses'), tr('প্রকাশিত প্রশিক্ষণের তথ্য','Explore published courses')),
+      ('directory', Icons.groups_outlined, tr('পেশাজীবী ডিরেক্টরি','Professional directory'), tr('ঐচ্ছিক পেশাগত পরিচিতি','Optional professional profiles')),
     ];
-    return Scaffold(appBar: AppBar(title: const Text('ক্যারিয়ার ডেভেলপমেন্ট')),
+    return Scaffold(
+      appBar: AppBar(title: Text(tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        Card(color: Theme.of(context).colorScheme.primaryContainer, child: const Padding(
-          padding: EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Career Growth', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 6), Text('চাকরি • দক্ষতা • প্রশিক্ষণ • পেশাগত পরিচিতি'),
-          ]))),
-        const SizedBox(height: 10),
-        for (final e in entries) Card(child: ListTile(
-          leading: Icon(e.$2), title: Text(e.$3), subtitle: Text(e.$4),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CareerSection(section: e.$1))),
-        )),
-      ]));
+        FsFeatureCard(icon: Icons.trending_up_rounded, title: tr('ক্যারিয়ার গ্রোথ','Career growth'),
+          subtitle: tr('চাকরি • দক্ষতা • প্রশিক্ষণ • পরিচিতি','Jobs • Skills • Training • Network')),
+        const SizedBox(height: 16),
+        LayoutBuilder(builder: (context, constraints) {
+          final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+          final columns = constraints.maxWidth < 340 || largeText ? 1 : constraints.maxWidth >= 720 ? 4 : 2;
+          final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+          return Wrap(spacing: 12, runSpacing: 12, children: [
+            for (final e in entries) SizedBox(width: width, child: FsFeatureCard(
+              vertical: true, icon: e.$2, title: e.$3, subtitle: e.$4,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => CareerSection(section: e.$1))),
+            )),
+          ]);
+        }),
+      ]),
+    );
   }
 }
 

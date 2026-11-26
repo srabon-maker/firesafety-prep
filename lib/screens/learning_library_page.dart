@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import '../services/homepage_service.dart';
 import 'tests_page.dart';
 import '../services/premium_service.dart';
@@ -26,7 +27,7 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
     body: FutureBuilder<Map<String, dynamic>>(
       future: _data,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) return const FsLoadingCards(count: 3);
         if (snapshot.hasError || !snapshot.hasData) return const Center(child: Text('প্রশ্নের বিভাগ লোড হয়নি। রিফ্রেশ করুন।'));
         final rows = HomepageService.rows(snapshot.data!['data']);
         final query = _search.text.trim().toLowerCase();
@@ -109,7 +110,7 @@ class _InterviewPageState extends State<InterviewPage> {
             items: [const DropdownMenuItem(value: '', child: Text('সব ইন্ডাস্ট্রি')), for(final v in _industries) DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))],
             onChanged: waiting ? null : (v) { _industry=v??''; _load(); }),
           SwitchListTile(title: const Text('English answer (যদি থাকে)'), value: _english, onChanged: (v)=>setState(()=>_english=v)),
-          if (waiting) const Center(child: CircularProgressIndicator())
+          if (waiting) const FsLoadingCards(count: 2)
           else if (snapshot.hasError || data == null) const Text('ইন্টারভিউ প্রশ্ন লোড হয়নি। রিফ্রেশ করুন।')
           else if (rows.isEmpty) const Text('এই বিভাগে প্রকাশিত প্রশ্ন পাওয়া যায়নি।')
           else ...[
