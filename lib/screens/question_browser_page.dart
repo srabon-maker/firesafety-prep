@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import '../services/question_library_service.dart';
 import 'premium_page.dart';
 
@@ -45,12 +46,12 @@ class _QuestionBrowserPageState extends State<QuestionBrowserPage> {
           ],
           onChanged:(v){if(v!=null){_difficulty=v;_reload();}}),
         SwitchListTile(title:const Text('শুধু বুকমার্ক করা প্রশ্ন'),value:_saved,onChanged:(v){_saved=v;_reload();}),
-        if(loading) const Center(child:CircularProgressIndicator())
+        if(loading) const FsLoadingCards(count: 2)
         else if(snapshot.hasError||data==null) ...[
           const Text('প্রশ্ন লোড হয়নি। লগইন ও সংযোগ পরীক্ষা করুন।'),
           OutlinedButton(onPressed:()=>_reload(page:_page),child:const Text('আবার চেষ্টা করুন')),
         ] else if(data['related_match']==false) const Text('এই নোটের ক্যাটাগরির সঙ্গে প্রকাশিত কোনো প্রশ্নের বিভাগ মেলেনি।')
-        else if(rows.isEmpty) const Text('কোনো প্রশ্ন পাওয়া যায়নি।')
+        else if(rows.isEmpty) const FsStatusCard(icon: Icons.quiz_outlined, message: 'কোনো প্রশ্ন পাওয়া যায়নি।')
         else for(final row in rows) if(row['locked']==true)
           Card(child:ListTile(leading:const Icon(Icons.lock_outline),title:Text(row['question']?.toString()??''),subtitle:const Text('Premium প্রশ্ন'),trailing:const Icon(Icons.workspace_premium_outlined),onTap:() async{
             await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));

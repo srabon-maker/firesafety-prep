@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import '../services/auth_guard.dart';
 import '../services/model_test_service.dart';
 import 'premium_page.dart';
@@ -92,7 +93,7 @@ class _TestsPageState extends State<TestsPage> {
     ]),
     body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
       future:_tests,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+        if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 3);
         if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('পরীক্ষার তালিকা লোড হয়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
         final tests=snapshot.data??[];
         if(tests.isEmpty)return ListView(children:[const SizedBox(height:100),Center(child:Icon(Icons.assignment_outlined,size:54,color:_maroon)),const Center(child:Text('এখন কোনো প্রকাশিত পরীক্ষা নেই।'))]);
@@ -400,7 +401,7 @@ class _ExamRunnerState extends State<_ExamRunner> with WidgetsBindingObserver {
         Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
           Text(q['question']?.toString()??'',style:Theme.of(context).textTheme.titleLarge),
           const SizedBox(height:18),
-          for(final letter in ['A','B','C','D'])Card(child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
+          for(final letter in ['A','B','C','D'])Card(color: _answers[(q['id'] as num).toInt()] == letter ? Theme.of(context).colorScheme.primaryContainer : null, child:RadioListTile<String>(value:letter,groupValue:_answers[(q['id'] as num).toInt()],title:Text('$letter. ${options[letter]??''}'),onChanged:_submitting?null:(v)=>v==null?null:_choose(v))),
           if(!_cacheReady)
             const Padding(padding:EdgeInsets.all(8),child:LinearProgressIndicator()),
           if(_saveError!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_saveError!,style:const TextStyle(color:Colors.red))),

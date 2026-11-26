@@ -61,10 +61,14 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         bottomNavigationBar: NavigationBar(
-          height: 70,
+          height: 72,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          animationDuration: MediaQuery.of(context).disableAnimations
+              ? Duration.zero : const Duration(milliseconds: 220),
           selectedIndex: index,
           backgroundColor: Theme.of(context).colorScheme.surface,
           indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+          elevation: 2,
           onDestinationSelected: _onDestinationSelected,
           destinations: [
             NavigationDestination(

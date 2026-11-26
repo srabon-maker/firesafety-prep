@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 
 import '../models/marketplace_category.dart';
 import '../models/marketplace_item.dart';
@@ -38,7 +39,7 @@ class _MarketPalette {
   Color get text => dark ? Colors.white : const Color(0xFF241A1D);
   Color get muted =>
       dark ? const Color(0xFFBDB4B7) : const Color(0xFF6E6064);
-  Color get accent => dark ? const Color(0xFFC0485F) : _maroon;
+  Color get accent => dark ? const Color(0xFFFFB3BC) : _maroon;
   Color get fill => const Color(0xFF7A1224);
   Color get appBar => dark ? _deepMaroon : _maroon;
   Color get inputFill => dark ? const Color(0xFF292528) : Colors.white;
@@ -471,7 +472,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           // shrink and jump to the top.
           return SizedBox(
             height: 360,
-            child: Center(child: CircularProgressIndicator(color: p.accent)),
+            child: const FsLoadingCards(count: 3),
           );
         }
         final query = _search.text.trim().toLowerCase();

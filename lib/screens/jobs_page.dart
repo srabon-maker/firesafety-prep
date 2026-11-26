@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/job_circular.dart';
@@ -216,7 +217,7 @@ class _JobsPageState extends State<JobsPage> {
                 if (!snapshot.hasData && !snapshot.hasError) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 70),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: FsLoadingCards(count: 3),
                   );
                 }
                 if (snapshot.hasError) {
@@ -541,7 +542,7 @@ class _JobCard extends StatelessWidget {
     final location = _displayLocation(job);
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 1,
+      elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),

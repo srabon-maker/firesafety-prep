@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/design_system.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -206,7 +207,7 @@ class _NotesPageState extends State<NotesPage> {
             if (_loading && _result == null)
               const SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+                child: FsLoadingCards(count: 3),
               )
             else if (_error != null && _result == null)
               SliverFillRemaining(
@@ -485,7 +486,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           future: _noteFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const FsLoadingCards(count: 3);
             }
             if (snapshot.hasError || !snapshot.hasData) {
               return _ErrorView(
@@ -499,7 +500,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             final note = snapshot.data!;
             if(note.locked)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.lock_outline,size:48),Text(note.title,textAlign:TextAlign.center),const Text('এই নোটটি Premium সদস্যদের জন্য।'),FilledButton(onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!context.mounted)return;await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));if(mounted)setState(()=>_noteFuture=NotesService.instance.fetchNote(widget.noteId));},child:const Text('Premium সদস্যপদ দেখুন'))])));
             return ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
               children: [
                 if (note.categoryName != null)
                   Align(
