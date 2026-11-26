@@ -219,7 +219,18 @@ class _HomePageState extends State<HomePage> {
               Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w800)),
               Text('Learn • Prepare • Connect',style:TextStyle(color:Colors.white70,fontSize:11)),
             ])),
-            IconButton(tooltip:_tr('নোটিফিকেশন','Notifications'),onPressed:()=>_open('notifications'),icon:const Icon(Icons.notifications_none,color:Colors.white)),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: IconButton(
+                tooltip: _tr('নোটিফিকেশন', 'Notifications'),
+                onPressed: () => _open('notifications'),
+                icon: const Icon(Icons.notifications_none_rounded,
+                    color: Colors.white, size: 22),
+              ),
+            ),
           ]),
           const SizedBox(height:16),
           TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:_tr('প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...','Search questions, notes, jobs...'),hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
