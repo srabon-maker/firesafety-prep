@@ -11,7 +11,6 @@ import 'jobs_page.dart';
 import 'career_page.dart';
 import 'tests_page.dart';
 import 'notes_page.dart';
-import 'topic_page.dart';
 import 'marketplace_page.dart';
 import 'community_page.dart';
 import 'notification_inbox_page.dart';
@@ -43,12 +42,6 @@ class _HomePageState extends State<HomePage> {
     ('tests','মডেল টেস্ট','Model tests',Icons.assignment_outlined,Color(0xFF9E1630)),
     ('interview','ইন্টারভিউ','Interview',Icons.forum_outlined,Color(0xFFB36A14)),
     ('progress','আমার প্রস্তুতি','My preparation',Icons.insights,Color(0xFF14799A)),
-  ];
-  static const _topics = [
-    ('ফায়ার',Icons.local_fire_department,Color(0xFFD92735)),
-    ('সেইফটি',Icons.health_and_safety_outlined,Color(0xFF20834B)),
-    ('কমপ্লায়েন্স',Icons.verified_user_outlined,Color(0xFF7142B8)),
-    ('টেকনিক্যাল',Icons.settings_outlined,Color(0xFF14799A)),
   ];
   @override
   void initState() { super.initState(); _load(); }
@@ -101,10 +94,6 @@ class _HomePageState extends State<HomePage> {
         ListTile(title:Text(item.$2),trailing:const Icon(Icons.search),onTap:()=>Navigator.pop(sheet,item.$1)),
     ])));
     if(mounted&&target!=null) await _open(target,search:query);
-  }
-  Future<void> _topic((String,IconData,Color) item) async {
-    if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;
-    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>TopicPage(title:item.$1,icon:item.$2,color:item.$3)));
   }
   Widget _heading(String title,{String? target})=>Padding(padding:const EdgeInsets.fromLTRB(2,18,2,6),child:Row(children:[
     Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w800))),
@@ -166,7 +155,6 @@ class _HomePageState extends State<HomePage> {
         if(jobs.isEmpty)return const Text('বর্তমানে কোনো প্রকাশিত চলমান বিজ্ঞপ্তি নেই।');
         return Column(children:[for(final job in jobs.take(3)) Card(child:ListTile(leading:const Icon(Icons.work_outline),title:Text(job.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(job.organization),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('jobs',search:job.title)))]);
       })]);
-      case 'topics':return Column(children:[_heading(_tr('বিষয়ভিত্তিক প্রস্তুতি','Topics')),GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:104,children:[for(final item in _topics)_tile(item.$1,item.$2,item.$3,()=>_topic(item))])]);
       case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
         if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('নোট লোড হয়নি।','Notes could not load.'), onRetry: _refresh);
@@ -234,13 +222,13 @@ class _HomePageState extends State<HomePage> {
             IconButton(tooltip:_tr('নোটিফিকেশন','Notifications'),onPressed:()=>_open('notifications'),icon:const Icon(Icons.notifications_none,color:Colors.white)),
           ]),
           const SizedBox(height:16),
-          Text(_tr('স্বাগতম! আজকের প্রস্তুতি শুরু করুন।','Welcome! Start preparing today.'),style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w800)),
-          const SizedBox(height:12),
           TextField(controller:_search,textInputAction:TextInputAction.search,maxLength:120,onSubmitted:_searchFor,style:const TextStyle(color:ink),decoration:InputDecoration(counterText:'',hintText:_tr('প্রশ্নের বিভাগ, নোট, চাকরি খুঁজুন...','Search questions, notes, jobs...'),hintStyle:const TextStyle(color:Colors.black54,fontSize:13),filled:true,fillColor:Colors.white,prefixIcon:const Icon(Icons.search,color:maroon),suffixIcon:IconButton(onPressed:()=>_searchFor(_search.text),icon:const Icon(Icons.arrow_forward,color:maroon)))),
         ])),
       Padding(padding:const EdgeInsets.fromLTRB(14,6,14,24),child:FutureBuilder<Map<String,dynamic>>(future:_home,builder:(context,snapshot){
         final data=snapshot.hasData?snapshot.data:null;
-        final sections=data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']);
+        // The retired topic shortcuts must not reappear via remote configuration.
+        final sections=(data==null?HomepageService.defaultSections:HomepageService.sections(data['sections']))
+            .where((key)=>key!='topics').toList();
         final policy=data?['access_policy'];
         final pending=policy is Map&&policy['mode']=='free'&&policy['scheduled_mode']!='free';
         final activation=policy is Map?DateTime.tryParse(policy['starts_at']?.toString()??'')?.toUtc().add(const Duration(hours:6)):null;
@@ -249,8 +237,8 @@ class _HomePageState extends State<HomePage> {
         return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(pending&&activation!=null)Card(child:ListTile(leading:const Icon(Icons.campaign_outlined,color:maroon),title:const Text('Premium সুবিধা চালুর আগাম নোটিশ'),subtitle:Text('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।'))),
           if(top)_section('banners',data),
-          _heading(_tr('দ্রুত সেবা','Quick access')),
-          LayoutBuilder(builder:(context,box)=>GridView.count(crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:118,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          const SizedBox(height: 12),
+          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:118,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
           const SizedBox(height: 14),
           FsFeatureCard(icon: Icons.work_outline_rounded,
             title: _tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'),
