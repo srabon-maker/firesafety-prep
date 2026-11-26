@@ -871,7 +871,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             tooltip: _tr(context, 'অর্ডার ও বুকিং ইতিহাস',
                 'Orders & booking history'),
             onPressed: _showHistory,
-            icon: Icons.receipt_long_rounded,
+            icon: Icons.inventory_2_outlined,
           ),
           const SizedBox(width: 5),
           Badge(
