@@ -106,6 +106,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
       _categoryCache[tab] = categories;
       return categories;
     });
+    _catalog.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _categoryOptions.then<void>((_) {}, onError: (Object _, StackTrace __) {});
   }
 
   @override
@@ -430,6 +432,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget _catalogView() {
     final p = _pal(context);
     return FutureBuilder<List<MarketplaceItem>>(
+      key: ValueKey('catalog-$_tab'),
       future: _catalog,
       builder: (context, snapshot) {
         // Fresh data if ready, otherwise the last data of this tab.
@@ -604,12 +607,13 @@ class _MarketplacePageState extends State<MarketplacePage> {
   Widget _categorySection() {
     final p = _pal(context);
     return FutureBuilder<List<MarketplaceCategory>>(
+      key: ValueKey('categories-$_tab'),
       future: _categoryOptions,
       builder: (context, snapshot) {
-        final categories = snapshot.data ?? _categoryCache[_tab];
-        if (categories == null || categories.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        final categories = (snapshot.connectionState == ConnectionState.done
+            ? snapshot.data : null) ?? _categoryCache[_tab] ??
+            const <MarketplaceCategory>[];
+        final loading = snapshot.connectionState == ConnectionState.waiting;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -618,19 +622,27 @@ class _MarketplacePageState extends State<MarketplacePage> {
               children: [
                 Icon(Icons.category_outlined, color: p.accent, size: 19),
                 const SizedBox(width: 7),
-                Text(
-                  _tr(context, 'ক্যাটাগরি', 'Categories'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: p.text,
+                Expanded(
+                  child: Text(
+                    _tr(context, 'ক্যাটাগরি', 'Categories'),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: p.text,
+                    ),
                   ),
                 ),
+                if (snapshot.hasError)
+                  IconButton(
+                    tooltip: _tr(context, 'ক্যাটাগরি আবার লোড করুন', 'Retry categories'),
+                    onPressed: () => setState(_reload),
+                    icon: Icon(Icons.refresh_rounded, color: p.accent),
+                  ),
               ],
             ),
             const SizedBox(height: 9),
             SizedBox(
-              height: 42,
+              height: 48,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
@@ -683,11 +695,39 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 ],
               ),
             ),
+            if (categories.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  loading
+                      ? _tr(context, 'ক্যাটাগরি লোড হচ্ছে…', 'Loading categories…')
+                      : snapshot.hasError
+                          ? _tr(context, 'ক্যাটাগরি লোড হয়নি। আবার চেষ্টা করুন।', 'Could not load categories. Try again.')
+                          : _tr(context, 'এখনো কোনো ক্যাটাগরি যোগ করা হয়নি।', 'No categories have been added yet.'),
+                  style: TextStyle(color: p.muted, fontSize: 12),
+                ),
+              ),
           ],
         );
       },
     );
   }
+
+  Widget _headerAction({
+    required String tooltip,
+    required VoidCallback onPressed,
+    required IconData icon,
+  }) => IconButton(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    style: IconButton.styleFrom(
+      backgroundColor: Colors.white.withValues(alpha: .12),
+      foregroundColor: Colors.white,
+      minimumSize: const Size(48, 48),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    icon: Icon(icon, size: 22),
+  );
 
   IconData _categoryIcon(String name) {
     final value = name.toLowerCase();
@@ -718,7 +758,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return Scaffold(
       backgroundColor: p.background,
       appBar: AppBar(
-        toolbarHeight: 82,
+        toolbarHeight: 68,
         titleSpacing: 8,
         backgroundColor: p.appBar,
         foregroundColor: Colors.white,
@@ -755,57 +795,36 @@ class _MarketplacePageState extends State<MarketplacePage> {
             ),
             const SizedBox(width: 9),
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _tr(context, 'ফায়ার সেইফটি মার্কেটপ্লেস',
-                        'Fire Safety Marketplace'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w900,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _tr(
-                      context,
-                      'ফায়ার সেইফটি পণ্য ও নির্ভরযোগ্য সার্ভিস এক জায়গায়',
-                      'Fire safety products and trusted services in one place',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 9.5,
-                      height: 1.15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              child: Text(
+                _tr(context, 'ফায়ার সেইফটি মার্কেটপ্লেস',
+                    'Fire Safety Marketplace'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
+          _headerAction(
             tooltip: _tr(context, 'অর্ডার ও বুকিং ইতিহাস',
                 'Orders & booking history'),
             onPressed: _showHistory,
-            icon: const Icon(Icons.receipt_long_outlined),
+            icon: Icons.receipt_long_rounded,
           ),
+          const SizedBox(width: 5),
           Badge(
             isLabelVisible: _cartCount > 0,
             label: Text('$_cartCount'),
-            child: IconButton(
+            child: _headerAction(
               tooltip: _tr(context, 'কার্ট', 'Cart'),
               onPressed: _showCart,
-              icon: const Icon(Icons.shopping_cart_outlined),
+              icon: Icons.shopping_cart_rounded,
             ),
           ),
           const SizedBox(width: 8),
