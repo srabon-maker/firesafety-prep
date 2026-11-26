@@ -199,9 +199,6 @@ class _CareerSectionState extends State<CareerSection> {
       Card(child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('পেশাজীবী ডিরেক্টরি',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
           const Text('পেশাজীবী খুঁজুন বা নিজের প্রোফাইল যোগ করুন।'),
           const SizedBox(height: 12),
           TextField(
@@ -319,9 +316,39 @@ class _CareerSectionState extends State<CareerSection> {
       'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
     };
     return Scaffold(
-    appBar: AppBar(title: Text(titles[_section] ?? tr('ক্যারিয়ার', 'Career')), actions: [
-      IconButton(onPressed:_busy?null:()=>_load(),icon:const Icon(Icons.refresh),tooltip:tr('রিফ্রেশ','Refresh')),
-    ]),
+    appBar: AppBar(
+      title: Row(
+        children: [
+          if (_section == 'directory') ...[
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.groups_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 23),
+            ),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: Text(
+              titles[_section] ?? tr('ক্যারিয়ার', 'Career'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: _busy ? null : () => _load(),
+          icon: const Icon(Icons.refresh),
+          tooltip: tr('রিফ্রেশ', 'Refresh'),
+        ),
+      ],
+    ),
     body: ListView(padding:const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
