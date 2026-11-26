@@ -722,6 +722,15 @@ $publishedCount = (int)$pdo->query("SELECT COUNT(*) FROM questions WHERE status=
 $draftCount = (int)$pdo->query("SELECT COUNT(*) FROM questions WHERE status='draft'")->fetchColumn();
 $categoryStmt = $pdo->query("SELECT category,COUNT(*) AS question_count FROM questions WHERE category IS NOT NULL AND TRIM(category)<>'' GROUP BY category ORDER BY category ASC");
 $categories = $categoryStmt->fetchAll(PDO::FETCH_ASSOC);
+// The question bank historically stores category names, not foreign keys.
+// Offer centrally created categories even before their first question exists.
+$questionCategoryOptions = array_column($categories, 'category');
+try {
+    $centralNames = $pdo->query("SELECT name FROM categories WHERE category_type='question' AND is_active=1 ORDER BY sort_order,name")->fetchAll(PDO::FETCH_COLUMN);
+    $questionCategoryOptions = array_values(array_unique(array_merge($centralNames,$questionCategoryOptions)));
+} catch (Throwable $e) {
+    error_log('Question category options: '.$e->getMessage());
+}
 
 $analyticsDifficulty=$pdo->query("SELECT difficulty,COUNT(*) total FROM questions".($featureSchemaReady?" WHERE is_archived=0":"")." GROUP BY difficulty ORDER BY FIELD(difficulty,'easy','medium','hard')")->fetchAll(PDO::FETCH_ASSOC);
 $analyticsLanguage=$pdo->query("SELECT language,COUNT(*) total FROM questions".($featureSchemaReady?" WHERE is_archived=0":"")." GROUP BY language ORDER BY language")->fetchAll(PDO::FETCH_ASSOC);
@@ -787,7 +796,7 @@ $token = csrf_token();
 <form method="post" enctype="multipart/form-data" action="questions.php<?= $editQuestion ? '?edit='.(int)$editQuestion['id'] : '' ?>">
 <input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= qfield($editQuestion,'id') ?>">
 <div class="form-grid">
-<div><label>ক্যাটাগরি *</label><input name="category" required maxlength="100" list="category-options" value="<?= qfield($editQuestion,'category') ?>" placeholder="যেমন: Fire Safety, NFPA, BNBC"><datalist id="category-options"><?php foreach($categories as $r): ?><option value="<?= qh((string)$r['category']) ?>"><?php endforeach; ?></datalist></div>
+<div><label>ক্যাটাগরি *</label><input name="category" required maxlength="100" list="category-options" value="<?= qfield($editQuestion,'category') ?>" placeholder="যেমন: Fire Safety, NFPA, BNBC"><datalist id="category-options"><?php foreach($questionCategoryOptions as $name): ?><option value="<?= qh((string)$name) ?>"><?php endforeach; ?></datalist></div>
 <div><label>সঠিক উত্তর *</label><select name="correct_answer" required><?php foreach(['A','B','C','D'] as $letter): ?><option value="<?= $letter ?>" <?= (($editQuestion['correct_answer']??'A')===$letter)?'selected':'' ?>>Option <?= $letter ?></option><?php endforeach; ?></select></div>
 <div class="field-full"><label>প্রশ্ন *</label><textarea class="question-textarea" name="question" required><?= qfield($editQuestion,'question') ?></textarea></div>
 <div><label>Option A *</label><textarea name="option_a" required><?= qfield($editQuestion,'option_a') ?></textarea></div><div><label>Option B *</label><textarea name="option_b" required><?= qfield($editQuestion,'option_b') ?></textarea></div><div><label>Option C *</label><textarea name="option_c" required><?= qfield($editQuestion,'option_c') ?></textarea></div><div><label>Option D *</label><textarea name="option_d" required><?= qfield($editQuestion,'option_d') ?></textarea></div>
@@ -807,7 +816,7 @@ $token = csrf_token();
 <div class="tool-body"><div class="import-help"><strong>ফরম্যাট:</strong> প্রতিটি প্রশ্নের আগে <b>প্রশ্ন:</b>, অপশনগুলো <b>A.</b>, <b>B.</b>, <b>C.</b>, <b>D.</b> এবং শেষে <b>সঠিক উত্তর: B</b> লিখুন। বাংলা অপশনের জন্য ক/খ/গ/ঘ-ও গ্রহণযোগ্য। প্রশ্নের মাঝে একটি ফাঁকা লাইন রাখুন।</div>
 <form method="post" action="questions.php#paste-import">
 <input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="paste_preview">
-<div class="form-grid"><div><label>ডিফল্ট ক্যাটাগরি *</label><input name="default_category" maxlength="100" value="General" required placeholder="যেমন: Fire Safety, NFPA, BNBC"></div>
+<div class="form-grid"><div><label>ডিফল্ট ক্যাটাগরি *</label><input name="default_category" list="category-options" maxlength="100" value="General" required placeholder="যেমন: Fire Safety, NFPA, BNBC"></div>
 <div class="field-full"><label>প্রশ্নগুলো পেস্ট করুন *</label><textarea name="bulk_questions" required style="min-height:260px" placeholder="প্রশ্ন: আগুন জ্বলতে কোন তিনটি উপাদান প্রয়োজন?&#10;A. পানি, বাতাস ও তাপ&#10;B. জ্বালানি, অক্সিজেন ও তাপ&#10;C. ধোঁয়া, পানি ও অক্সিজেন&#10;D. তাপ, ধোঁয়া ও পানি&#10;সঠিক উত্তর: B&#10;&#10;প্রশ্ন: NFPA 10 কোন বিষয়ের সঙ্গে সম্পর্কিত?&#10;A. Fire Alarm&#10;B. Sprinkler System&#10;C. Portable Fire Extinguishers&#10;D. Standpipe System&#10;সঠিক উত্তর: C"></textarea></div></div>
 <div class="form-actions"><button class="btn orange" type="submit">তথ্য সাজান ও Preview দেখুন</button></div>
 </form>
@@ -838,7 +847,7 @@ $isPastePreview = (($preview['filename'] ?? '') === 'কপি-পেস্ট �
 <div class="tool-body"><div class="import-help"><strong>সমর্থিত ফরম্যাট:</strong> Word-এর টেবিল (প্রথম কলামে Field, দ্বিতীয় কলামে Value) অথবা লাইনভিত্তিক Question/প্রশ্ন, A./A), Option A, Correct Answer/সঠিক উত্তর, Explanation/ব্যাখ্যা। চারটি অপশন ও সঠিক উত্তর আবশ্যক। সর্বোচ্চ ১০ MB।</div>
 <form method="post" enctype="multipart/form-data" action="questions.php#docx-import">
 <input type="hidden" name="csrf_token" value="<?= qh($token) ?>"><input type="hidden" name="action" value="docx_preview">
-<div class="form-grid"><div><label>DOCX ফাইল নির্বাচন করুন *</label><input type="file" name="docx_file" accept=".docx" required></div><div><label>ডিফল্ট ক্যাটাগরি</label><input name="default_category" maxlength="100" value="General" placeholder="টেবিলে ক্যাটাগরি না থাকলে ব্যবহৃত হবে"></div></div>
+<div class="form-grid"><div><label>DOCX ফাইল নির্বাচন করুন *</label><input type="file" name="docx_file" accept=".docx" required></div><div><label>ডিফল্ট ক্যাটাগরি</label><input name="default_category" list="category-options" maxlength="100" value="General" placeholder="টেবিলে ক্যাটাগরি না থাকলে ব্যবহৃত হবে"></div></div>
 <div class="form-actions"><button class="btn orange" type="submit">Upload & Preview</button></div>
 </form>
 </div></details>

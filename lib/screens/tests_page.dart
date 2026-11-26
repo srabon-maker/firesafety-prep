@@ -18,6 +18,12 @@ class TestsPage extends StatefulWidget {
 
 class _TestsPageState extends State<TestsPage> {
   late Future<List<Map<String,dynamic>>> _tests;
+  String? _categoryFilter;
+  String _categoryKey(Map<String,dynamic> test) => test['category_id']?.toString() ?? 'mixed';
+  String _categoryLabel(Map<String,dynamic> test) {
+    final name = (test['category_name'] ?? '').toString().trim();
+    return name.isNotEmpty ? name : 'সমন্বিত / অন্যান্য';
+  }
   Map<int, Map<String, dynamic>> _activeAttempts = {};
   bool _loadingActiveAttempts = false;
   final Set<int> _startingTestIds = <int>{};
@@ -96,6 +102,11 @@ class _TestsPageState extends State<TestsPage> {
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 3);
         if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('পরীক্ষার তালিকা লোড হয়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
         final tests=snapshot.data??[];
+        final categories = <String,String>{
+          for (final test in tests) _categoryKey(test): _categoryLabel(test),
+        };
+        final selected = categories.containsKey(_categoryFilter) ? _categoryFilter : null;
+        final visibleTests = selected == null ? tests : tests.where((test) => _categoryKey(test) == selected).toList();
         if(tests.isEmpty)return ListView(children:[const SizedBox(height:100),Center(child:Icon(Icons.assignment_outlined,size:54,color:_maroon)),const Center(child:Text('এখন কোনো প্রকাশিত পরীক্ষা নেই।'))]);
         return ListView(padding:const EdgeInsets.all(16),children:[
           Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_deepMaroon,_maroon]),borderRadius:BorderRadius.circular(20)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.track_changes,color:Colors.orangeAccent,size:34),SizedBox(height:10),Text('নিজেকে যাচাই করুন',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.bold)),SizedBox(height:5),Text('প্রকাশিত পরীক্ষা নির্বাচন করে প্রস্তুতি যাচাই করুন।',style:TextStyle(color:Colors.white70))])),
@@ -135,7 +146,19 @@ class _TestsPageState extends State<TestsPage> {
             ),
           ],
           const SizedBox(height:16),
-          for(final t in tests) Card(color:const Color(0xFF241D20),surfaceTintColor:Colors.transparent,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20),side:BorderSide(color:Colors.white.withValues(alpha:0.16))),margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('ক্যাটাগরি', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height:6),
+          Wrap(spacing:8, runSpacing:6, children:[
+            ChoiceChip(label: Text('সব (${tests.length})'), selected: selected == null,
+              onSelected: (_) => setState(() => _categoryFilter = null)),
+            for(final entry in categories.entries)
+              ChoiceChip(label: Text(entry.value), selected: selected == entry.key,
+                onSelected: (value) => setState(() => _categoryFilter = value ? entry.key : null)),
+          ]),
+          const SizedBox(height:12),
+          for(final t in visibleTests) Card(color:const Color(0xFF241D20),surfaceTintColor:Colors.transparent,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20),side:BorderSide(color:Colors.white.withValues(alpha:0.16))),margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(_categoryLabel(t), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height:4),
             Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
             if((t['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(t['description'].toString())),
             const SizedBox(height:10),Wrap(spacing:14,runSpacing:8,children:[

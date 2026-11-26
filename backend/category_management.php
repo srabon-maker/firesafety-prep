@@ -32,7 +32,7 @@ $token = csrf_token();
 
 $type = (string)($_GET['type'] ?? 'question');
 
-if (!in_array($type, ['question', 'note'], true)) {
+if (!in_array($type, ['question', 'note', 'test'], true)) {
     $type = 'question';
 }
 
@@ -47,7 +47,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string)($_POST['action'] ?? '');
         $id = (int)($_POST['id'] ?? 0);
 
-        if ($action === 'save') {
+        if ($action === 'create_shared') {
+            // Keep the legacy typed IDs and text-based question lookup. Create
+            // the missing root categories together, without renaming existing ones.
+            $name = trim((string)($_POST['shared_name'] ?? ''));
+            if ($name === '' || mb_strlen($name, 'UTF-8') > 100) {
+                throw new RuntimeException('বিষয়ের নাম দিন (সর্বোচ্চ ১০০ অক্ষর)।');
+            }
+            $pdo->beginTransaction();
+            $find = $pdo->prepare('SELECT id,parent_id,is_active FROM categories WHERE category_type=? AND name=? FOR UPDATE');
+            $insert = $pdo->prepare('INSERT INTO categories(name,slug,category_type,parent_id,sort_order,is_active) VALUES(?,?,?,NULL,0,1)');
+            $created = 0;
+            foreach (['question','note','test'] as $kind) {
+                $find->execute([$kind,$name]);
+                $matches = $find->fetchAll(PDO::FETCH_ASSOC);
+                if ($matches) {
+                    if (count($matches) !== 1 || $matches[0]['parent_id'] !== null || !(int)$matches[0]['is_active']) {
+                        throw new RuntimeException('একই নামের নিষ্ক্রিয় বা সাব-ক্যাটাগরি আছে। সংশ্লিষ্ট ট্যাব থেকে আগে ঠিক করুন।');
+                    }
+                    continue;
+                }
+                $base = substr(slugify($name), 0, 75);
+                $insert->execute([$name,$base.'-'.$kind.'-'.bin2hex(random_bytes(4)),$kind]);
+                ++$created;
+            }
+            $pdo->commit();
+            $msg = $created > 0
+                ? 'তিন সেকশনের জন্য বিষয় প্রস্তুত। নতুন ক্যাটাগরি: '.$created
+                : 'এই বিষয়টি তিন সেকশনেই আগে থেকে আছে।';
+        } elseif ($action === 'save') {
 
             $name = trim((string)($_POST['name'] ?? ''));
             $categoryType = (string)($_POST['category_type'] ?? '');
@@ -60,7 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            if (!in_array($categoryType, ['question', 'note'], true)) {
+            if (in_array($categoryType, ['question','test'], true) && mb_strlen($name,'UTF-8') > 100) {
+                throw new RuntimeException('প্রশ্ন ও পরীক্ষার ক্যাটাগরি সর্বোচ্চ ১০০ অক্ষর।');
+            }
+            if (!in_array($categoryType, ['question', 'note', 'test'], true)) {
                 throw new RuntimeException('ক্যাটাগরির ধরন সঠিক নয়।');
             }
 
@@ -120,13 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($id > 0) {
 
                 $old = $pdo->prepare("
-                    SELECT category_type
+                    SELECT category_type,name
                     FROM categories
                     WHERE id = ?
                 ");
 
                 $old->execute([$id]);
-                $oldType = $old->fetchColumn();
+                $oldRow = $old->fetch(PDO::FETCH_ASSOC);
+                $oldType = $oldRow['category_type'] ?? null;
 
                 if (!$oldType) {
                     throw new RuntimeException('ক্যাটাগরি পাওয়া যায়নি।');
@@ -136,6 +168,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException(
                         'ক্যাটাগরির ধরন পরিবর্তন করা যাবে না।'
                     );
+                }
+
+                if ($oldRow['name'] !== $name && in_array($oldType,['question','test'],true)) {
+                    $linked = $pdo->prepare('SELECT COUNT(*) FROM questions WHERE category=?');
+                    $linked->execute([$oldRow['name']]);
+                    if ((int)$linked->fetchColumn() > 0) {
+                        throw new RuntimeException('এই নামে প্রশ্ন রয়েছে। ডেটা সংযোগ রক্ষায় নতুন ক্যাটাগরি তৈরি করুন; নাম পরিবর্তন করা যাবে না।');
+                    }
+                    if ($oldType === 'test') {
+                        $linked = $pdo->prepare('SELECT COUNT(*) FROM model_tests WHERE category_id=?');
+                        $linked->execute([$id]);
+                        if ((int)$linked->fetchColumn() > 0) throw new RuntimeException('এই ক্যাটাগরিতে মডেল টেস্ট আছে; নাম পরিবর্তন করা যাবে না।');
+                    }
+                }
+                if ($parent > 0) {
+                    $childCheck = $pdo->prepare('SELECT COUNT(*) FROM categories WHERE parent_id=?');
+                    $childCheck->execute([$id]);
+                    if ((int)$childCheck->fetchColumn() > 0) throw new RuntimeException('সাব-ক্যাটাগরি আছে এমন ক্যাটাগরিকে অন্য Parent-এর নিচে নেওয়া যাবে না।');
                 }
 
                 $update = $pdo->prepare("
@@ -240,6 +290,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $content->execute([$id]);
 
+            } elseif ($category['category_type'] === 'test') {
+                $content = $pdo->prepare('SELECT COUNT(*) FROM model_tests WHERE category_id=?');
+                $content->execute([$id]);
+
             } else {
 
                 $content = $pdo->prepare("
@@ -268,7 +322,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } catch (Throwable $e) {
-        $err = $e->getMessage();
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $err = $e instanceof PDOException ? 'ক্যাটাগরি সংরক্ষণ হয়নি। ডেটাবেসের কাঠামো যাচাই করুন।' : $e->getMessage();
+        if ($e instanceof PDOException) error_log('Category management: '.$e->getMessage());
     }
 }
 
@@ -337,13 +393,14 @@ $statement = $pdo->query("
         COUNT(*) AS total,
         SUM(is_active = 1) AS active
     FROM categories
-    WHERE category_type IN ('question', 'note')
+    WHERE category_type IN ('question', 'note', 'test')
     GROUP BY category_type
 ");
 
 $counts = [
     'question' => [0, 0],
-    'note' => [0, 0]
+    'note' => [0, 0],
+    'test' => [0, 0]
 ];
 
 foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -582,7 +639,7 @@ body {
 
 .stats {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -945,7 +1002,7 @@ td {
                 </h1>
 
                 <div class="page-description">
-                    Questions ও Notes-এর Category এবং Sub-category তৈরি ও পরিচালনা করুন।
+                    Question Bank, Notes ও Model Test-এর Category এবং Sub-category এক জায়গা থেকে পরিচালনা করুন।
                 </div>
 
             </div>
@@ -1019,8 +1076,24 @@ td {
 
             </div>
 
+            <div class="stat-card">
+                <div class="stat-label">Model Test Categories</div>
+                <div class="stat-value"><?= $counts['test'][0] ?></div>
+                <div class="stat-note"><?= $counts['test'][1] ?> Active Categories</div>
+            </div>
         </section>
 
+        <section class="panel" style="margin:16px 0">
+            <h2 class="panel-title">একই বিষয় তিন সেকশনে তৈরি করুন</h2>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= ch($token) ?>">
+                <input type="hidden" name="action" value="create_shared">
+                <label>বিষয়ের নাম (Question Bank + Notes + Model Test)</label>
+                <input type="text" name="shared_name" maxlength="100" required placeholder="যেমন: NFPA 10">
+                <div class="form-actions"><button class="btn btn-orange" type="submit">Create in all three sections</button></div>
+            </form>
+            <p class="help-text">বিদ্যমান সক্রিয় মূল ক্যাটাগরি পুনরায় তৈরি হবে না। প্রতিটি সেকশনের নিজস্ব ID অক্ষত থাকবে। একই নামের প্রশ্ন থেকে Model Test তৈরি করা যাবে। প্রকাশিত কনটেন্টের অবস্থা সংশ্লিষ্ট কনটেন্ট পেজ থেকে পরিচালনা করুন।</p>
+        </section>
 
         <!-- CATEGORY TABS -->
 
@@ -1038,6 +1111,9 @@ td {
                 href="?type=note"
             >
                 Notes Categories
+            </a>
+            <a class="tab <?= $type === 'test' ? 'active' : '' ?>" href="?type=test">
+                Model Test Categories
             </a>
 
         </div>
@@ -1105,6 +1181,7 @@ td {
                         >
                             Notes
                         </option>
+                        <option value="test" <?= $type === 'test' ? 'selected' : '' ?>>Model Tests</option>
 
                     </select>
 
@@ -1230,7 +1307,7 @@ td {
 
                 <h2 class="panel-title">
 
-                    <?= $type === 'question' ? 'Questions' : 'Notes' ?>
+                    <?= ch(['question'=>'Questions','note'=>'Notes','test'=>'Model Tests'][$type] ?? 'Questions') ?>
                     ক্যাটাগরি তালিকা
 
                 </h2>
