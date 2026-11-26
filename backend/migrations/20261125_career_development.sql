@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS career_profiles (
  role_name VARCHAR(120) NOT NULL,
  organization VARCHAR(120) NOT NULL DEFAULT '',
  city VARCHAR(100) NOT NULL DEFAULT '',
+ bio TEXT NULL,
  status ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
  revision INT UNSIGNED NOT NULL DEFAULT 1,
  updated_at DATETIME NOT NULL,
