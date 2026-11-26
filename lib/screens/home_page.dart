@@ -252,7 +252,7 @@ class _HomePageState extends State<HomePage> {
         decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(28))),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Row(children:[
-            Container(width:48,height:48,padding:const EdgeInsets.all(2),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
+            Container(width:48,height:48,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
             const SizedBox(width:12),
             const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w700)),
