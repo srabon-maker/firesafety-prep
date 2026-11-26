@@ -276,7 +276,25 @@ class _HomePageState extends State<HomePage> {
           if(top)_section('banners',data),
           const SizedBox(height: 12),
           LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:118,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
-          _heading(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development')),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Container(
+                  width: 48,
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
           LayoutBuilder(builder: (context, box) {
             final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
             // Four compact shortcuts in one row at normal phone widths.
