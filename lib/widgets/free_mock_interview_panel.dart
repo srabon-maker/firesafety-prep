@@ -205,13 +205,13 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
     if (question.isEmpty) return;
     try {
       await OfflineVoiceService.stopSpeaking();
-      await OfflineVoiceService.speak(question, _localeTag);
       if (mounted) {
         setState(() {
           _speaking = true;
           _voiceMessage = 'ফোনের অফলাইন ভয়েসে প্রশ্ন পড়া হচ্ছে।';
         });
       }
+      await OfflineVoiceService.speak(question, _localeTag);
     } on Exception {
       if (mounted) {
         setState(() {
