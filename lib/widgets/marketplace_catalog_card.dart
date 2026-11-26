@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/marketplace_item.dart';
+import '../models/marketplace_engagement.dart';
 import '../settings/app_settings.dart';
 
 // Same filled-button maroon as the marketplace page.
@@ -36,12 +37,14 @@ class MarketplaceCatalogCard extends StatelessWidget {
     required this.onDetails,
     required this.onAction,
     this.actionBusy = false,
+    this.rating,
   });
 
   final MarketplaceItem item;
   final VoidCallback onDetails;
   final VoidCallback onAction;
   final bool actionBusy;
+  final ProductRating? rating;
 
   String _actionLabel(BuildContext context) => item.isService
       ? AppText.of(context, 'সার্ভিস বুকিং করুন', 'Book service')
@@ -140,6 +143,10 @@ class MarketplaceCatalogCard extends StatelessWidget {
                             color: p.muted, fontSize: 10, height: 1.15),
                       ),
                     ],
+                    if (rating != null && rating!.count > 0)
+                      Text('★ ${rating!.average.toStringAsFixed(1)} (${rating!.count})',
+                        style: TextStyle(color: p.muted, fontSize: 11),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 5),
                     Row(
                       children: [

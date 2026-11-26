@@ -40,7 +40,7 @@ workflows:
           echo "Permanent release signing identity verified."
 
       - name: Run marketplace regression tests
-        script: flutter test test/marketplace_catalog_test.dart test/marketplace_transactions_test.dart test/marketplace_catalog_card_test.dart
+        script: flutter test test/marketplace_catalog_test.dart test/marketplace_transactions_test.dart test/marketplace_catalog_card_test.dart test/marketplace_engagement_test.dart
 
       - name: Run profile editor widget tests
         script: flutter test test/profile_edit_test.dart

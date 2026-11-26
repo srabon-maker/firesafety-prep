@@ -176,6 +176,7 @@ function checked(array|null $edit,string $name,bool $default = false): string { 
 <main>
 <?php if ($error !== ''): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
 <?php if (isset($_GET['saved'])): ?><p class="success">Changes saved.</p><?php endif; ?>
+<p><a href="marketplace_engagement_admin.php">Product Reviews &amp; Banners →</a></p>
 <nav class="tabs">
 <?php foreach (['products'=>'Products','services'=>'Services','categories'=>'Categories','orders'=>'Orders','requests'=>'Service Requests'] as $key=>$label): ?>
 <a class="<?= $tab === $key ? 'active' : '' ?>" href="?tab=<?= h($key) ?>"><?= h($label) ?></a>

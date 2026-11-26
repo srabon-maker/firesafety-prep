@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/design_system.dart';
 
 import '../models/marketplace_category.dart';
+import '../models/marketplace_engagement.dart';
+import '../widgets/marketplace_reviews.dart';
 import '../models/marketplace_item.dart';
 import '../services/marketplace_api_service.dart';
 import '../services/marketplace_transaction_service.dart';
@@ -79,6 +81,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
   String _sort = 'featured';
   late Future<List<MarketplaceItem>> _catalog;
   late Future<List<MarketplaceCategory>> _categoryOptions;
+  late Future<MarketplaceEngagement> _engagement;
+  MarketplaceEngagement? _engagementCache;
+  int _engagementEpoch = 0;
 
   // Last loaded data of each tab (0 = products, 1 = services). While a tab
   // reloads, its old data stays on screen, so the page does not jump.
@@ -94,10 +99,18 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
   void _reload() {
     final tab = _tab;
+    final epoch = ++_engagementEpoch;
+    _engagement = MarketplaceApiService.instance.get('engagement.php').then((response) {
+      final data = MarketplaceEngagement.fromJson(Map<String,dynamic>.from(response['data'] as Map));
+      if (mounted && epoch == _engagementEpoch) setState(() => _engagementCache = data);
+      return data;
+    });
+    _engagement.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     _catalog = MarketplaceApiService.instance
         .fetchCatalog(isService: tab == 1)
         .then((items) {
       _catalogCache[tab] = items;
+      if (mounted && tab == _tab) setState(() {});
       return items;
     });
     _categoryOptions = MarketplaceApiService.instance
@@ -341,6 +354,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
               ],
             ),
           ),
+          if (!item.isService) MarketplaceReviews(productId: item.id),
           const SizedBox(height: 24),
         ],
       ),
@@ -577,7 +591,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     crossAxisCount: columns,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    mainAxisExtent: 125 + 95 * textScale,
+                    mainAxisExtent: 125 + (_tab == 0 ? 115 : 95) * textScale,
                   ),
                   itemBuilder: (context, index) {
                     final item = filtered[index];
@@ -585,6 +599,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       key: ValueKey('${item.isService}-${item.id}'),
                       item: item,
                       actionBusy: _adding,
+                      rating: item.isService ? null : _engagementCache?.ratings[item.id],
                       onDetails: () => _showDetails(item),
                       onAction: () {
                         if (item.isService) {
@@ -602,6 +617,48 @@ class _MarketplacePageState extends State<MarketplacePage> {
         );
       },
     );
+  }
+
+  Widget _productBanners() {
+    final banners = _engagementCache?.banners ?? const <ProductBanner>[];
+    if (_tab != 0 || banners.isEmpty) return const SizedBox.shrink();
+    final products = _catalogCache[0] ?? const <MarketplaceItem>[];
+    final byId = {for (final item in products) item.id: item};
+    final visible = banners.where((b) => byId.containsKey(b.productId)).toList();
+    if (visible.isEmpty) return const SizedBox.shrink();
+    return Padding(padding: const EdgeInsets.only(bottom: 14), child: SizedBox(
+      height: 132,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal, itemCount: visible.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final banner = visible[index];
+          final item = byId[banner.productId]!;
+          final uri = Uri.tryParse(banner.imageUrl);
+          return SizedBox(width: (MediaQuery.sizeOf(context).width - 48).clamp(160.0, 380.0).toDouble(),
+            child: Material(color: const Color(0xFF650D18),borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,child: InkWell(onTap: () => _showDetails(item),
+                child: Padding(padding: const EdgeInsets.all(12),child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,children: [
+                      Text(banner.title,maxLines: 2,overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white,fontSize: 16,fontWeight: FontWeight.w600)),
+                      if (banner.subtitle.isNotEmpty) Text(banner.subtitle,maxLines: 2,
+                        overflow: TextOverflow.ellipsis,style: const TextStyle(color: Colors.white70,fontSize: 12)),
+                      const SizedBox(height: 6),
+                      Text(_tr(context,'বিস্তারিত দেখুন ›','View details ›'),style: const TextStyle(color: Colors.white,fontSize: 12)),
+                    ])),
+                  const SizedBox(width: 8),
+                  SizedBox(width: 88,height: 100,child: ClipRRect(borderRadius: BorderRadius.circular(10),
+                    child: uri != null && uri.scheme == 'https' && uri.host.isNotEmpty
+                      ? Image.network(banner.imageUrl,fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => MarketplaceCatalogImage(item: item))
+                      : MarketplaceCatalogImage(item: item))),
+                ]))),
+            ));
+        },
+      ),
+    ));
   }
 
   Widget _categorySection() {
@@ -844,6 +901,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _productBanners(),
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
