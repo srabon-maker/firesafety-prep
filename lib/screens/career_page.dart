@@ -23,7 +23,7 @@ class CareerPage extends StatelessWidget {
     String tr(String bn, String en) => AppText.of(context, bn, en);
     final entries = [
       ('alerts', Icons.notifications_active_outlined, tr('চাকরির এলার্ট','Job alerts'), tr('পদ ও কর্মস্থল অনুযায়ী চাকরি','Jobs matching your preferences')),
-      ('mock', Icons.record_voice_over_outlined, tr('মক ইন্টারভিউ','Mock interview'), tr('উত্তর অনুশীলন ও মূল্যায়ন','Practice and self-assess answers')),
+      ('mock', Icons.record_voice_over_outlined, tr('মক ইন্টারভিউ','Mock interview'), tr('লিখে ও অফলাইন ভয়েসে অনুশীলন','Practice with text and offline voice')),
       ('courses', Icons.school_outlined, tr('প্রশিক্ষণ ও কোর্স','Training & courses'), tr('প্রকাশিত প্রশিক্ষণের তথ্য','Explore published courses')),
       ('directory', Icons.groups_outlined, tr('পেশাজীবী ডিরেক্টরি','Professional directory'), tr('ঐচ্ছিক পেশাগত পরিচিতি','Optional professional profiles')),
     ];
