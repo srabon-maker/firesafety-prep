@@ -200,10 +200,10 @@ class _CareerSectionState extends State<CareerSection> {
       Card(child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('ফায়ার সেফটি পেশাজীবীদের পরিচিতি',
+          const Text('পেশাজীবী ডিরেক্টরি',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text('অনুমোদিত প্রোফাইল দেখুন অথবা নিজের পেশাগত পরিচিতি জমা দিন।'),
+          const Text('পেশাজীবী খুঁজুন বা নিজের প্রোফাইল যোগ করুন।'),
           const SizedBox(height: 12),
           TextField(
             controller: _directorySearch,
@@ -213,7 +213,7 @@ class _CareerSectionState extends State<CareerSection> {
             onSubmitted: (_) => _searchDirectory(),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: 'নাম, পদবি, প্রতিষ্ঠান বা শহর খুঁজুন',
+              hintText: 'নাম, পদবি বা প্রতিষ্ঠান খুঁজুন',
               border: const OutlineInputBorder(),
               counterText: '',
               suffixIcon: IconButton(onPressed: _busy || _editingProfile ? null : _searchDirectory, icon: const Icon(Icons.search), tooltip: 'খুঁজুন'),
@@ -223,7 +223,7 @@ class _CareerSectionState extends State<CareerSection> {
           SizedBox(width: double.infinity, child: FilledButton.icon(
             onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
             icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1),
-            label: Text(_editingProfile ? 'ফর্ম বন্ধ করুন' : 'নিজের প্রোফাইল যুক্ত করুন'),
+            label: Text(_editingProfile ? 'বন্ধ করুন' : 'প্রোফাইল যোগ করুন'),
           )),
         ]),
       )),
@@ -245,34 +245,34 @@ class _CareerSectionState extends State<CareerSection> {
               _selectedPhoto = null;
               _removePhoto = true;
             }), icon: const Icon(Icons.delete_outline), label: const Text('ছবি সরান')),
-          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:const Text('প্রোফাইল ছবি নির্বাচন করুন')),
-          const Text('বড় ছবিও নির্বাচন করুন — স্বয়ংক্রিয়ভাবে ছোট করা হবে',style:TextStyle(fontSize:12)),
+          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:const Text('ছবি নির্বাচন করুন')),
+          const Text('ছবি স্বয়ংক্রিয়ভাবে ছোট হবে',style:TextStyle(fontSize:12)), 
         ])),
         Text('প্রোফাইল তথ্য', style: Theme.of(context).textTheme.titleMedium),
-        const Text('নিজের সম্মতিতে তথ্য জমা দিন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা ব্যক্তিগত লিংক দেবেন না। প্রকাশিত পরিচিতি পেশাগত সনদ যাচাই নয়।'),
+        const Text('অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখবেন। ফোন বা ইমেইল দেবেন না। এটি সনদ যাচাই নয়।'),
         const SizedBox(height: 12),
         _field(_name,'প্রদর্শিত নাম',100),
         _field(_role,'পদ / পেশা',120),
         _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),
         _field(_city,'শহর (ঐচ্ছিক)',100),
         CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
-          title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
+          title:const Text('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।')),
         SizedBox(width: double.infinity, child: FilledButton.icon(
           onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
-          icon: const Icon(Icons.send_outlined), label:const Text('অনুমোদনের জন্য জমা দিন'))),
+          icon: const Icon(Icons.send_outlined), label:const Text('জমা দিন'))),
         if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
           onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
       ],
       const SizedBox(height: 16),
       Row(children: [
-        Expanded(child: Text('অনুমোদিত পেশাজীবী',
+        Expanded(child: Text('পেশাজীবী', 
           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-        Text('${visibleProfiles.length} জন লোড হয়েছে', style: Theme.of(context).textTheme.bodySmall),
+        Text('${visibleProfiles.length} জন', style: Theme.of(context).textTheme.bodySmall),
       ]),
       const SizedBox(height: 8),
       if (visibleProfiles.isEmpty) Card(
         child: Padding(padding: const EdgeInsets.all(20), child: Center(
-          child: Text(query.isEmpty ? 'এখনো কোনো অনুমোদিত প্রোফাইল নেই।' : 'এই নামে বা তথ্যে কোনো প্রোফাইল পাওয়া যায়নি।'),
+          child: Text(query.isEmpty ? 'এখনো কোনো প্রোফাইল নেই।' : 'কোনো প্রোফাইল পাওয়া যায়নি।'),
         )),
       ),
       for (final row in visibleProfiles) Card(
