@@ -49,13 +49,16 @@ class FsLoadingCards extends StatelessWidget {
         tween: Tween(begin: .55, end: 1),
         duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 250),
         builder: (context, opacity, child) => Opacity(opacity: opacity, child: child),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          for (int i = 0; i < count; i++) Card(child: Padding(padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final visible = constraints.hasBoundedHeight ? (constraints.maxHeight / 70).floor().clamp(0, count).toInt() : count;
+          if (visible == 0) return const LinearProgressIndicator();
+          return Column(mainAxisSize: MainAxisSize.min, children: [
+          for (int i = 0; i < visible; i++) Card(child: Padding(padding: const EdgeInsets.all(12),
             child: Row(children: [
               Container(width: 34, height: 34, decoration: BoxDecoration(color: c.surfaceContainerHighest, borderRadius: BorderRadius.circular(10))),
               const SizedBox(width: 12), Expanded(child: Column(children: [bar(.85), const SizedBox(height: 8), bar(.55)])),
             ]))),
-        ]),
+        ]); }),
       ),
     ));
   }

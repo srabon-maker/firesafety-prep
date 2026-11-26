@@ -823,6 +823,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                       _tr(context, 'সঠিক উত্তর', 'Accuracy'),
                                       Icons.track_changes_outlined)),
                             ]),
+                            if (data[1] != null && questions > 0) ...[
+                              const SizedBox(height: 12),
+                              LinearProgressIndicator(
+                                value: (accuracy / 100).clamp(0.0, 1.0).toDouble(),
+                                semanticsLabel: _tr(context, 'সঠিক উত্তর','Accuracy'),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Text(
                                 _tr(

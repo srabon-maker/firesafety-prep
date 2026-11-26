@@ -6,6 +6,7 @@ This branch is a frontend-only incremental redesign. Preserve authentication, re
 - Home quick access, responsive layout, localized key labels, career entry and loading/retry states.
 - Career adaptive dashboard, question and exam feedback, loading placeholders in jobs/notes/community/shop and profile section headings.
 - Shared finite animation respecting reduced-motion setting and widget tests.
+- Study note text size and scroll-progress controls, theme-aware HTML colors, profile accuracy bar based on existing data, job card contrast, localized community actions, bigger marketplace product images and 48dp cart targets.
 
 ## Before merging
 - [ ] flutter pub get
@@ -20,4 +21,4 @@ This branch is a frontend-only incremental redesign. Preserve authentication, re
 - [ ] Capture actual screenshots and compare design before merging.
 
 ## Follow-up
-Full localization of all legacy screens, bundled font family, richer job filters, actual preparation progress on Home, reading controls, notification counts and detailed screen-specific redesigns require further implementation and testing. Do not invent verification badges or progress values.
+Full localization of all legacy screens, bundled font family, richer job filters, actual preparation progress on Home, notification counts and detailed screen-specific redesigns require further implementation and testing. Do not invent verification badges or progress values.

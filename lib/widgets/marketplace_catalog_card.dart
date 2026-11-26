@@ -73,7 +73,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 96,
+              height: 112,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -172,8 +172,8 @@ class MarketplaceCatalogCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 5),
                         SizedBox(
-                          width: 32,
-                          height: 32,
+                          width: 48,
+                          height: 48,
                           child: IconButton(
                             tooltip: _actionLabel(context),
                             onPressed: actionBusy

@@ -540,6 +540,7 @@ class _JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final location = _displayLocation(job);
+    final accent = scheme.primary;
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
@@ -594,7 +595,7 @@ class _JobCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: _maroon),
+                  Icon(Icons.chevron_right, color: accent),
                 ],
               ),
               const SizedBox(height: 12),
@@ -602,14 +603,14 @@ class _JobCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 7,
                 children: [
-                  if (job.isPinned) _tag('পিন করা', _maroon),
+                  if (job.isPinned) _tag('পিন করা', accent),
                   if (job.category.isNotEmpty)
-                    _tag(job.category, _maroon),
+                    _tag(job.category, accent),
                   if (location.isNotEmpty)
                     _tag(location, scheme.onSurfaceVariant),
                   _tag(
                     job.isExpired ? 'মেয়াদ শেষ' : 'চলমান',
-                    job.isExpired ? scheme.error : const Color(0xFF27815A),
+                    job.isExpired ? scheme.error : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8DDEB2) : const Color(0xFF176B46)),
                   ),
                 ],
               ),
@@ -628,10 +629,10 @@ class _JobCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Text(
+                  Text(
                     'বিস্তারিত দেখুন',
                     style: TextStyle(
-                      color: _maroon,
+                      color: accent,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

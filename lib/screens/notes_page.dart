@@ -455,11 +455,30 @@ class NoteDetailPage extends StatefulWidget {
 
 class _NoteDetailPageState extends State<NoteDetailPage> {
   late Future<StudyNote> _noteFuture;
+  double _readerFontSize = 16;
+  final _readerScroll = ScrollController();
+  final _readerProgress = ValueNotifier<double>(0);
+
+  void _updateReaderProgress() {
+    if (!_readerScroll.hasClients) return;
+    final position = _readerScroll.position;
+    if (position.hasContentDimensions && position.maxScrollExtent > 0) {
+      _readerProgress.value = (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0).toDouble();
+    }
+  }
+
+  @override
+  void dispose() {
+    _readerScroll.dispose();
+    _readerProgress.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _noteFuture = NotesService.instance.fetchNote(widget.noteId);
+    _readerScroll.addListener(_updateReaderProgress);
   }
 
   Future<void> _openFile(String url) async {
@@ -499,9 +518,24 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             }
             final note = snapshot.data!;
             if(note.locked)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.lock_outline,size:48),Text(note.title,textAlign:TextAlign.center),const Text('এই নোটটি Premium সদস্যদের জন্য।'),FilledButton(onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!context.mounted)return;await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));if(mounted)setState(()=>_noteFuture=NotesService.instance.fetchNote(widget.noteId));},child:const Text('Premium সদস্যপদ দেখুন'))])));
-            return ListView(
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            return Column(children: [
+              ValueListenableBuilder<double>(
+                valueListenable: _readerProgress,
+                builder: (context, progress, _) => LinearProgressIndicator(
+                  value: progress, semanticsLabel: 'Reading progress'),
+              ),
+              Expanded(child: ListView(
+              controller: _readerScroll,
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
               children: [
+                Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  const Icon(Icons.text_fields_rounded),
+                  IconButton(tooltip: 'Decrease text size', onPressed: _readerFontSize <= 14 ? null : () => setState(() => _readerFontSize -= 2), icon: const Icon(Icons.remove_circle_outline)),
+                  Text(_readerFontSize.toStringAsFixed(0)),
+                  IconButton(tooltip: 'Increase text size', onPressed: _readerFontSize >= 24 ? null : () => setState(() => _readerFontSize += 2), icon: const Icon(Icons.add_circle_outline)),
+                ]),
+                const SizedBox(height: 10),
                 if (note.categoryName != null)
                   Align(
                     alignment: Alignment.centerLeft,
@@ -534,8 +568,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   const SizedBox(height: 18),
                   Text(
                     note.summary!,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: _readerFontSize,
                       fontWeight: FontWeight.w600,
                       height: 1.7,
                     ),
@@ -549,8 +583,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       await _openFile(url);
                       return true;
                     },
-                    textStyle: const TextStyle(
-                      fontSize: 16,
+                    textStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: _readerFontSize,
                       height: 1.7,
                     ),
                     customStylesBuilder: (element) {
@@ -558,25 +593,25 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         case 'h1':
                         case 'h2':
                           return {
-                            'color': '#650D18',
+                            'color': dark ? '#FFB3BC' : '#650D18',
                             'font-weight': '800',
                           };
                         case 'h3':
                           return {'font-weight': '700'};
                         case 'a':
                           return {
-                            'color': '#650D18',
+                            'color': dark ? '#FFB3BC' : '#650D18',
                             'text-decoration': 'underline',
                           };
                         case 'th':
                           return {
-                            'background-color': '#FFFFE8E8',
+                            'background-color': dark ? '#383037' : '#FFE8E8',
                             'font-weight': '700',
                           };
                         case 'blockquote':
                           return {
-                            'background-color': '#FFFFF5F3',
-                            'border-left': '3px solid #650D18',
+                            'background-color': dark ? '#342C32' : '#FFF5F3',
+                            'border-left': dark ? '3px solid #FFB3BC' : '3px solid #650D18',
                             'padding': '8px 12px',
                           };
                         default:
@@ -617,7 +652,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   ),
                 ],
               ],
-            );
+            )),
+            ]);
           },
         ),
       );

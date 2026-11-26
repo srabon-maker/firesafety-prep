@@ -574,7 +574,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     crossAxisCount: columns,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 12,
-                    mainAxisExtent: 100 + 80 * textScale,
+                    mainAxisExtent: 125 + 95 * textScale,
                   ),
                   itemBuilder: (context, index) {
                     final item = filtered[index];
