@@ -49,7 +49,7 @@ workflows:
         script: flutter test test/job_circular_test.dart
 
       - name: Run notes loading and access regression tests
-        script: flutter test test/notes_service_test.dart test/premium_learning_model_test.dart
+        script: flutter test test/notes_service_test.dart test/premium_learning_model_test.dart test/session_token_store_test.dart
 
       - name: Build Android APK with permanent release signing
         script: flutter build apk --release

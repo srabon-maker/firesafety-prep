@@ -7,6 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
+import 'session_token_store.dart';
+
 class AuthService {
   AuthService._();
 
@@ -31,8 +33,13 @@ class AuthService {
   static const String _sessionKey = 'fire_safety_session_token';
   static const Duration _requestTimeout = Duration(seconds: 20);
 
-  final FlutterSecureStorage _storage =
-      const FlutterSecureStorage();
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  final SessionTokenStore _sessionStore = SessionTokenStore(
+    read: () => _storage.read(key: _sessionKey),
+    write: (token) => _storage.write(key: _sessionKey, value: token),
+    delete: () => _storage.delete(key: _sessionKey),
+    recoverAndroidCipher: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+  );
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
@@ -197,10 +204,7 @@ class AuthService {
       }
 
       _invalidateSessionSnapshot();
-      await _storage.write(
-        key: _sessionKey,
-        value: token.toString(),
-      );
+      await _sessionStore.write(token.toString());
 
       _log('STEP 9: Session saved successfully.');
       _log('GOOGLE LOGIN COMPLETED.');
@@ -310,10 +314,7 @@ class AuthService {
     }
 
     _invalidateSessionSnapshot();
-    await _storage.write(
-      key: _sessionKey,
-      value: token.toString(),
-    );
+      await _sessionStore.write(token.toString());
 
     _log('Registration completed successfully.');
 
@@ -325,7 +326,9 @@ class AuthService {
   // --------------------------------------------------
 
   Future<String?> getSessionToken() async {
-    return await _storage.read(key: _sessionKey);
+    final token = await _sessionStore.read();
+    if (token == null || token.isEmpty) _invalidateSessionSnapshot();
+    return token;
   }
 
   // --------------------------------------------------
@@ -385,8 +388,7 @@ class AuthService {
 
     if (response.statusCode == 401 || response.statusCode == 403) {
       // An older in-flight request must never delete a newer login token.
-      if (await getSessionToken() == token) {
-        await _storage.delete(key: _sessionKey);
+      if (await _sessionStore.deleteIfMatches(token)) {
         _invalidateSessionSnapshot();
       }
       return null;
@@ -395,8 +397,7 @@ class AuthService {
     final data = _decodeResponse(response);
     if (data['success'] == false ||
         data['authenticated'] == false) {
-      if (await getSessionToken() == token) {
-        await _storage.delete(key: _sessionKey);
+      if (await _sessionStore.deleteIfMatches(token)) {
         _invalidateSessionSnapshot();
       }
       return null;
@@ -490,7 +491,7 @@ class AuthService {
 
   Future<void> _clearLocalSession() async {
     _invalidateSessionSnapshot();
-    await _storage.delete(key: _sessionKey);
+    await _sessionStore.clear();
     try {
       await _initializeGoogleSignIn();
       await _googleSignIn.signOut();

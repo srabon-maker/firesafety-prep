@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'auth_service.dart';
 import '../screens/login_page.dart';
@@ -45,8 +46,11 @@ class AuthGuard {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Login যাচাই করা যায়নি: '
-            '${e.toString().replaceFirst('Exception: ', '')}',
+            e is PlatformException
+                ? 'Login যাচাই করা যায়নি। অ্যাপটি আবার চালু করে চেষ্টা করুন।'
+                : 'Login যাচাই করা যায়নি: ${e.toString().replaceFirst('Exception: ', '')}',
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,

@@ -115,10 +115,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
       'status': _currentStatus,
     };
 
-    await _storage.write(
-      key: _suggestionKey,
-      value: jsonEncode(data),
-    );
+    try {
+      await _storage.write(
+        key: _suggestionKey,
+        value: jsonEncode(data),
+      );
+    } catch (_) {
+      // Suggestions are optional; do not block registration on damaged local storage.
+    }
   }
 
   @override
