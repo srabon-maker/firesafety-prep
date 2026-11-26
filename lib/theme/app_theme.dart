@@ -30,7 +30,6 @@ class AppTheme {
     final typography = base.textTheme.apply(
       bodyColor: scheme.onSurface,
       displayColor: scheme.onSurface,
-      fontFamilyFallback: const ['Noto Sans Bengali', 'sans-serif'],
     );
     final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
     OutlineInputBorder inputBorder(Color color) => OutlineInputBorder(
