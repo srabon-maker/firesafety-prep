@@ -107,7 +107,7 @@ class _HomePageState extends State<HomePage> {
   // Keep each shortcut's semantic colour, with lighter tones on dark cards.
   Color _shortcutIconColor(Color color) {
     if (Theme.of(context).brightness != Brightness.dark) return color;
-    return const <Color, Color>{
+    return <Color, Color>{
       Color(0xFFB83228): Color(0xFFF29B91),
       Color(0xFF7142B8): Color(0xFFBBA1F5),
       Color(0xFF20834B): Color(0xFF80CDA4),
