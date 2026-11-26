@@ -48,7 +48,12 @@ try {
     $locked=$active?'0':$marked;
     $preview=($_GET['premium_preview']??'')==='1';
     $action = (string)($_GET['action'] ?? 'list');
-    $select = "SELECT n.id,n.category_id,n.title,CASE WHEN $locked THEN NULL ELSE n.summary END AS summary,CASE WHEN $locked THEN NULL ELSE n.content END AS content,CASE WHEN $locked THEN NULL ELSE n.file_url END AS file_url,CASE WHEN $locked THEN 'none' ELSE n.file_type END AS file_type,$marked AS premium_only,$locked AS locked,CASE WHEN NOT ($locked) THEN EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) ELSE 0 END AS private_pdf,
+    // Home only needs title/category. Do not transmit long HTML in preview lists.
+    $summaryOnly = $action === 'list' && ($_GET['summary_only'] ?? '') === '1';
+    $contentSelect = $summaryOnly ? 'NULL' : "CASE WHEN $locked THEN NULL ELSE n.content END";
+    $summarySelect = $summaryOnly ? 'NULL' : "CASE WHEN $locked THEN NULL ELSE n.summary END";
+    $fileSelect = $summaryOnly ? 'NULL' : "CASE WHEN $locked THEN NULL ELSE n.file_url END";
+    $select = "SELECT n.id,n.category_id,n.title,$summarySelect AS summary,$contentSelect AS content,$fileSelect AS file_url,CASE WHEN $locked THEN 'none' ELSE n.file_type END AS file_type,$marked AS premium_only,$locked AS locked,CASE WHEN NOT ($locked) THEN EXISTS(SELECT 1 FROM premium_note_pdfs pp WHERE pp.note_id=n.id) ELSE 0 END AS private_pdf,
         DATE_FORMAT(n.published_at,'%Y-%m-%d %H:%i:%s') AS published_at,
         c.name AS category_name
         FROM notes n LEFT JOIN categories c ON c.id=n.category_id AND c.category_type='note'";
