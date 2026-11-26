@@ -44,7 +44,11 @@ class CommunityService {
     final uri = Uri.parse(_url).replace(queryParameters: {
       'action': sort == 'mine' ? 'my_posts' : 'feed', 'sort': sort,
     });
-    final response = await http.get(uri, headers: await _headers(requireLogin: sort == 'mine')).timeout(_timeout);
+    final headers = await _headers(requireLogin: sort == 'mine');
+    final response = await http.get(uri, headers: headers).timeout(_timeout);
+    if ((await _headers())['Authorization'] != headers['Authorization']) {
+      throw const FormatException('লগইন সেশন পরিবর্তিত হয়েছে। আবার চেষ্টা করুন।');
+    }
     final data = _decode(response)['data'];
     if (data is! List) throw Exception('পোস্টের তালিকা সঠিক নয়।');
     return data.map((item) =>
@@ -109,7 +113,11 @@ class CommunityService {
     final uri = Uri.parse(_url).replace(queryParameters: {
       'action': 'comments', 'post_id': '$postId',
     });
-    final response = await http.get(uri, headers: await _headers()).timeout(_timeout);
+    final headers = await _headers();
+    final response = await http.get(uri, headers: headers).timeout(_timeout);
+    if ((await _headers())['Authorization'] != headers['Authorization']) {
+      throw const FormatException('লগইন সেশন পরিবর্তিত হয়েছে। আবার চেষ্টা করুন।');
+    }
     final data = _decode(response)['data'];
     if (data is! List) throw Exception('মন্তব্যের তালিকা সঠিক নয়।');
     return data.map((item) =>

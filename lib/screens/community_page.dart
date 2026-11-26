@@ -28,6 +28,7 @@ class _CommunityPageState extends State<CommunityPage> {
   // page never turns into a spinner (and never jumps) after a like.
   List<CommunityPost>? _lastPosts;
   String _sort = 'latest';
+  int _feedEpoch = 0;
   bool _searchVisible = false;
   final _search = TextEditingController();
 
@@ -41,10 +42,15 @@ class _CommunityPageState extends State<CommunityPage> {
 
   void _reload() {
     final sortAtStart = _sort;
+    final epoch = ++_feedEpoch;
     _feed = CommunityService.instance.feed(sort: sortAtStart).then((posts) {
-      if (sortAtStart == _sort) _lastPosts = posts;
+      if (mounted && epoch == _feedEpoch && sortAtStart == _sort) {
+        _lastPosts = posts;
+      }
       return posts;
     });
+    // A fast failure or a disposed page may have no FutureBuilder listener.
+    _feed.then<void>((_) {}, onError: (Object _, StackTrace __) {});
   }
 
   // Pull-to-refresh and retry: old posts stay visible while loading.
@@ -57,10 +63,11 @@ class _CommunityPageState extends State<CommunityPage> {
   // swaps it in without any loading indicator.
   Future<void> _silentRefresh() async {
     final sortAtStart = _sort;
+    final epoch = ++_feedEpoch;
     try {
       final posts = await CommunityService.instance.feed(sort: sortAtStart);
       // Ignore the result if the user changed the sort meanwhile.
-      if (!mounted || sortAtStart != _sort) return;
+      if (!mounted || epoch != _feedEpoch || sortAtStart != _sort) return;
       setState(() {
         _lastPosts = posts;
         _feed = Future.value(posts);

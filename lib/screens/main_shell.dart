@@ -20,7 +20,8 @@ class _MainShellState extends State<MainShell> {
 
   late final List<Widget> pages = [
     const HomePage(),
-    const CommunityPage(),
+    // Community is mounted only after successful authentication.
+    const SizedBox.shrink(),
     const MarketplacePage(),
 
   ];
@@ -55,7 +56,9 @@ class _MainShellState extends State<MainShell> {
           index: index,
           children: [
             TickerMode(enabled: index == 0, child: pages[0]),
-            ...pages.skip(1),
+            if (index == 1) const CommunityPage()
+            else pages[1],
+            pages[2],
             // Mount only after AuthGuard succeeds. Discard account-specific
             // state on leaving Profile so a new login cannot see stale data.
             if (index == 3) ProfilePage(onLogout: _goToHome)
