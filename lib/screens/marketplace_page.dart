@@ -790,8 +790,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 42,
-                height: 38,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(14),
