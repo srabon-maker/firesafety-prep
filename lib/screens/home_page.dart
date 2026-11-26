@@ -48,13 +48,17 @@ class _HomePageState extends State<HomePage> {
   void _load() {
     _home=HomepageService.fetch('home');
     _jobs=JobCircularService.instance.fetchCirculars();
-    _notes=NotesService.instance.fetchNotes();
+    _loadNotesPreview();
     // Hidden optional sections may have no FutureBuilder subscriber.
     // Attach an error listener immediately, without replacing the original future.
     _home.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     _jobs.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+  }
+  void _loadNotesPreview() {
+    _notes = NotesService.instance.fetchNotes(summaryOnly: true);
     _notes.then<void>((_) {}, onError: (Object _, StackTrace __) {});
   }
+  void _retryNotesPreview() => setState(_loadNotesPreview);
   @override
   void dispose() { _search.dispose(); super.dispose(); }
   Future<void> _refresh() async {
@@ -84,6 +88,7 @@ class _HomePageState extends State<HomePage> {
       _=>const NotificationInboxPage(),
     };
     await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>page));
+    if (mounted && target == 'notes') _retryNotesPreview();
   }
   Future<void> _searchFor(String value) async {
     final query=value.trim();
@@ -177,7 +182,12 @@ class _HomePageState extends State<HomePage> {
       })]);
       case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
-        if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('নোট লোড হয়নি।','Notes could not load.'), onRetry: _refresh);
+        if(snapshot.hasError) {
+          final error = snapshot.error;
+          return FsStatusCard(icon: Icons.cloud_off_outlined,
+            message: error is NotesLoadException ? _tr(error.message(), error.message(english: true)) : _tr('নোট লোড হয়নি।','Notes could not load.'),
+            onRetry: _retryNotesPreview);
+        }
         final notes=snapshot.data?.notes??[];
         if(notes.isEmpty)return const Text('কোনো প্রকাশিত নোট নেই।');
         return Column(children:[for(final note in notes.take(3)) Card(child:ListTile(leading:const Icon(Icons.menu_book_outlined),title:Text(note.title,maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text(note.categoryName??''),trailing:const Icon(Icons.chevron_right),onTap:()=>_open('notes',search:note.title)))]);
