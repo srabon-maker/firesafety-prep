@@ -269,7 +269,6 @@ class _CareerSectionState extends State<CareerSection> {
           minLines: 4,
           maxLines: 7,
           maxLength: 2000,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             labelText: AppText.of(context, 'বিস্তারিত পরিচিতি (ঐচ্ছিক)', 'Professional summary (optional)'),
