@@ -28,12 +28,3 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run Flutter tests
         run: flutter test
-      - name: Compile Android debug APK
-        run: flutter build apk --debug
-      - name: Upload Android debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: fire-safety-bd-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
