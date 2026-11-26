@@ -1,95 +1,22 @@
 ---
-# Fire Safety BD release: reviewed admin pages, shared assets and three
-# Marketplace order and notification APIs only. Config, other APIs, logs and uploads stay put.
+# Temporary scoped deployment: Career / Professional Directory only.
+# Restore the previous full deployment configuration after this release is verified.
 deployment:
   tasks:
     - export DEPLOYPATH=/home2/manobiki/fire.manobikishwarganj.com
     - export BACKUPPATH=/home2/manobiki/fire-safety-deploy-backups
-    - export RELEASEBACKUP="$BACKUPPATH/admin-$(date +%Y%m%d-%H%M%S)"
+    - 'export RELEASEBACKUP="$BACKUPPATH/career-$(date +%Y%m%d-%H%M%S)"'
     - /bin/test -d "$DEPLOYPATH"
-    - /bin/test -f "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
-    - /bin/test -f backend/admin/fire_safety_job_prep_dashboard.php
-    - /bin/test -f backend/assets/admin-unified.css
-    - /bin/test -f backend/assets/admin-shell.js
-    - /bin/test -f backend/assets/model-tests.js
-    - /bin/test -f backend/questions.php
-    - /bin/test -f backend/notes.php
-    - /bin/test -f backend/model_tests.php
-    - /bin/test -f backend/category_management.php
-    - /bin/test -f backend/job_circulars.php
-    - /bin/test -f backend/job_submission_review.php
-    - /bin/test -f backend/community_review.php
-    - /bin/test -f backend/community_admin_delete.php
-    - /bin/test -f backend/marketplace_admin.php
-    - /bin/test -f backend/users.php
-    - /bin/test -f backend/admin_operations.php
-    - /bin/test -f backend/premium_access.php
-    - /bin/test -f backend/premium_learning.php
-    - /bin/test -f backend/premium_pdf_storage.php
-    - /bin/test -f backend/api/premium_pdf/index.php
-    - /bin/test -f backend/api/notes.php
-    - /bin/test -f backend/api/tests.php
-    - /bin/test -f backend/premium_admin.php
-    - /bin/test -f backend/ads_admin.php
-    - /bin/test -f backend/api/premium/index.php
-    - /bin/test -f backend/support_common.php
-    - /bin/test -f backend/support_admin.php
-    - /bin/test -f backend/api/support/index.php
-    - /bin/test -f backend/analytics_admin.php
-    - /bin/test -f backend/notifications_admin.php
-    - /bin/test -f backend/settings_admin.php
-    - /bin/mkdir -p "$RELEASEBACKUP/assets" "$DEPLOYPATH/assets"
-    - 'for f in fire_safety_job_prep_dashboard.php questions.php notes.php model_tests.php category_management.php job_circulars.php job_submission_review.php community_review.php community_admin_delete.php marketplace_admin.php users.php admin_operations.php analytics_admin.php notifications_admin.php settings_admin.php premium_access.php premium_learning.php premium_pdf_storage.php premium_admin.php ads_admin.php support_common.php support_admin.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f" || exit 1; fi; done'
-    - 'if /bin/test -f "$DEPLOYPATH/assets/admin-unified.css"; then /bin/cp -p "$DEPLOYPATH/assets/admin-unified.css" "$RELEASEBACKUP/assets/admin-unified.css"; fi'
-    # Marketplace order API: migration must already be applied; back up before copying.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api/marketplace"; /bin/test -f "$DEPLOYPATH/api/marketplace/_common.php"; for f in _orders.php cart.php orders.php; do /bin/test -f "backend/api/marketplace/$f"; done; /bin/test -f "$DEPLOYPATH/api/marketplace/cart.php"; /bin/test -f "$DEPLOYPATH/api/marketplace/orders.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/marketplace"; for f in _orders.php cart.php orders.php; do if /bin/test -f "$DEPLOYPATH/api/marketplace/$f"; then /bin/cp -p "$DEPLOYPATH/api/marketplace/$f" "$RELEASEBACKUP/api/marketplace/$f"; fi; done; for f in _orders.php cart.php orders.php; do /bin/cp -p "backend/api/marketplace/$f" "$DEPLOYPATH/api/marketplace/$f"; done'
-    # Product reviews and banners: apply SQL migration first; back up any old endpoint/admin.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api/marketplace"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/marketplace"; for f in marketplace_engagement_admin.php api/marketplace/engagement.php; do /bin/test -f "backend/$f"; /bin/test ! -L "$DEPLOYPATH/$f"; if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
-    # Notification inbox: explicit single-file allowlist; no schema or auth changes.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -d "$DEPLOYPATH/api"; /bin/test -f backend/api/notifications/index.php; /bin/mkdir -p "$DEPLOYPATH/api/notifications"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/notifications"; if /bin/test -f "$DEPLOYPATH/api/notifications/index.php"; then /bin/cp -p "$DEPLOYPATH/api/notifications/index.php" "$RELEASEBACKUP/api/notifications/index.php"; fi; /bin/cp -p backend/api/notifications/index.php "$DEPLOYPATH/api/notifications/index.php"'
-    - /bin/cp -p backend/assets/admin-unified.css "$DEPLOYPATH/assets/admin-unified.css"
-    - /bin/cp -p backend/assets/admin-shell.js "$DEPLOYPATH/assets/admin-shell.js"
-    - 'if /bin/test -f "$DEPLOYPATH/assets/model-tests.js"; then /bin/cp -p "$DEPLOYPATH/assets/model-tests.js" "$RELEASEBACKUP/assets/model-tests.js"; fi'
-    - /bin/cp -p backend/assets/model-tests.js "$DEPLOYPATH/assets/model-tests.js"
-    - /bin/cp -p backend/questions.php "$DEPLOYPATH/questions.php"
-    - /bin/cp -p backend/notes.php "$DEPLOYPATH/notes.php"
-    - /bin/cp -p backend/model_tests.php "$DEPLOYPATH/model_tests.php"
-    - 'set -e; /bin/test -f backend/category_labels.php; /bin/test ! -L "$DEPLOYPATH/category_labels.php"; if /bin/test -f "$DEPLOYPATH/category_labels.php"; then /bin/cp -p "$DEPLOYPATH/category_labels.php" "$RELEASEBACKUP/category_labels.php"; fi; /bin/cp -p backend/category_labels.php "$DEPLOYPATH/category_labels.php"'
-    - /bin/cp -p backend/category_management.php "$DEPLOYPATH/category_management.php"
-    - /bin/cp -p backend/job_circulars.php "$DEPLOYPATH/job_circulars.php"
-    - /bin/cp -p backend/job_submission_review.php "$DEPLOYPATH/job_submission_review.php"
-    - /bin/cp -p backend/community_admin_delete.php "$DEPLOYPATH/community_admin_delete.php"
-    - /bin/cp -p backend/community_review.php "$DEPLOYPATH/community_review.php"
-    - /bin/cp -p backend/marketplace_admin.php "$DEPLOYPATH/marketplace_admin.php"
-    - /bin/cp -p backend/users.php "$DEPLOYPATH/users.php"
-    - /bin/cp -p backend/premium_access.php "$DEPLOYPATH/premium_access.php"
-    - /bin/cp -p backend/premium_learning.php "$DEPLOYPATH/premium_learning.php"
-    - /bin/cp -p backend/premium_pdf_storage.php "$DEPLOYPATH/premium_pdf_storage.php"
-    - /bin/cp -p backend/premium_admin.php "$DEPLOYPATH/premium_admin.php"
-    - /bin/cp -p backend/ads_admin.php "$DEPLOYPATH/ads_admin.php"
-    - /bin/cp -p backend/support_common.php "$DEPLOYPATH/support_common.php"
-    - /bin/cp -p backend/support_admin.php "$DEPLOYPATH/support_admin.php"
-    - /bin/cp -p backend/admin_operations.php "$DEPLOYPATH/admin_operations.php"
-    - /bin/cp -p backend/analytics_admin.php "$DEPLOYPATH/analytics_admin.php"
-    - /bin/cp -p backend/notifications_admin.php "$DEPLOYPATH/notifications_admin.php"
-    - /bin/cp -p backend/settings_admin.php "$DEPLOYPATH/settings_admin.php"
-    - /bin/cp -p backend/admin/fire_safety_job_prep_dashboard.php "$DEPLOYPATH/fire_safety_job_prep_dashboard.php"
-    # Hero banner: install protection before enabling the authenticated upload form. No uploaded images are overwritten.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/homepage_image_upload.php; /bin/test -f backend/uploads/homepage/.htaccess; /bin/mkdir -p "$DEPLOYPATH/uploads/homepage" "$RELEASEBACKUP/uploads/homepage"; /bin/test ! -L "$DEPLOYPATH/uploads/homepage"; for f in homepage_image_upload.php uploads/homepage/.htaccess; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
-    # Dynamic homepage: apply migration before deployment; preserve config and uploads.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/homepage_admin.php; /bin/test -f backend/interview_admin.php; /bin/test -f backend/api/homepage/index.php; /bin/mkdir -p "$DEPLOYPATH/api/homepage"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/homepage"; for f in homepage_admin.php interview_admin.php api/homepage/index.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
-    # Premium status API: apply premium foundation migration first.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/premium"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/premium"; if /bin/test -f "$DEPLOYPATH/api/premium/index.php"; then /bin/cp -p "$DEPLOYPATH/api/premium/index.php" "$RELEASEBACKUP/api/premium/index.php"; fi; /bin/cp -p backend/api/premium/index.php "$DEPLOYPATH/api/premium/index.php"'
-    # Support: apply support migration before deployment.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/support"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/support"; if /bin/test -f "$DEPLOYPATH/api/support/index.php"; then /bin/cp -p "$DEPLOYPATH/api/support/index.php" "$RELEASEBACKUP/api/support/index.php"; fi; /bin/cp -p backend/api/support/index.php "$DEPLOYPATH/api/support/index.php"'
-    # Question library API: apply bookmark migration before deploying.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/api/question_library/index.php; /bin/mkdir -p "$DEPLOYPATH/api/question_library"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/question_library"; if /bin/test -f "$DEPLOYPATH/api/question_library/index.php"; then /bin/cp -p "$DEPLOYPATH/api/question_library/index.php" "$RELEASEBACKUP/api/question_library/index.php"; fi; /bin/cp -p backend/api/question_library/index.php "$DEPLOYPATH/api/question_library/index.php"'
-    # Notes API: allow first installation or restoration of a missing endpoint.
-    # Apply premium migrations and shared helpers before deploying; never overwrite a symlink.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f backend/api/notes.php; /bin/test -d "$DEPLOYPATH/api"; /bin/test ! -L "$DEPLOYPATH/api/notes.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api"; if /bin/test -f "$DEPLOYPATH/api/notes.php"; then /bin/cp -p "$DEPLOYPATH/api/notes.php" "$RELEASEBACKUP/api/notes.php"; fi; /bin/cp -p backend/api/notes.php "$DEPLOYPATH/api/notes.php"; /bin/test -s "$DEPLOYPATH/api/notes.php"'
-    # Tests API: retain the existing endpoint and backup requirements.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/test -f "$DEPLOYPATH/api/tests.php"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api"; /bin/cp -p "$DEPLOYPATH/api/tests.php" "$RELEASEBACKUP/api/tests.php"; /bin/cp -p backend/api/tests.php "$DEPLOYPATH/api/tests.php"'
-    # Private PDF downloads (file bytes are never deployed or stored in Git).
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/premium_pdf"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/premium_pdf"; if /bin/test -f "$DEPLOYPATH/api/premium_pdf/index.php"; then /bin/cp -p "$DEPLOYPATH/api/premium_pdf/index.php" "$RELEASEBACKUP/api/premium_pdf/index.php"; fi; /bin/cp -p backend/api/premium_pdf/index.php "$DEPLOYPATH/api/premium_pdf/index.php"'
-    # Career: apply career migration first; back up only allowlisted files.
-    - 'set -e; /bin/test -n "$DEPLOYPATH"; /bin/test -n "$RELEASEBACKUP"; /bin/mkdir -p "$DEPLOYPATH/api/career"; /bin/mkdir -p -m 700 "$RELEASEBACKUP/api/career"; for f in career_common.php career_admin.php api/career/index.php; do /bin/test -f "backend/$f"; done; for f in career_common.php career_admin.php api/career/index.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; done'
+    - /bin/test -f "$DEPLOYPATH/db.php"
+    - /bin/test -f "$DEPLOYPATH/admin_helpers.php"
+    - /bin/test -f backend/career_common.php
+    - /bin/test -f backend/career_admin.php
+    - /bin/test -f backend/api/career/index.php
+    - '/bin/test ! -L "$DEPLOYPATH/api"'
+    - '/bin/mkdir -p "$DEPLOYPATH/api/career"'
+    - '/bin/test ! -L "$DEPLOYPATH/api/career"'
+    - '/bin/test ! -L "$DEPLOYPATH/career_common.php"'
+    - '/bin/test ! -L "$DEPLOYPATH/career_admin.php"'
+    - '/bin/test ! -L "$DEPLOYPATH/api/career/index.php"'
+    - '/bin/mkdir -p -m 700 "$RELEASEBACKUP/api/career"'
+    - 'set -eu; for f in career_common.php career_admin.php api/career/index.php; do if /bin/test -e "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; done; /bin/cp -p backend/career_common.php "$DEPLOYPATH/career_common.php"; /bin/cp -p backend/career_admin.php "$DEPLOYPATH/career_admin.php"; /bin/cp -p backend/api/career/index.php "$DEPLOYPATH/api/career/index.php"; /bin/test -s "$DEPLOYPATH/career_common.php"; /bin/test -s "$DEPLOYPATH/career_admin.php"; /bin/test -s "$DEPLOYPATH/api/career/index.php"'
