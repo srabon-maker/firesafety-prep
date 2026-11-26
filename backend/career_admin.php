@@ -7,8 +7,8 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
 if(($_SERVER['REQUEST_METHOD']??'GET')==='GET'&&isset($_GET['photo'])){
  $key=$_GET['photo'];
  if(!is_string($key)||!preg_match('/^[a-f0-9]{32}$/D',$key)){http_response_code(404);exit;}
- $q=$pdo->prepare("SELECT ph.photo_data FROM career_profile_photos ph JOIN career_profiles p ON p.user_id=ph.user_id AND p.photo_path=ph.photo_key JOIN users u ON u.id=p.user_id WHERE ph.photo_key=? AND u.is_registered=1 AND p.status IN ('pending','approved')");
- $q->execute([$key]);$bytes=$q->fetchColumn();
+ $q=$pdo->prepare("SELECT p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.photo_path=? AND u.is_registered=1 AND p.status IN ('pending','approved')");
+ $q->execute([$key]);$allowed=$q->fetchColumn();$bytes=is_string($allowed)?career_photo_read($allowed):null;
  if(!is_string($bytes)||$bytes===''){http_response_code(404);exit;}
  header('Content-Type: image/jpeg');header('Content-Length: '.strlen($bytes));echo $bytes;exit;
 }
