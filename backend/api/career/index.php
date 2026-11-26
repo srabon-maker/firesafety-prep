@@ -94,8 +94,12 @@ try{
    $canvas=imagecreatetruecolor($w,$h);
    imagefill($canvas,0,0,imagecolorallocate($canvas,255,255,255));
    imagecopyresampled($canvas,$source,0,0,0,0,$w,$h,$info[0],$info[1]);
-   ob_start();$ok=imagejpeg($canvas,null,85);$jpeg=ob_get_clean();
-   if(!$ok||!is_string($jpeg)||$jpeg===''||strlen($jpeg)>2097152)throw new RuntimeException('Photo processing failed');
+   foreach([85,76,66,56,46,36] as $quality){
+    ob_start();$ok=imagejpeg($canvas,null,$quality);$jpeg=ob_get_clean();
+    if(!$ok||!is_string($jpeg)||$jpeg==='')throw new RuntimeException('Photo processing failed');
+    if(strlen($jpeg)<=204800)break;
+   }
+   if(strlen($jpeg)>204800)throw new DomainException('Photo could not be compressed; choose another image');
    $photoPath=bin2hex(random_bytes(16));
   }
   $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,status,updated_at) VALUES(?,?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
