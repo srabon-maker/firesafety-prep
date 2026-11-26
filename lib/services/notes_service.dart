@@ -43,9 +43,10 @@ class NotesService {
     for (var attempt = 0; attempt < 2; attempt++) {
       if (await _readToken() != token) throw _sessionChanged;
       try {
-        final response = await (_client == null
+        final client = _client;
+        final response = await (client == null
             ? http.get(uri, headers: headers)
-            : _client.get(uri, headers: headers)).timeout(timeout);
+            : client.get(uri, headers: headers)).timeout(timeout);
         if (await _readToken() != token) throw _sessionChanged;
         final status = response.statusCode;
         if (attempt == 0 && const {502, 503, 504}.contains(status)) {
