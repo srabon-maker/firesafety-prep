@@ -214,8 +214,6 @@ class _HomePageState extends State<HomePage> {
                     const Text('Fire Safety Marketplace', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
                     const SizedBox(height: 2),
                     Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
-                    const SizedBox(height: 2),
-                    Text(AppText.of(context, 'শপে প্রবেশ করুন', 'Explore shop'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
                   ])),
                   const SizedBox(width: 6),
                   const Icon(Icons.chevron_right, color: Colors.white, size: 20),
