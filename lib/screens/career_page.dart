@@ -54,11 +54,12 @@ class CareerSection extends StatefulWidget {
 }
 
 class _CareerSectionState extends State<CareerSection> {
+  final _directorySearch = TextEditingController();
   final _keyword = TextEditingController(), _location = TextEditingController(),
       _name = TextEditingController(), _role = TextEditingController(),
       _organization = TextEditingController(), _city = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
-  bool _busy = true, _enabled = false, _consent = false, _revealed = false;
+  bool _busy = true, _enabled = false, _consent = false, _revealed = false, _editingProfile = false;
   String? _error, _next;
   String _status = '';
   int _index = 0, _score = 0;
@@ -68,7 +69,7 @@ class _CareerSectionState extends State<CareerSection> {
   void initState() { super.initState(); _load(); }
   @override
   void dispose() {
-    for (final c in [_keyword,_location,_name,_role,_organization,_city]) { c.dispose(); }
+    for (final c in [_directorySearch,_keyword,_location,_name,_role,_organization,_city]) { c.dispose(); }
     super.dispose();
   }
   Future<void> _load({bool more = false}) async {
@@ -165,17 +166,109 @@ class _CareerSectionState extends State<CareerSection> {
       for(final row in _rows) _card(CareerService.text(row,'title'),
         ['provider','location','start_date','description'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n'),link:CareerService.text(row,'course_url')),
     ];
+    final query = _directorySearch.text.trim().toLowerCase();
+    final visibleProfiles = _rows.where((row) {
+      final searchable = ['display_name','role_name','organization','city']
+          .map((key) => CareerService.text(row, key)).join(' ').toLowerCase();
+      return query.isEmpty || searchable.contains(query);
+    }).toList();
     return [
-      const Text('নিজের সম্মতিতে পরিচিতি প্রকাশ করুন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা লিংক দেবেন না। প্রকাশিত পরিচিতি সনদ যাচাই করা নয়।'),
-      if(_status.isNotEmpty) Text('অবস্থা: ${({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status}'),
-      const SizedBox(height: 10),_field(_name,'প্রদর্শিত নাম',100),_field(_role,'পদ / পেশা',120),
-      _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),_field(_city,'শহর (ঐচ্ছিক)',100),
-      CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
-        title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
-      FilledButton(onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text}),child:const Text('অনুমোদনের জন্য জমা দিন')),
-      if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
-      const SizedBox(height: 12),const Text('অনুমোদিত পরিচিতি',style:TextStyle(fontWeight:FontWeight.bold)),
-      for(final row in _rows) _card(CareerService.text(row,'display_name'),['role_name','organization','city'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n')),
+      Card(child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('ফায়ার সেফটি পেশাজীবীদের পরিচিতি',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text('অনুমোদিত প্রোফাইল দেখুন অথবা নিজের পেশাগত পরিচিতি জমা দিন।'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _directorySearch,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'নাম, পদবি, প্রতিষ্ঠান বা শহর খুঁজুন',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: FilledButton.icon(
+            onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
+            icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1),
+            label: Text(_editingProfile ? 'ফর্ম বন্ধ করুন' : 'নিজের প্রোফাইল যুক্ত করুন'),
+          )),
+        ]),
+      )),
+      if (_status.isNotEmpty) Card(child: ListTile(
+        leading: Icon(_status == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
+          color: _status == 'approved' ? Colors.green : null),
+        title: const Text('আপনার প্রোফাইলের অবস্থা'),
+        subtitle: Text(({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status),
+      )),
+      if (_editingProfile) ...[
+        const SizedBox(height: 8),
+        Text('প্রোফাইল তথ্য', style: Theme.of(context).textTheme.titleMedium),
+        const Text('নিজের সম্মতিতে তথ্য জমা দিন। অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখতে পাবেন। ফোন, ইমেইল বা ব্যক্তিগত লিংক দেবেন না। প্রকাশিত পরিচিতি পেশাগত সনদ যাচাই নয়।'),
+        const SizedBox(height: 12),
+        _field(_name,'প্রদর্শিত নাম',100),
+        _field(_role,'পদ / পেশা',120),
+        _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),
+        _field(_city,'শহর (ঐচ্ছিক)',100),
+        CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
+          title:const Text('আমি এই তথ্য নিবন্ধিত ব্যবহারকারীদের দেখানোর সম্মতি দিচ্ছি।')),
+        SizedBox(width: double.infinity, child: FilledButton.icon(
+          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text}),
+          icon: const Icon(Icons.send_outlined), child:const Text('অনুমোদনের জন্য জমা দিন'))),
+        if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
+          onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
+      ],
+      const SizedBox(height: 16),
+      Row(children: [
+        Expanded(child: Text('অনুমোদিত পেশাজীবী',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+        Text('${visibleProfiles.length} জন', style: Theme.of(context).textTheme.bodySmall),
+      ]),
+      const SizedBox(height: 8),
+      if (visibleProfiles.isEmpty) Card(
+        child: Padding(padding: const EdgeInsets.all(20), child: Center(
+          child: Text(query.isEmpty ? 'এখনো কোনো অনুমোদিত প্রোফাইল নেই।' : 'এই নামে বা তথ্যে কোনো প্রোফাইল পাওয়া যায়নি।'),
+        )),
+      ),
+      for (final row in visibleProfiles) Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            CircleAvatar(radius: 27, child: Text(
+              CareerService.text(row,'display_name').trim().isEmpty ? 'FS' :
+                CareerService.text(row,'display_name').trim().substring(0,1),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(CareerService.text(row,'display_name'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 3),
+              Text(CareerService.text(row,'role_name'),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+              if (CareerService.text(row,'organization').isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Row(children: [const Icon(Icons.business_outlined,size:16),const SizedBox(width:5),
+                  Expanded(child: Text(CareerService.text(row,'organization')))]),
+              ],
+              if (CareerService.text(row,'city').isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Row(children: [const Icon(Icons.location_on_outlined,size:16),const SizedBox(width:5),
+                  Expanded(child: Text(CareerService.text(row,'city')))]),
+              ],
+              const SizedBox(height: 5),
+              const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+                SizedBox(width: 4),
+                Text('অ্যাডমিন অনুমোদিত পরিচিতি', style: TextStyle(fontSize: 11)),
+              ]),
+            ])),
+          ]),
+        ),
+      ),
     ];
   }
   @override
