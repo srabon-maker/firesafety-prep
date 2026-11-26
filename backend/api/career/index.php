@@ -45,9 +45,9 @@ try{
    $q=$pdo->prepare('SELECT id,title,provider,description,location,course_url,start_date FROM career_courses WHERE published=1 AND id<? ORDER BY id DESC LIMIT 26');$q->execute([$before]);
   }elseif($action==='directory'){
    $search=career_text($_GET['q']??'',160);
-   $q=$pdo->prepare("SELECT p.user_id AS id,p.display_name,p.role_name,p.organization,p.city,p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.status='approved' AND u.is_registered=1 AND p.user_id<? AND (?='' OR LOCATE(?,CONCAT_WS(' ',p.display_name,p.role_name,p.organization,p.city))>0) ORDER BY p.user_id DESC LIMIT 26");$q->execute([$before,$search,$search]);
+   $q=$pdo->prepare("SELECT p.user_id AS id,p.display_name,p.role_name,p.organization,p.city,p.bio,p.photo_path FROM career_profiles p JOIN users u ON u.id=p.user_id WHERE p.status='approved' AND u.is_registered=1 AND p.user_id<? AND (?='' OR LOCATE(?,CONCAT_WS(' ',p.display_name,p.role_name,p.organization,p.city,p.bio))>0) ORDER BY p.user_id DESC LIMIT 26");$q->execute([$before,$search,$search]);
   }elseif($action==='my_profile'){
-   $q=$pdo->prepare('SELECT display_name,role_name,organization,city,status,photo_path FROM career_profiles WHERE user_id=?');$q->execute([$uid]);career_reply(200,['success'=>true,'profile'=>$q->fetch(PDO::FETCH_ASSOC)?:null]);
+   $q=$pdo->prepare('SELECT display_name,role_name,organization,city,bio,status,photo_path FROM career_profiles WHERE user_id=?');$q->execute([$uid]);career_reply(200,['success'=>true,'profile'=>$q->fetch(PDO::FETCH_ASSOC)?:null]);
   }else throw new DomainException('Unknown action');
   $rows=$q->fetchAll(PDO::FETCH_ASSOC);$more=count($rows)>25;if($more)array_pop($rows);
   career_reply(200,['success'=>true,'data'=>$rows,'next_before_id'=>$more?(string)end($rows)['id']:null]);
@@ -79,6 +79,7 @@ try{
   if(($b['consent']??null)!==true)throw new DomainException('Explicit consent required');
   $name=career_public_text($b['display_name']??'',100,true);$role=career_public_text($b['role_name']??'',120,true);
   $org=career_public_text($b['organization']??'',120);$city=career_public_text($b['city']??'',100);
+  $bio=array_key_exists('bio',$b)?career_public_text($b['bio'],2000):null;
   $photoPath=null;$jpeg=null;
   $remove=$b['remove_photo']??false;
   if(!is_bool($remove))throw new DomainException('Invalid photo choice');
@@ -104,8 +105,8 @@ try{
    $photoPath=bin2hex(random_bytes(16));
   }
   $q=$pdo->prepare('SELECT photo_path FROM career_profiles WHERE user_id=?');$q->execute([$uid]);$previous=$q->fetchColumn();
-  $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,status,updated_at) VALUES(?,?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
-  $q->execute([$uid,$name,$role,$org,$city]);
+  $q=$pdo->prepare("INSERT INTO career_profiles(user_id,display_name,role_name,organization,city,bio,status,updated_at) VALUES(?,?,?,?,?,?, 'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),role_name=VALUES(role_name),organization=VALUES(organization),city=VALUES(city),bio=IF(VALUES(bio) IS NULL,bio,VALUES(bio)),status='pending',revision=revision+1,updated_at=VALUES(updated_at)");
+  $q->execute([$uid,$name,$role,$org,$city,$bio]);
   if($photoPath!==null){
    career_photo_write($photoPath,$jpeg);$newPhoto=$photoPath;
    $q=$pdo->prepare('UPDATE career_profiles SET photo_path=? WHERE user_id=?');$q->execute([$photoPath,$uid]);
