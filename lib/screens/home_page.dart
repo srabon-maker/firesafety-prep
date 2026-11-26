@@ -282,7 +282,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: .65),
+                color: maroon,
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(16),
