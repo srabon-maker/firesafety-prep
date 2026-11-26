@@ -285,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
                 Container(
-                  width: 48,
+                  width: double.infinity,
                   height: 1.5,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
