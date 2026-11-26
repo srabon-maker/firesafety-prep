@@ -71,7 +71,6 @@ class _CareerSectionState extends State<CareerSection> {
   String _status = '';
   int _index = 0, _score = 0;
   String get _section => widget.section;
-  static const _titles = {'alerts':'Job Alert','mock':'Mock Interview','courses':'Training & Courses','directory':'Professional Directory'};
   @override
   void initState() { super.initState(); _load(); }
   @override
@@ -311,9 +310,17 @@ class _CareerSectionState extends State<CareerSection> {
     ];
   }
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(_titles[_section] ?? 'Career'), actions: [
-      IconButton(onPressed:_busy?null:()=>_load(),icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ'),
+  Widget build(BuildContext context) {
+    String tr(String bn, String en) => AppText.of(context, bn, en);
+    final titles = {
+      'alerts': tr('চাকরির বিজ্ঞপ্তি', 'Job Alerts'),
+      'mock': tr('মক ইন্টারভিউ', 'Mock Interview'),
+      'courses': tr('প্রশিক্ষণ ও কোর্স', 'Training & Courses'),
+      'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
+    };
+    return Scaffold(
+    appBar: AppBar(title: Text(titles[_section] ?? tr('ক্যারিয়ার', 'Career')), actions: [
+      IconButton(onPressed:_busy?null:()=>_load(),icon:const Icon(Icons.refresh),tooltip:tr('রিফ্রেশ','Refresh')),
     ]),
     body: ListView(padding:const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
@@ -322,6 +329,7 @@ class _CareerSectionState extends State<CareerSection> {
       if(_section!='directory'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
       if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:const Text('আরও দেখুন')),
     ]));
+  }
 }
 
 
