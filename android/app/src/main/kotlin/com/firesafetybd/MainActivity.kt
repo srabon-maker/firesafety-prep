@@ -267,6 +267,9 @@ class MainActivity : FlutterActivity() {
                     val pending = pendingSpeak
                     if (status != TextToSpeech.SUCCESS || pending == null) {
                         pendingSpeak = null
+                        textToSpeech?.shutdown()
+                        textToSpeech = null
+                        ttsReady = false
                         pending?.result?.error(
                             "OFFLINE_TTS_UNAVAILABLE",
                             "The device text-to-speech engine is unavailable.",
