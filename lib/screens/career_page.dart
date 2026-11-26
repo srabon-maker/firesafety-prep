@@ -8,6 +8,7 @@ import '../services/auth_guard.dart';
 import '../settings/app_settings.dart';
 import '../services/auth_service.dart';
 import '../services/career_service.dart';
+import '../widgets/free_mock_interview_panel.dart';
 
 class CareerPage extends StatelessWidget {
   const CareerPage({super.key});
@@ -63,14 +64,13 @@ class _CareerSectionState extends State<CareerSection> {
       _organization = TextEditingController(), _city = TextEditingController(),
       _bio = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
-  bool _busy = true, _enabled = false, _consent = false, _revealed = false, _editingProfile = false;
+  bool _busy = true, _enabled = false, _consent = false, _editingProfile = false;
   Uint8List? _selectedPhoto;
   String _photoPath = '';
   String _directoryQuery = '';
   bool _removePhoto = false;
   String? _error, _next;
   String _status = '';
-  int _index = 0, _score = 0;
   String get _section => widget.section;
   @override
   void initState() { super.initState(); _load(); }
@@ -109,7 +109,6 @@ class _CareerSectionState extends State<CareerSection> {
           _bio.text = CareerService.text(p,'bio');
           _status = CareerService.text(p,'status'); _photoPath = CareerService.text(p,'photo_path'); _consent = false; _selectedPhoto = null; _removePhoto = false;
         }
-        if (_section == 'mock') { _index = 0; _score = 0; _revealed = false; }
       });
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -172,7 +171,6 @@ class _CareerSectionState extends State<CareerSection> {
     );
   }
 
-  void _rate(bool correct) => setState(() { if (correct) _score++; _index++; _revealed = false; });
   List<Widget> _content() {
     if (_section == 'alerts') return [
       const Text('গত ৩০ দিনের প্রকাশিত ও মেয়াদ না পেরোনো বিজ্ঞপ্তি থেকে শব্দের মিল। যোগ্যতা নিশ্চিত করে না। নতুন মিল থাকা চাকরি চেক করলে অ্যাপের ইনবক্সে নোটিফিকেশন যোগ হবে; মোবাইল পুশ নয়।'),
@@ -185,20 +183,19 @@ class _CareerSectionState extends State<CareerSection> {
         ['organization','location','requirements','application_deadline'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n'),link:CareerService.text(row,'apply_url')),
     ];
     if (_section == 'mock') return [
-      const Text('প্রথমে নিজে উত্তর বলুন। নমুনা উত্তরের সঙ্গে মিলিয়ে নিজেকে মূল্যায়ন করুন। এটি AI বা পরীক্ষকের মূল্যায়ন নয়।'),
-      const SizedBox(height: 10), _field(_role,'পদের নাম (ঐচ্ছিক, সঠিক নাম)',120),
-      FilledButton(onPressed: _busy ? null : () => _load(), child: const Text('নতুন অনুশীলন শুরু')),
-      if (_rows.isNotEmpty && _index < _rows.length) ...[
-        const SizedBox(height: 12),
-        LinearProgressIndicator(value: _index / _rows.length),
-        _card('প্রশ্ন ${_index + 1}/${_rows.length}',CareerService.text(_rows[_index],'title')),
-        if (!_revealed) FilledButton(onPressed: _busy ? null : () => setState(() => _revealed = true), child: const Text('নমুনা উত্তর দেখুন'))
-        else ...[
-          _card('নমুনা উত্তর',CareerService.text(_rows[_index],'body')),
-          FilledButton(onPressed: _busy ? null : () => _rate(true), child: const Text('উত্তর মিলেছে')),
-          OutlinedButton(onPressed: _busy ? null : () => _rate(false), child: const Text('আরও অনুশীলন দরকার')),
-        ]
-      ] else if (_rows.isNotEmpty) _card('অনুশীলন সম্পন্ন','নিজস্ব মূল্যায়ন: $_score / ${_rows.length}'),
+      const Text('লিখে অথবা ভয়েসে উত্তর দিন। প্রশ্ন ফোনের অফলাইন ভয়েসে শোনা যাবে; উত্তরও ডিভাইসেই লেখা হবে।'),
+      const SizedBox(height: 10),
+      _field(_role,'পদের নাম (ঐচ্ছিক, সঠিক নাম)',120),
+      FilledButton(
+        onPressed: _busy ? null : () => _load(),
+        child: const Text('নতুন অনুশীলন শুরু'),
+      ),
+      const SizedBox(height: 12),
+      FreeMockInterviewPanel(
+        questions: _rows,
+        role: _role.text.trim(),
+        onRestart: _busy ? null : () => _load(),
+      ),
     ];
     if (_section == 'courses') return [
       const Text('প্রতিষ্ঠান, তারিখ, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন। অ্যাপের মাধ্যমে কোর্সে ভর্তি বা পেমেন্ট হয় না।'),
