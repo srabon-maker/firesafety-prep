@@ -905,7 +905,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             label: 'অর্ডার',
             englishLabel: 'Orders',
             onPressed: _showHistory,
-            icon: Icons.receipt_outlined,
+            icon: Icons.receipt_long_outlined,
           ),
           const SizedBox(width: 5),
           Badge(
