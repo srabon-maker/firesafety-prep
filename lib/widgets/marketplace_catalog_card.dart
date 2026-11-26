@@ -153,7 +153,7 @@ class MarketplaceCatalogCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: p.accent,
+                                  color: p.placeholderIcon,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                 ),
