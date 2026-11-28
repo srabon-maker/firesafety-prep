@@ -66,6 +66,8 @@ void main() {
     expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
+    expect(find.byTooltip('অ্যাডমিন সাপোর্ট'), findsOneWidget);
+    expect(find.byIcon(Icons.support_agent_rounded), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -131,6 +133,8 @@ void main() {
     expect((grids.first.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount).crossAxisCount, 2);
     expect(find.text('Marketplace'), findsNothing);
     expect(find.text('My preparation'), findsOneWidget);
+    expect(find.byTooltip('Admin support').hitTestable(), findsOneWidget);
+    expect(find.byTooltip('Notifications').hitTestable(), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Professional\ndirectory'), findsOneWidget);
