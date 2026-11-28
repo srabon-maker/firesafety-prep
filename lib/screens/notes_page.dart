@@ -9,6 +9,7 @@ import '../models/study_note.dart';
 import '../services/notes_service.dart';
 import '../services/saved_notes_service.dart';
 import '../services/auth_guard.dart';
+import '../settings/app_settings.dart';
 import 'question_browser_page.dart';
 import 'premium_page.dart';
 import 'saved_notes_page.dart';
@@ -16,8 +17,9 @@ import 'saved_notes_page.dart';
 const Color notesMaroon = Color(0xFF650D18);
 
 class NotesPage extends StatefulWidget {
-  const NotesPage({super.key, this.initialSearch = ''});
+  const NotesPage({super.key, this.initialSearch = '', this.loadNotes});
   final String initialSearch;
+  final Future<StudyNotesPage> Function(String search, int? categoryId, int page)? loadNotes;
 
   @override
   State<NotesPage> createState() => _NotesPageState();
@@ -55,11 +57,14 @@ class _NotesPageState extends State<NotesPage> {
       });
     }
     try {
-      final result = await NotesService.instance.fetchNotes(
+      final loader = widget.loadNotes;
+      final result = await (loader != null
+        ? loader(_searchController.text, _selectedCategory, _page)
+        : NotesService.instance.fetchNotes(
         search: _searchController.text,
         categoryId: _selectedCategory,
         page: _page,
-      );
+      ));
       if (!mounted || epoch!=_requestEpoch) return;
       setState(() {
         _result = result;
@@ -100,19 +105,58 @@ class _NotesPageState extends State<NotesPage> {
     _loadNotes();
   }
 
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
+
+  Widget _headerAction(IconData icon, String tooltip, VoidCallback? onTap) =>
+      Tooltip(message: tooltip, child: Material(
+        color: Colors.transparent,
+        child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(10),
+          child: SizedBox(width: 48, height: 48, child: Center(
+            child: Container(width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20,
+                color: onTap == null ? Colors.white54 : Colors.white),
+            ),
+          )),
+        ),
+      ));
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final categories = _result?.categories ?? const <StudyNoteCategory>[];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('নোট ও রিসোর্স'),
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        leadingWidth: 48,
+        centerTitle: false,
+        backgroundColor: const Color(0xFF36060D),
+        foregroundColor: Colors.white,
+        title: Row(children: [
+          Container(width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24))),
+            child: const Icon(Icons.menu_book_outlined, color: Colors.white, size: 29)),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr('নোট ও রিসোর্স', 'Notes & resources'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
         actions: [
-          IconButton(tooltip:'সংরক্ষিত নোট',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const SavedNotesPage())),icon:const Icon(Icons.bookmarks_outlined)),
-          IconButton(
-            tooltip: 'রিফ্রেশ',
-            onPressed: _loading ? null : () => _loadNotes(),
-            icon: const Icon(Icons.refresh),
-          ),
+          _headerAction(Icons.bookmarks_outlined, _tr('সংরক্ষিত নোট', 'Saved notes'),
+            () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const SavedNotesPage()))),
+          const SizedBox(width: 5),
+          _headerAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'),
+            _loading ? null : () => _loadNotes()),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
@@ -122,25 +166,10 @@ class _NotesPageState extends State<NotesPage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'ফায়ার সেফটি স্টাডি নোট',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'অ্যাডমিন প্যানেল থেকে প্রকাশিত নোট ও প্রয়োজনীয় রিসোর্স',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     TextField(
                       controller: _searchController,
                       onChanged: _onSearchChanged,
@@ -151,12 +180,13 @@ class _NotesPageState extends State<NotesPage> {
                         _loadNotes();
                       },
                       decoration: InputDecoration(
-                        hintText: 'নোটের শিরোনাম বা বিষয় খুঁজুন...',
-                        prefixIcon: const Icon(Icons.search),
+                        hintText: _tr('নোট খুঁজুন', 'Search notes'),
+                        prefixIcon: Icon(Icons.search_rounded, color: scheme.primary),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         suffixIcon: _searchController.text.isEmpty
                             ? null
                             : IconButton(
-                                tooltip: 'সার্চ মুছুন',
+                                tooltip: _tr('সার্চ মুছুন', 'Clear search'),
                                 onPressed: () {
                                   _searchDebounce?.cancel();
                                   _searchController.clear();
@@ -166,29 +196,32 @@ class _NotesPageState extends State<NotesPage> {
                                 icon: const Icon(Icons.close),
                               ),
                         filled: true,
+                        fillColor: scheme.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: scheme.outlineVariant),
                         ),
                       ),
                     ),
                     if (categories.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       DropdownButtonFormField<int?>(
                         value: _selectedCategory,
                         isExpanded: true,
                         decoration: InputDecoration(
-                          labelText: 'ক্যাটাগরি',
+                          prefixIcon: Icon(Icons.grid_view_rounded, color: scheme.primary, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           filled: true,
+                          fillColor: scheme.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
+                            borderSide: BorderSide(color: scheme.outlineVariant),
                           ),
                         ),
                         items: [
-                          const DropdownMenuItem<int?>(
+                          DropdownMenuItem<int?>(
                             value: null,
-                            child: Text('সব ক্যাটাগরি'),
+                            child: Text(_tr('সব ক্যাটাগরি', 'All categories')),
                           ),
                           ...categories.map(
                             (category) => DropdownMenuItem<int?>(
@@ -204,6 +237,18 @@ class _NotesPageState extends State<NotesPage> {
                 ),
               ),
             ),
+            if (_result != null)
+              SliverToBoxAdapter(child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                child: Row(children: [
+                  Expanded(child: Text(_tr('স্টাডি নোট', 'Study notes'),
+                    style: Theme.of(context).textTheme.titleMedium)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(_tr('${_result!.total}টি নোট', '${_result!.total} notes'),
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+                ]),
+              )),
             if (_loading && _result == null)
               const SliverFillRemaining(
                 hasScrollBody: false,
@@ -213,22 +258,24 @@ class _NotesPageState extends State<NotesPage> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _ErrorView(
-                  message: _error.toString().replaceFirst('Exception: ', ''),
+                  message: _error is NotesLoadException
+                      ? (_error as NotesLoadException).message(english: Localizations.localeOf(context).languageCode == 'en')
+                      : _error.toString().replaceFirst('Exception: ', ''),
                   onRetry: () => _loadNotes(),
                 ),
               )
-            else if (_result != null && _result!.notes.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyNotesView(),
-              )
+            else if (_result != null && _result!.notes.isEmpty && _error == null)
+              SliverToBoxAdapter(child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: _EmptyNotesView(filtered: _searchController.text.trim().isNotEmpty || _selectedCategory != null),
+              ))
             else ...[
               if (_error != null)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'সর্বশেষ তথ্য লোড হয়নি। আবার চেষ্টা করুন।',
+                      _tr('সর্বশেষ তথ্য লোড হয়নি। আবার চেষ্টা করুন।', 'Latest notes could not be loaded. Try again.'),
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ),
@@ -242,7 +289,6 @@ class _NotesPageState extends State<NotesPage> {
                     return _NoteCard(
                       key: ValueKey(note.id),
                       note: note,
-                      index: index,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -257,24 +303,24 @@ class _NotesPageState extends State<NotesPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8, runSpacing: 4,
                       children: [
                         OutlinedButton(
                           onPressed: _page > 1 ? () => _changePage(_page - 1) : null,
-                          child: const Text('← আগের'),
+                          child: Text(_tr('← আগের', '← Previous')),
                         ),
-                        const SizedBox(width: 16),
                         Text(
                           '$_page / ${_result!.totalPages}',
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        const SizedBox(width: 16),
                         OutlinedButton(
                           onPressed: _page < _result!.totalPages
                               ? () => _changePage(_page + 1)
                               : null,
-                          child: const Text('পরের →'),
+                          child: Text(_tr('পরের →', 'Next →')),
                         ),
                       ],
                     ),
@@ -292,12 +338,10 @@ class _NoteCard extends StatefulWidget {
   const _NoteCard({
     super.key,
     required this.note,
-    required this.index,
     required this.onTap,
   });
 
   final StudyNote note;
-  final int index;
   final VoidCallback onTap;
 
   @override
@@ -326,7 +370,7 @@ class _NoteCardState extends State<_NoteCard> {
       await SavedNotesService.instance.setSaved(widget.note.id, next);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(next ? 'নোটটি সংরক্ষণ করা হয়েছে।' : 'সংরক্ষিত নোট থেকে সরানো হয়েছে।'),
+        content: Text(next ? AppText.of(context, 'নোটটি সংরক্ষণ করা হয়েছে।', 'Note saved.') : AppText.of(context, 'সংরক্ষিত নোট থেকে সরানো হয়েছে।', 'Note removed from bookmarks.')),
         duration: const Duration(seconds: 1),
       ));
     } catch (_) {
@@ -336,58 +380,54 @@ class _NoteCardState extends State<_NoteCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = [
-      const Color(0xFFFFE4DF),
-      const Color(0xFFE4EDFF),
-      const Color(0xFFE5F5E8),
-    ];
-    final iconColors = [notesMaroon, Colors.blue, Colors.green];
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Card(
       color: Theme.of(context).cardColor,
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(17),
-        side: BorderSide(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
         leading: Container(
-          width: 46,
-          height: 46,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: colors[widget.index % colors.length],
-            borderRadius: BorderRadius.circular(13),
+            color: scheme.primary.withValues(alpha: .12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            widget.note.fileUrl == null ? Icons.menu_book_outlined : Icons.description_outlined,
-            color: iconColors[widget.index % iconColors.length],
+            widget.note.locked ? Icons.lock_outline : (widget.note.privatePdf || widget.note.fileUrl != null) ? Icons.description_outlined : Icons.menu_book_outlined,
+            color: scheme.primary, size: 23,
           ),
         ),
-        title: Text(widget.note.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(widget.note.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface)),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 5),
+          padding: const EdgeInsets.only(top: 3),
           child: Text(
             [
-              if(widget.note.locked) '🔒 Premium',
+              if(widget.note.locked || widget.note.premiumOnly) 'Premium',
               if (widget.note.categoryName != null) widget.note.displayCategory(Localizations.localeOf(context).languageCode),
               if (widget.note.summary != null) widget.note.summary!,
-              'বিস্তারিত পড়তে ট্যাপ করুন',
             ].join(' • '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: _saved ? 'সংরক্ষণ থেকে সরান' : 'নোট সংরক্ষণ করুন',
+              tooltip: _saved ? AppText.of(context, 'সংরক্ষণ থেকে সরান', 'Remove bookmark') : AppText.of(context, 'নোট সংরক্ষণ করুন', 'Bookmark note'),
               onPressed: _loading ? null : _toggleSaved,
               icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border,
-                  color: _saved ? notesMaroon : null),
+                  color: _saved ? scheme.primary : scheme.onSurfaceVariant),
             ),
-            const Icon(Icons.chevron_right),
+            Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
           ],
         ),
         onTap: widget.onTap,
@@ -397,23 +437,29 @@ class _NoteCardState extends State<_NoteCard> {
 }
 
 class _EmptyNotesView extends StatelessWidget {
-  const _EmptyNotesView();
+  const _EmptyNotesView({required this.filtered});
+  final bool filtered;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.menu_book_outlined,
-                  size: 54, color: Theme.of(context).colorScheme.outline),
-              const SizedBox(height: 12),
-              const Text('এখনো কোনো প্রকাশিত নোট পাওয়া যায়নি।'),
-            ],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(filtered ? Icons.search_off_rounded : Icons.menu_book_outlined,
+            size: 36, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 8),
+          Text(filtered
+            ? AppText.of(context, 'কোনো নোট পাওয়া যায়নি।', 'No matching notes.')
+            : AppText.of(context, 'এখনো কোনো নোট নেই।', 'No notes published yet.'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: scheme.onSurfaceVariant)),
+        ]),
+      ),
+    );
+  }
 }
 
 class _ErrorView extends StatelessWidget {
@@ -436,7 +482,7 @@ class _ErrorView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('আবার চেষ্টা করুন'),
+                label: Text(AppText.of(context, 'আবার চেষ্টা করুন', 'Try again')),
               ),
             ],
           ),
