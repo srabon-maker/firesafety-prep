@@ -208,8 +208,7 @@ class AuthService {
       }
 
       _invalidateSessionSnapshot();
-    await _sessionStore.write(token.toString());
-    _notifySessionChanged();
+      await _sessionStore.write(token.toString());
       _notifySessionChanged();
 
       _log('STEP 9: Session saved successfully.');
@@ -320,7 +319,8 @@ class AuthService {
     }
 
     _invalidateSessionSnapshot();
-      await _sessionStore.write(token.toString());
+    await _sessionStore.write(token.toString());
+    _notifySessionChanged();
 
     _log('Registration completed successfully.');
 

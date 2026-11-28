@@ -114,6 +114,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Login while Shop is hidden triggers fresh catalog and cart on return',
+      (tester) async {
+    final session = ValueNotifier(0);
+    var reads = 0;
+    var count = 0;
+    Future<List<MarketplaceItem>> catalog(bool _) async {
+      reads++;
+      return [product];
+    }
+    Future<void> show(bool active) async {
+      await tester.pumpWidget(host(active: active, session: session,
+        catalog: catalog, cart: () async => count));
+      await tester.pumpAndSettle();
+    }
+    await show(true);
+    await show(false);
+    count = 4;
+    session.value++;
+    await tester.pumpAndSettle();
+    expect(reads, 1);
+    expect(tester.widget<Badge>(find.byType(Badge)).isLabelVisible, isFalse);
+    await show(true);
+    expect(reads, 2);
+    expect(find.text(product.name), findsOneWidget);
+    expect((tester.widget<Badge>(find.byType(Badge)).label as Text).data, '4');
+    await tester.pumpWidget(const SizedBox.shrink());
+    session.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Session change clears badge and rejects late previous-account count',
       (tester) async {
     final session = ValueNotifier(0);
