@@ -40,7 +40,7 @@ StudyNotesPage emptyPage() => const StudyNotesPage(
 
 void main() {
   testWidgets('Dark Bengali notes has compact header and empty state', (tester) async {
-    await mountNotes(tester, ThemeMode.dark, 'bn', (_, _, _) async => emptyPage());
+    await mountNotes(tester, ThemeMode.dark, 'bn', (_search, _category, _page) async => emptyPage());
     expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 68);
     expect(tester.widget<Text>(find.text('নোট ও রিসোর্স')).style?.fontSize, 15.5);
     expect(find.text('ফায়ার সেফটি স্টাডি নোট'), findsNothing);
@@ -87,7 +87,7 @@ void main() {
 
   testWidgets('Category selection and large text remain usable', (tester) async {
     final selected = <int?>[];
-    await mountNotes(tester, ThemeMode.dark, 'en', (_, category, _) async {
+    await mountNotes(tester, ThemeMode.dark, 'en', (_search, category, _page) async {
       selected.add(category);
       return emptyPage();
     }, scale: 1.6);
