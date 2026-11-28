@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fire_safety_job_prep/screens/career_page.dart';
+import 'package:fire_safety_job_prep/theme/app_theme.dart';
+
+Future<void> mountDirectory(WidgetTester tester, String language,
+    Future<Map<String, dynamic>> Function(String, Map<String, String>) loader,
+    {ThemeMode mode = ThemeMode.dark, double scale = 1}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(360, 800);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
+  await tester.pumpWidget(MaterialApp(
+    theme: AppTheme.lightTheme, darkTheme: AppTheme.darkTheme, themeMode: mode,
+    locale: Locale(language), supportedLocales: const [Locale('bn'), Locale('en')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)), child: child!),
+    home: CareerSection(section: 'directory', directoryRequest: loader),
+  ));
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets('Bengali directory shows compact empty list and consent form', (tester) async {
+    await mountDirectory(tester, 'bn', (action, filters) async =>
+      action == 'my_profile' ? {'profile': null} : {'data': []});
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 68);
+    expect(find.text('পেশাজীবী ডিরেক্টরি'), findsOneWidget);
+    expect(find.text('এখনো কোনো প্রোফাইল নেই।'), findsOneWidget);
+    expect(find.byTooltip('খুঁজুন'), findsOneWidget);
+    await tester.tap(find.text('প্রোফাইল যোগ করুন'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('জমা দিন'), 150);
+    final submit = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'জমা দিন'));
+    expect(submit.onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('English directory keeps server search and opens full profile', (tester) async {
+    final calls = <Map<String, String>>[];
+    await mountDirectory(tester, 'en', (action, filters) async {
+      if (action == 'my_profile') return {'profile': null};
+      calls.add(Map.of(filters));
+      return {'data': [
+        {'id': 1, 'display_name': 'Sample professional', 'role_name': 'Safety Officer',
+          'organization': 'Example Company', 'city': 'Dhaka', 'bio': 'Sample professional summary.'}
+      ]};
+    }, mode: ThemeMode.light);
+    await tester.enterText(find.byType(TextField), 'Safety');
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    expect(calls.last['q'], 'Safety');
+    await tester.tap(find.text('Sample professional'));
+    await tester.pumpAndSettle();
+    expect(find.text('Professional profile'), findsOneWidget);
+    expect(find.text('Approved profile'), findsOneWidget);
+    expect(find.text('Example Company'), findsOneWidget);
+    expect(find.text('Dhaka'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Sample professional summary.'), 120);
+    expect(find.text('Professional summary'), findsOneWidget);
+    expect(find.text('Sample professional summary.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Professional Directory'), findsOneWidget);
+  });
+
+  testWidgets('Large text and omitted optional details remain accessible', (tester) async {
+    await mountDirectory(tester, 'en', (action, filters) async =>
+      action == 'my_profile' ? {'profile': null} : {'data': [
+        {'id': 2, 'display_name': 'Sample member', 'role_name': 'Officer'}
+      ]}, scale: 1.6);
+    await tester.tap(find.text('Sample member'));
+    await tester.pumpAndSettle();
+    expect(find.text('Organization'), findsNothing);
+    expect(find.text('Professional summary'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
