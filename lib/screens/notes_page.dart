@@ -250,8 +250,7 @@ class _NotesPageState extends State<NotesPage> {
                 ]),
               )),
             if (_loading && _result == null)
-              const SliverFillRemaining(
-                hasScrollBody: false,
+              const SliverToBoxAdapter(
                 child: FsLoadingCards(count: 3),
               )
             else if (_error != null && _result == null)
