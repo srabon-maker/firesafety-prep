@@ -157,7 +157,7 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> with WidgetsBindingObse
                           mainAxisAlignment: MainAxisAlignment.end, children: [
                           Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 20,
-                                fontWeight: FontWeight.w800)),
+                                fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
                           Text(body, maxLines: 2, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 13)),
@@ -165,7 +165,7 @@ class _HomeHeroBannerState extends State<HomeHeroBanner> with WidgetsBindingObse
                           Row(mainAxisSize: MainAxisSize.min, children: [
                             Flexible(child: Text(AppText.of(context, 'বিস্তারিত দেখুন', 'View details'),
                               maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Color(0xFFFFD394), fontWeight: FontWeight.w700))),
+                              style: const TextStyle(color: Color(0xFFFFD394), fontWeight: FontWeight.w500))),
                             const Icon(Icons.chevron_right, color: Color(0xFFFFD394), size: 18),
                           ]),
                         ]),

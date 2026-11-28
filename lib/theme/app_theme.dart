@@ -34,7 +34,7 @@ class AppTheme {
       )),
       navigationBarTheme: base.navigationBarTheme.copyWith(
         height: 72, indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: c.primary, linearMinHeight: 5),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),

@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
     if(mounted&&target!=null) await _open(target,search:query);
   }
   Widget _heading(String title,{String? target})=>Padding(padding:const EdgeInsets.fromLTRB(2,8,2,2),child:Row(children:[
-    Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w800))),
+    Expanded(child:Text(title,style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w600))),
     if(target!=null) TextButton(onPressed:()=>_open(target),style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:8),minimumSize:const Size(48,44)),child:Text(_tr('সব দেখুন','View all'))),
   ]));
   // Keep each shortcut's semantic colour, with lighter tones on dark cards.
@@ -124,15 +124,15 @@ class _HomePageState extends State<HomePage> {
 
   RoundedRectangleBorder _shortcutShape() => RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(14),
-    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .62)),
+    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .40)),
   );
 
   Widget _tile(String title,IconData icon,Color color,VoidCallback action)=>Card(
     margin:EdgeInsets.zero, shape:_shortcutShape(),
     child:InkWell(borderRadius:BorderRadius.circular(14),onTap:action,child:Padding(padding:const EdgeInsets.all(5),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
       Container(width:36,height:36,decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(10)),child:Icon(icon,color:_shortcutIconColor(color),size:22)),
-      const SizedBox(height:5),
-      Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w600,fontSize:12,height:1.2)),
+      const SizedBox(height:4),
+      Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w500,fontSize:12,height:1.2)),
     ]))),
   );
   Widget _careerTile(String target, String title, IconData icon, Color color, VoidCallback action) => Card(
@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage> {
       borderRadius: BorderRadius.circular(14),
       onTap: action,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(3, 9, 3, 5),
+        padding: const EdgeInsets.fromLTRB(3, 6, 3, 3),
         child: Column(children: [
           Container(
             key: ValueKey('home-career-icon-$target'),
@@ -155,10 +155,10 @@ class _HomePageState extends State<HomePage> {
             child: Icon(icon, size: 19,
               color: _shortcutIconColor(color)),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Expanded(child: Center(child: Text(title, textAlign: TextAlign.center, maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w600)))),
+            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w500)))),
         ]),
       ),
     ),
@@ -187,7 +187,7 @@ class _HomePageState extends State<HomePage> {
     ])),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
       if(banner&&HomepageService.safeImage(image)) Image.network(image,height:88,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),
       Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+        Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w600)),
         const SizedBox(height:5),Text(body,maxLines:2,overflow:TextOverflow.ellipsis),
       ])),
     ])));
@@ -242,7 +242,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Column(key: const ValueKey('home-marketplace-labels'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, height: 1.2)),
+                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15, height: 1.2)),
                     const SizedBox(height: 1),
                     Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.2)),
                   ])),
@@ -271,14 +271,14 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment:CrossAxisAlignment.start,
           children:[
             Text(title,maxLines:2,overflow:TextOverflow.ellipsis,
-              style:theme.textTheme.titleSmall?.copyWith(fontSize:14,height:1.2,fontWeight:FontWeight.w700)),
+              style:theme.textTheme.titleSmall?.copyWith(fontSize:14,height:1.2,fontWeight:FontWeight.w600)),
             if(subtitle.trim().isNotEmpty)...[
               const SizedBox(height:2),
               Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,
                 style:theme.textTheme.bodySmall?.copyWith(fontSize:12,height:1.2,fontWeight:FontWeight.w400,color:scheme.onSurfaceVariant)),
             ],
           ],
-        ) : Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w700)),
+        ) : Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w600)),
         subtitle:compactJob||subtitle.trim().isEmpty?null:Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.bodySmall?.copyWith(color:scheme.onSurfaceVariant)),
         trailing:Icon(Icons.chevron_right,color:scheme.primary,size:20),onTap:onTap));
   }
@@ -294,10 +294,7 @@ class _HomePageState extends State<HomePage> {
           Row(children:[
             Container(width:42,height:42,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
             const SizedBox(width:10),
-            const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('Fire Safety BD',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w700)),
-              Text('Learn • Prepare • Connect',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white70,fontSize:11)),
-            ])),
+            const Expanded(child: _HomeBrandText()),
             IconButton(
               key: const ValueKey('home-admin-support'),
               tooltip: _tr('অ্যাডমিন সাপোর্ট', 'Admin support'),
@@ -364,15 +361,15 @@ class _HomePageState extends State<HomePage> {
           if(pending&&activation!=null)Card(child:ListTile(leading:Icon(Icons.campaign_outlined,color:Theme.of(context).colorScheme.primary),title:Text(_tr('Premium সুবিধা চালুর আগাম নোটিশ','Upcoming Premium access')),subtitle:Text(_tr('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।','Currently free. Access restrictions begin: ${activation.toString().substring(0,16)} (Bangladesh time).')))),
           if(top)_section('banners',data),
           const SizedBox(height: 8),
-          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:88,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
-          const SizedBox(height: 12),
+          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:80+(MediaQuery.textScalerOf(context).scale(13)-13).clamp(0.0,4.0)*3,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          const SizedBox(height: 10),
           Row(children: [
             Icon(Icons.work_outline,color:Theme.of(context).colorScheme.primary,size:20),
             const SizedBox(width:6),
             Expanded(child:Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'),
-              style:Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w700))),
+              style:Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w600))),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
                 LayoutBuilder(builder: (context, box) {
                   final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
                   // Four compact shortcuts in one row at normal phone widths.
@@ -384,7 +381,7 @@ class _HomePageState extends State<HomePage> {
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 6,
                     mainAxisSpacing: 6,
-                    mainAxisExtent: largeText ? 128 : 84,
+                    mainAxisExtent: largeText ? 128 : (box.maxWidth < 320 ? 84.0 : 78.0) + (MediaQuery.textScalerOf(context).scale(13) - 13).clamp(0.0, 4.0) * 3,
                     children: [
                       for (final item in const [
                         ('alerts', 'চাকরির\nঅ্যালার্ট', 'Job\nalerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
@@ -403,4 +400,52 @@ class _HomePageState extends State<HomePage> {
       })),
     ],
   )))));
+}
+
+// The tagline shares the title's left edge and never exceeds its measured width.
+class _HomeBrandText extends StatelessWidget {
+  const _HomeBrandText();
+
+  @override
+  Widget build(BuildContext context) {
+    const name = 'Fire Safety BD';
+    const titleStyle = TextStyle(
+      color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700,
+      height: 1.05, letterSpacing: 0,
+    );
+    const taglineStyle = TextStyle(
+      color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w400,
+      height: 1.1, letterSpacing: 0,
+    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final painter = TextPainter(
+        text: TextSpan(text: name,
+          style: DefaultTextStyle.of(context).style.merge(titleStyle)),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.localeOf(context),
+        maxLines: 1,
+      )..layout(maxWidth: constraints.maxWidth);
+      final width = painter.width;
+      painter.dispose();
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: width,
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, key: ValueKey('home-brand-title'), maxLines: 1,
+                overflow: TextOverflow.ellipsis, style: titleStyle),
+              SizedBox(height: 2),
+              Text('Learn • Prepare • Connect',
+                key: ValueKey('home-brand-tagline'), maxLines: 1,
+                overflow: TextOverflow.ellipsis, style: taglineStyle),
+            ],
+          ),
+        ),
+      );
+    });
+  }
 }
