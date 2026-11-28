@@ -147,7 +147,7 @@ tbody tr:hover{background:#fffbf8}
 <body>
 <div class="shell">
 <aside class="sidebar fs-unified-side" aria-label="অ্যাডমিন নেভিগেশন">
-<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
+<div class="brand"><a href="fire_safety_job_prep_dashboard.php" class="fs-brand-home" title="ড্যাশবোর্ডে ফিরুন"><img class="logo" src="assets/fire-safety-bd-logo.png?v=177" alt="Fire Safety BD Logo"><span><strong class="brand-name">Fire Safety BD</strong><small class="brand-sub">অ্যাডমিন প্যানেল</small></span></a></div>
 <nav class="nav" aria-label="অ্যাডমিন মেনু">
 <a href="fire_safety_job_prep_dashboard.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>
 <a href="questions.php"><span class="ico">ⓘ</span>প্রশ্ন ব্যাংক</a>
