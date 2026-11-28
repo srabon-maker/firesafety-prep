@@ -62,7 +62,7 @@ void main() {
     expect(tester.getSize(marketplace).height, closeTo(expectedHeight, .1));
     expect(tester.getSize(marketplace).height, greaterThanOrEqualTo(68));
     expect(tester.getSize(marketIcon), const Size(42, 42));
-    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 15);
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 14);
     expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     final brand = find.byKey(const ValueKey('home-brand-title'));
@@ -91,7 +91,7 @@ void main() {
     expect(tester.getCenter(brand).dy, closeTo(tester.getCenter(find.byTooltip('অ্যাডমিন সাপোর্ট')).dy, .1));
     expect(tester.widget<Text>(find.text('চাকরির খবর')).style?.fontWeight, FontWeight.w500);
     expect(tester.widget<Text>(find.text('মক\nইন্টারভিউ')).style?.fontWeight, FontWeight.w500);
-    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w600);
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w500);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
     expect(find.byTooltip('অ্যাডমিন সাপোর্ট'), findsOneWidget);
     expect(find.byIcon(Icons.support_agent_rounded), findsOneWidget);
@@ -145,27 +145,24 @@ void main() {
   });
 
   for(final language in ['bn','en']){
-    testWidgets('Three home headings share 14dp styling and real job deadline in $language',(tester)async{
+    testWidgets('Four home headings share 14dp medium styling and omit preview deadline in $language',(tester)async{
       final deadline=DateTime(2099,12,31);
       final bn=language=='bn';
       await mountHome(tester,language,mode:bn?ThemeMode.dark:ThemeMode.light,deadline:deadline);
       await tester.drag(find.byType(ListView).first,const Offset(0,-500));
       await tester.pumpAndSettle();
       final labels=bn
-        ?['ক্যারিয়ার ডেভেলপমেন্ট','সর্বশেষ চাকরির বিজ্ঞপ্তি','নতুন স্টাডি নোট']
-        :['Career development','Latest jobs','New study notes'];
+        ?['ক্যারিয়ার ডেভেলপমেন্ট','সর্বশেষ চাকরির বিজ্ঞপ্তি','নতুন স্টাডি নোট','মার্কেটপ্লেস']
+        :['Career development','Latest jobs','New study notes','Marketplace'];
       final headings=labels.map(find.text).toList();
       for(final heading in headings){
         expect(heading,findsOneWidget);
         final text=tester.widget<Text>(heading);
         expect(text.style?.fontSize,14);
-        expect(text.style?.fontWeight,FontWeight.w600);
+        expect(text.style?.fontWeight,FontWeight.w500);
       }
-      final context=tester.element(find.text('Sample job'));
-      final date=MaterialLocalizations.of(context).formatCompactDate(deadline);
-      final deadlineFinder=find.text(bn?'শেষ তারিখ: $date':'Deadline: $date');
-      expect(deadlineFinder,findsOneWidget);
-      expect(tester.widget<Text>(deadlineFinder).style?.fontSize,11);
+      expect(find.text('Sample job'),findsOneWidget);
+      expect(find.textContaining(bn?'শেষ তারিখ:':'Deadline:'),findsNothing);
       expect(find.text('Example Company'),findsOneWidget);
       expect(find.text('Dhaka'),findsNothing);
       expect(tester.takeException(),isNull);

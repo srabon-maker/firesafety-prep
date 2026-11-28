@@ -114,7 +114,7 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(width:6),
       ],
       Expanded(child:Text(title,style:compact
-        ?theme.textTheme.titleSmall?.copyWith(fontSize:14,fontWeight:FontWeight.w600)
+        ?theme.textTheme.titleSmall?.copyWith(fontSize:14,fontWeight:FontWeight.w500)
         :theme.textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w600))),
       if(target!=null) TextButton(onPressed:()=>_open(target),
         style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:8),
@@ -141,11 +141,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  String _jobDeadline(DateTime? deadline) {
-    if(deadline==null)return '';
-    final date=MaterialLocalizations.of(context).formatCompactDate(deadline);
-    return _tr('শেষ তারিখ: $date','Deadline: $date');
-  }
   // Keep each shortcut's semantic colour, with lighter tones on dark cards.
   Color _shortcutIconColor(Color color) {
     if (Theme.of(context).brightness != Brightness.dark) return color;
@@ -240,7 +235,7 @@ class _HomePageState extends State<HomePage> {
         if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'), onRetry: _refresh);
         final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
         if(jobs.isEmpty)return FsStatusCard(icon:Icons.work_outline,message:_tr('বর্তমানে কোনো চলমান বিজ্ঞপ্তি নেই।','No active jobs published.'));
-        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),deadlineLabel:_jobDeadline(job.deadline),compactJob:true,onTap:()=>_open('jobs',search:job.title))]);
+        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),compactJob:true,onTap:()=>_open('jobs',search:job.title))]);
       })]);
       case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes',icon:Icons.menu_book_outlined,compact:true),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
@@ -279,7 +274,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Column(key: const ValueKey('home-marketplace-labels'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15, height: 1.2)),
+                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14, height: 1.2)),
                     const SizedBox(height: 1),
                     Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.2)),
                   ])),
@@ -297,7 +292,7 @@ class _HomePageState extends State<HomePage> {
       default:return const SizedBox.shrink();
     }
   }
-  Widget _previewCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, bool compactJob = false, String deadlineLabel = ''}) {
+  Widget _previewCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, bool compactJob = false}) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Card(margin:const EdgeInsets.only(bottom:6),clipBehavior:Clip.antiAlias,
@@ -313,12 +308,6 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height:2),
               Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,
                 style:theme.textTheme.bodySmall?.copyWith(fontSize:12,height:1.2,fontWeight:FontWeight.w400,color:scheme.onSurfaceVariant)),
-            ],
-            if(deadlineLabel.isNotEmpty)...[
-              const SizedBox(height:2),
-              Text(deadlineLabel,maxLines:2,overflow:TextOverflow.ellipsis,
-                style:theme.textTheme.bodySmall?.copyWith(fontSize:11,height:1.25,
-                  fontWeight:FontWeight.w400,color:scheme.onSurfaceVariant)),
             ],
           ],
         ) : Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w600)),
