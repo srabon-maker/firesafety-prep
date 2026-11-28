@@ -8,7 +8,8 @@ import 'package:fire_safety_job_prep/theme/app_theme.dart';
 
 Future<void> mountHome(WidgetTester tester, String language,
     {ThemeMode mode = ThemeMode.dark, double scale = 1, double width = 360,
-    List<String> sections = const ['marketplace', 'jobs', 'notes']}) async {
+    List<String> sections = const ['marketplace', 'jobs', 'notes'],
+    String company = 'Example Company'}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -24,7 +25,7 @@ Future<void> mountHome(WidgetTester tester, String language,
         textScaler: TextScaler.linear(scale)), child: child!),
     home: Scaffold(body: HomePage(
       loadHome: () async => {'sections': sections},
-      loadJobs: () async => [JobCircular(id: 1, organization: 'Example Company',
+      loadJobs: () async => [JobCircular(id: 1, organization: company,
         title: 'Sample job', location: 'Dhaka', publishedAt: DateTime(2026, 1, 1))],
       loadNotes: () async => const StudyNotesPage(notes: [], categories: [], page: 1, totalPages: 1, total: 0),
     )),
@@ -69,8 +70,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
     expect(find.text('Sample job'), findsOneWidget);
-    expect(find.text('Example Company • Dhaka'), findsOneWidget);
+    expect(find.text('Example Company'), findsOneWidget);
+    expect(find.text('Dhaka'), findsNothing);
+    expect(find.text('Example Company • Dhaka'), findsNothing);
     expect(find.text('No notes published.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Missing company never substitutes workplace as company name', (tester) async {
+    await mountHome(tester, 'en', company: '  ');
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    final job = tester.widget<ListTile>(find.widgetWithText(ListTile, 'Sample job'));
+    expect(job.subtitle, isNull);
+    expect(find.text('Dhaka'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
