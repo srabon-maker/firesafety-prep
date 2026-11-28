@@ -8,7 +8,8 @@ import 'package:fire_safety_job_prep/theme/app_theme.dart';
 
 Future<void> mountHome(WidgetTester tester, String language,
     {ThemeMode mode = ThemeMode.dark, double scale = 1, double width = 360,
-    List<String> sections = const ['marketplace', 'jobs', 'notes']}) async {
+    List<String> sections = const ['marketplace', 'jobs', 'notes'],
+    String company = 'Example Company'}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -24,7 +25,7 @@ Future<void> mountHome(WidgetTester tester, String language,
         textScaler: TextScaler.linear(scale)), child: child!),
     home: Scaffold(body: HomePage(
       loadHome: () async => {'sections': sections},
-      loadJobs: () async => [JobCircular(id: 1, organization: 'Example Company',
+      loadJobs: () async => [JobCircular(id: 1, organization: company,
         title: 'Sample job', location: 'Dhaka', publishedAt: DateTime(2026, 1, 1))],
       loadNotes: () async => const StudyNotesPage(notes: [], categories: [], page: 1, totalPages: 1, total: 0),
     )),
@@ -36,7 +37,7 @@ void main() {
   testWidgets('Bengali home preserves all ten shortcuts and compact grids', (tester) async {
     await mountHome(tester, 'bn');
     for (final label in ['চাকরির খবর','প্রশ্ন ব্যাংক','স্টাডি নোট','মডেল টেস্ট',
-      'ইন্টারভিউ','আমার প্রস্তুতি','চাকরির অ্যালার্ট','মক ইন্টারভিউ','প্রশিক্ষণ ও কোর্স','পেশাজীবী ডিরেক্টরি']) {
+      'ইন্টারভিউ','আমার প্রস্তুতি','চাকরির\nঅ্যালার্ট','মক\nইন্টারভিউ','প্রশিক্ষণ\nও কোর্স','পেশাজীবী\nডিরেক্টরি']) {
       expect(find.text(label), findsOneWidget);
     }
     final grids = tester.widgetList<GridView>(find.byType(GridView)).toList();
@@ -46,6 +47,12 @@ void main() {
     expect(first.mainAxisExtent, 88);
     expect(second.crossAxisCount, 4);
     expect(second.mainAxisExtent, 84);
+    final iconTops = [for (final target in ['alerts','mock','courses','directory'])
+      tester.getTopLeft(find.byKey(ValueKey('home-career-icon-$target'))).dy];
+    expect(iconTops.toSet().length, 1);
+    final mockCard = tester.widget<Card>(find.byKey(const ValueKey('home-career-mock')));
+    final shape = mockCard.shape! as RoundedRectangleBorder;
+    expect(shape.side.color.a, closeTo(.62, .01));
     expect(find.text('মার্কেটপ্লেস'), findsOneWidget);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
@@ -56,13 +63,34 @@ void main() {
     await mountHome(tester, 'en', mode: ThemeMode.light);
     final list = find.byType(ListView).first;
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
+    final status = tester.widget<DecoratedBox>(find.byKey(const ValueKey('home-status-gradient')));
+    expect((status.decoration as BoxDecoration).gradient, isA<LinearGradient>());
     expect(find.text('Marketplace'), findsOneWidget);
     await tester.drag(list, const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
     expect(find.text('Sample job'), findsOneWidget);
-    expect(find.text('Example Company • Dhaka'), findsOneWidget);
+    expect(find.text('Example Company'), findsOneWidget);
+    final jobTitle = find.text('Sample job');
+    final companyName = find.text('Example Company');
+    expect(tester.getTopLeft(companyName).dy - tester.getBottomLeft(jobTitle).dy, closeTo(2, .1));
+    expect(tester.widget<Text>(jobTitle).style?.fontSize, 14);
+    expect(tester.widget<Text>(jobTitle).style?.fontWeight, FontWeight.w700);
+    expect(tester.widget<Text>(companyName).style?.fontSize, 12);
+    expect(tester.widget<Text>(companyName).style?.fontWeight, FontWeight.w400);
+    expect(find.text('Dhaka'), findsNothing);
+    expect(find.text('Example Company • Dhaka'), findsNothing);
     expect(find.text('No notes published.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Missing company never substitutes workplace as company name', (tester) async {
+    await mountHome(tester, 'en', company: '  ');
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    final job = tester.widget<ListTile>(find.widgetWithText(ListTile, 'Sample job'));
+    expect(job.subtitle, isNull);
+    expect(find.text('Dhaka'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -74,7 +102,7 @@ void main() {
     expect(find.text('My preparation'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(find.text('Professional directory'), findsOneWidget);
+    expect(find.text('Professional\ndirectory'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
