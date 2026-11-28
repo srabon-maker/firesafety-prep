@@ -188,7 +188,9 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         child: FutureBuilder<Map<String, dynamic>>(
           future: _data,
           builder: (context, snapshot) {
-            final rows = HomepageService.rows(snapshot.data?['data']);
+            final raw = snapshot.data?['data'];
+            final valid = raw is List && raw.every((item) => item is Map);
+            final rows = valid ? HomepageService.rows(raw) : <Map<String, dynamic>>[];
             final query = _search.text.trim().toLowerCase();
             final filtered = rows.where((row) => categoryMatches(row, 'category', query)).toList();
             return ListView(
@@ -215,7 +217,7 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
                 const SizedBox(height: 14),
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const FsLoadingCards(count: 3)
-                else if (snapshot.hasError || !snapshot.hasData)
+                else if (snapshot.hasError || !snapshot.hasData || !valid)
                   FsStatusCard(icon: Icons.error_outline,
                     message: _tr('প্রশ্নের বিভাগ লোড হয়নি।', 'Could not load categories.'),
                     onRetry: _refresh)
@@ -462,11 +464,14 @@ class _InterviewPageState extends State<InterviewPage> {
           builder: (context, snapshot) {
             final waiting = snapshot.connectionState == ConnectionState.waiting;
             final data = waiting ? null : snapshot.data;
-            if (data != null && !snapshot.hasError) {
+            final valid = data != null && data['data'] is List &&
+                (data['data'] as List).every((item) => item is Map) &&
+                data['roles'] is List && data['industries'] is List;
+            if (valid && !snapshot.hasError) {
               _roles = HomepageService.strings(data['roles']);
               _industries = HomepageService.strings(data['industries']);
             }
-            final rows = data == null ? <Map<String, dynamic>>[] : HomepageService.rows(data['data']);
+            final rows = valid ? HomepageService.rows(data['data']) : <Map<String, dynamic>>[];
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
@@ -488,7 +493,7 @@ class _InterviewPageState extends State<InterviewPage> {
                 _languagePicker(),
                 const SizedBox(height: 12),
                 if (waiting) const FsLoadingCards(count: 2)
-                else if (snapshot.hasError || data == null)
+                else if (snapshot.hasError || data == null || !valid)
                   FsStatusCard(icon: Icons.error_outline,
                     message: _tr('ইন্টারভিউ প্রশ্ন লোড হয়নি।', 'Could not load interview questions.'),
                     onRetry: _refresh)
