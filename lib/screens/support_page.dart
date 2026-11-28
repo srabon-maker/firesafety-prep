@@ -108,33 +108,102 @@ class _SupportPageState extends State<SupportPage>{
       ]));
   }
 
+  Widget _paymentTicket(Map row,ColorScheme colors){
+    final status=_status[row['status']]??'';
+    final plan=_plans[row['plan_code']]??'';
+    final answered=row['status']=='answered';
+    final closed=row['status']=='closed';
+    final badgeColor=closed?colors.onSurfaceVariant
+      :answered?colors.onTertiaryContainer:colors.onSecondaryContainer;
+    final badgeBackground=closed?colors.surfaceContainerHighest
+      :answered?colors.tertiaryContainer:colors.secondaryContainer;
+    return Card(
+      key:ValueKey('payment-ticket-${row['id']}'),
+      margin:const EdgeInsets.only(bottom:6),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:colors.outlineVariant)),
+      child:ListTile(
+        contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+        minVerticalPadding:4,
+        minLeadingWidth:24,
+        horizontalTitleGap:10,
+        leading:Icon(answered?Icons.mark_email_unread_outlined:Icons.chat_bubble_outline,
+          color:colors.primary,size:22),
+        title:Text(row['subject'].toString(),maxLines:2,overflow:TextOverflow.ellipsis,
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w500,height:1.25)),
+        subtitle:Padding(padding:const EdgeInsets.only(top:4),
+          child:Wrap(spacing:6,runSpacing:3,crossAxisAlignment:WrapCrossAlignment.center,
+            children:[
+              if(status.isNotEmpty)Container(
+                padding:const EdgeInsets.symmetric(horizontal:5,vertical:1),
+                decoration:BoxDecoration(color:badgeBackground,
+                  borderRadius:BorderRadius.circular(4)),
+                child:Text(status,style:TextStyle(fontSize:10,height:1.2,color:badgeColor))),
+              if(plan.isNotEmpty&&row['plan_code']!='none')
+                Text(plan,style:TextStyle(fontSize:10,color:colors.onSurfaceVariant)),
+            ])),
+        trailing:Icon(Icons.chevron_right,size:18,color:colors.onSurfaceVariant),
+        onTap:()=>_open(row['id'].toString()),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context)=>Scaffold(
     appBar:widget.generalSupport
       ?_generalSupportHeader(context,actions:[IconButton(onPressed:()=>_load(),
         icon:const Icon(Icons.refresh),tooltip:_tr('রিফ্রেশ','Refresh'))])
-      :AppBar(title:const Text('পেমেন্ট ও সদস্যপদ সহায়তা'),actions:[IconButton(
-        onPressed:()=>_load(),icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ')]),
+      :AppBar(
+        toolbarHeight:68,
+        titleSpacing:8,
+        backgroundColor:Theme.of(context).brightness==Brightness.dark
+          ?const Color(0xFF36060D):const Color(0xFF650D18),
+        foregroundColor:Colors.white,
+        title:const Text('পেমেন্ট সহায়তা',
+          key:ValueKey('payment-support-title'),
+          semanticsLabel:'পেমেন্ট ও সদস্যপদ সহায়তা',
+          maxLines:2,overflow:TextOverflow.ellipsis,
+          style:TextStyle(fontSize:15.5,fontWeight:FontWeight.w500,height:1.2)),
+        actions:[IconButton(onPressed:()=>_load(),
+          icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ')]),
     body:FutureBuilder<Map<String,dynamic>>(future:_data,builder:(context,snapshot){
       final data=snapshot.connectionState==ConnectionState.waiting?null:snapshot.data;
       final rows=(data?['data'] as List? ?? []).whereType<Map>();
       if(widget.generalSupport)return _generalList(snapshot,rows,data);
-      return ListView(padding:const EdgeInsets.all(16),children:[
-        const Text(_warning),
-        const SizedBox(height:12),
-        FilledButton.icon(onPressed:_compose,icon:const Icon(Icons.edit_outlined),label:const Text('নতুন মেসেজ')),
+      final colors=Theme.of(context).colorScheme;
+      return ListView(padding:const EdgeInsets.all(12),children:[
+        Container(
+          key:const ValueKey('payment-support-warning'),
+          padding:const EdgeInsets.all(8),
+          decoration:BoxDecoration(color:colors.surfaceContainerHigh,
+            borderRadius:BorderRadius.circular(8)),
+          child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Icon(Icons.gpp_maybe_outlined,size:16,color:colors.primary),
+            const SizedBox(width:6),
+            Expanded(child:Text(_warning,style:TextStyle(fontSize:11,
+              height:1.4,color:colors.onSurfaceVariant))),
+          ]),
+        ),
+        const SizedBox(height:8),
+        FilledButton.icon(
+          key:const ValueKey('payment-support-compose'),
+          onPressed:_compose,icon:const Icon(Icons.edit_outlined,size:18),
+          style:FilledButton.styleFrom(minimumSize:const Size(48,44),
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)),
+            textStyle:const TextStyle(fontSize:14,fontWeight:FontWeight.w500)),
+          label:const Text('নতুন মেসেজ')),
+        const SizedBox(height:4),
         if(snapshot.connectionState==ConnectionState.waiting)const Center(child:CircularProgressIndicator())
         else if(snapshot.hasError||data==null)...[
           const Text('মেসেজ লোড হয়নি। লগইন ও সংযোগ পরীক্ষা করুন।'),
           OutlinedButton(onPressed:()=>_load(),child:const Text('আবার চেষ্টা করুন')),
         ]else...[
           if(rows.isEmpty)const Text('কোনো কথোপকথন নেই।'),
-          for(final row in rows)Card(child:ListTile(
-            leading:Icon(row['status']=='answered'?Icons.mark_email_unread_outlined:Icons.chat_bubble_outline),
-            title:Text(row['subject'].toString()),
-            subtitle:Text('${_status[row['status']]??''} • ${_plans[row['plan_code']]??''}'),
-            trailing:const Icon(Icons.chevron_right),onTap:()=>_open(row['id'].toString()))),
-          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+          for(final row in rows)_paymentTicket(row,colors),
+          if(_page>1||data['has_more']==true)
+          Row(key:const ValueKey('payment-support-pagination'),
+            mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
             TextButton(onPressed:_page>1?()=>_load(_page-1):null,child:const Text('আগের পেজ')),
             Text('$_page'),
             TextButton(onPressed:data['has_more']==true?()=>_load(_page+1):null,child:const Text('পরের পেজ')),
