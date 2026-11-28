@@ -9,7 +9,7 @@ deployment:
     - /bin/test -d "$DEPLOYPATH"
     - /bin/test -f "$DEPLOYPATH/db.php"
     - /bin/test -f "$DEPLOYPATH/admin_helpers.php"
-    - 'set -eu; /bin/test -s backend/assets/fire-safety-bd-logo.png; /bin/test -s assets/fire_safety_job_prep_logo.png; /bin/test -d "$DEPLOYPATH/assets"; /bin/test ! -L "$DEPLOYPATH/assets"; /bin/test -f "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; /bin/test ! -L "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; echo "9fe54525ef24693cd84e829c7c048261be5e28d559606746d52cdb7b21112fe8  backend/assets/fire-safety-bd-logo.png" | sha256sum -c -; echo "5f0aeb5f4c7ec87e59cf7e89bf6cd89c022245152d128b5ec4139d3d2e433900  assets/fire_safety_job_prep_logo.png" | sha256sum -c -'
+    - 'set -eu; /bin/test -s backend/assets/fire-safety-bd-logo.png; /bin/test -s assets/fire_safety_job_prep_logo.png; /bin/test -d "$DEPLOYPATH/assets"; /bin/test ! -L "$DEPLOYPATH/assets"; /bin/test -f "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; /bin/test ! -L "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; echo "1adc98f58261474be38e1c68197a99388428f63762fc21e611fff64b8b87164e  backend/assets/fire-safety-bd-logo.png" | sha256sum -c -; echo "1adc98f58261474be38e1c68197a99388428f63762fc21e611fff64b8b87164e  assets/fire_safety_job_prep_logo.png" | sha256sum -c -'
     - /bin/test -f backend/support_common.php
     - /bin/test -f backend/support_admin.php
     - /bin/test -f backend/api/support/index.php
