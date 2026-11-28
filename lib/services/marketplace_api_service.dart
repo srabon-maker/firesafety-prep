@@ -7,6 +7,13 @@ import '../models/marketplace_category.dart';
 import '../models/marketplace_item.dart';
 import 'auth_service.dart';
 
+class _TransientMarketplaceRead implements Exception {
+  const _TransientMarketplaceRead(this.statusCode);
+  final int statusCode;
+  @override
+  String toString() => 'Marketplace temporarily unavailable (HTTP $statusCode)';
+}
+
 class MarketplaceApiService {
   MarketplaceApiService._();
 
@@ -66,6 +73,35 @@ class MarketplaceApiService {
         .timeout(requestTimeout);
     return _decodeResponse(response);
   }
+
+  // Retry only idempotent public catalog reads, never cart/order mutations.
+  static Future<T> retryPublicRead<T>(Future<T> Function() read, {
+    Duration delay = const Duration(milliseconds: 600),
+  }) async {
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await read();
+      } catch (error) {
+        final transient = error is TimeoutException ||
+            error is http.ClientException ||
+            error is _TransientMarketplaceRead;
+        if (!transient || attempt >= 1) rethrow;
+        await Future<void>.delayed(delay);
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getPublic(String endpoint) =>
+      retryPublicRead(() async {
+        final response = await http.get(
+          Uri.parse('$apiBaseUrl$endpoint'),
+          headers: await _headers(),
+        ).timeout(requestTimeout);
+        if (const [408, 500, 502, 503, 504].contains(response.statusCode)) {
+          throw _TransientMarketplaceRead(response.statusCode);
+        }
+        return _decodeResponse(response);
+      });
 
   Future<Map<String, dynamic>> post(
     String endpoint, {
@@ -135,7 +171,7 @@ class MarketplaceApiService {
   Future<List<MarketplaceItem>> fetchCatalog({
     required bool isService,
   }) async {
-    final response = await get(
+    final response = await getPublic(
       isService ? servicesEndpoint : productsEndpoint,
     );
     return parseCatalogResponse(response, isService: isService);
@@ -144,7 +180,7 @@ class MarketplaceApiService {
   Future<List<MarketplaceCategory>> fetchCategories({
     required bool isService,
   }) async {
-    final response = await get(categoriesEndpoint);
+    final response = await getPublic(categoriesEndpoint);
     return parseCategoriesResponse(response, isService: isService);
   }
 }

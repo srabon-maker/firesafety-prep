@@ -52,6 +52,10 @@ class AuthService {
   Future<Map<String, dynamic>?>? _validationInFlight;
   String? _validationInFlightToken;
   int _sessionEpoch = 0;
+  // Notify UI only after a session is saved or removed. Never expose a token.
+  final ValueNotifier<int> _sessionChanges = ValueNotifier(0);
+  ValueListenable<int> get sessionChanges => _sessionChanges;
+  void _notifySessionChanged() => _sessionChanges.value++;
   static const Duration _sessionCacheLifetime = Duration(minutes: 2);
 
   void _invalidateSessionSnapshot() {
@@ -205,6 +209,7 @@ class AuthService {
 
       _invalidateSessionSnapshot();
       await _sessionStore.write(token.toString());
+      _notifySessionChanged();
 
       _log('STEP 9: Session saved successfully.');
       _log('GOOGLE LOGIN COMPLETED.');
@@ -314,7 +319,8 @@ class AuthService {
     }
 
     _invalidateSessionSnapshot();
-      await _sessionStore.write(token.toString());
+    await _sessionStore.write(token.toString());
+    _notifySessionChanged();
 
     _log('Registration completed successfully.');
 
@@ -390,6 +396,7 @@ class AuthService {
       // An older in-flight request must never delete a newer login token.
       if (await _sessionStore.deleteIfMatches(token)) {
         _invalidateSessionSnapshot();
+        _notifySessionChanged();
       }
       return null;
     }
@@ -399,6 +406,7 @@ class AuthService {
         data['authenticated'] == false) {
       if (await _sessionStore.deleteIfMatches(token)) {
         _invalidateSessionSnapshot();
+        _notifySessionChanged();
       }
       return null;
     }
@@ -492,6 +500,7 @@ class AuthService {
   Future<void> _clearLocalSession() async {
     _invalidateSessionSnapshot();
     await _sessionStore.clear();
+    _notifySessionChanged();
     try {
       await _initializeGoogleSignIn();
       await _googleSignIn.signOut();

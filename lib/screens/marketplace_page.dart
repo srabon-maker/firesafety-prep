@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/design_system.dart';
 
@@ -64,7 +65,17 @@ class _StockLimitException implements Exception {
 }
 
 class MarketplacePage extends StatefulWidget {
-  const MarketplacePage({super.key});
+  const MarketplacePage({
+    super.key, this.active = true, this.loadCatalog, this.loadCategories,
+    this.loadEngagement, this.loadCartCount, this.sessionChanges,
+  });
+
+  final bool active;
+  final Future<List<MarketplaceItem>> Function(bool isService)? loadCatalog;
+  final Future<List<MarketplaceCategory>> Function(bool isService)? loadCategories;
+  final Future<MarketplaceEngagement> Function()? loadEngagement;
+  final Future<int> Function()? loadCartCount;
+  final ValueListenable<int>? sessionChanges;
 
   @override
   State<MarketplacePage> createState() => _MarketplacePageState();
@@ -81,9 +92,16 @@ class _MarketplacePageState extends State<MarketplacePage> {
   String _sort = 'featured';
   late Future<List<MarketplaceItem>> _catalog;
   late Future<List<MarketplaceCategory>> _categoryOptions;
-  late Future<MarketplaceEngagement> _engagement;
   MarketplaceEngagement? _engagementCache;
-  int _engagementEpoch = 0;
+  late final ValueListenable<int> _sessionChanges;
+  int _cartEpoch = 0;
+  Future<void>? _cartLoad;
+  bool _refreshOnActivation = false;
+  static const _catalogFreshness = Duration(minutes: 1);
+  final Map<int, DateTime> _lastCatalogSuccess = {};
+  final Map<int, Future<List<MarketplaceItem>>> _catalogPending = {};
+  final Map<int, Future<List<MarketplaceCategory>>> _categoryPending = {};
+  final Map<int, Future<MarketplaceEngagement>> _engagementPending = {};
 
   // Last loaded data of each tab (0 = products, 1 = services). While a tab
   // reloads, its old data stays on screen, so the page does not jump.
@@ -93,38 +111,84 @@ class _MarketplacePageState extends State<MarketplacePage> {
   @override
   void initState() {
     super.initState();
+    _sessionChanges = widget.sessionChanges ?? AuthService.instance.sessionChanges;
+    _sessionChanges.addListener(_onSessionChanged);
     _reload();
     _loadCartCount();
   }
 
+  @override
+  void didUpdateWidget(covariant MarketplacePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      if (_needsRefresh()) _reload();
+      _loadCartCount();
+    }
+  }
+
+  bool _needsRefresh() {
+    final last = _lastCatalogSuccess[_tab];
+    return _refreshOnActivation || last == null ||
+        DateTime.now().difference(last) >= _catalogFreshness ||
+        !_categoryCache.containsKey(_tab) || _engagementCache == null;
+  }
+
+  void _onSessionChanged() {
+    if (!mounted) return;
+    // Public catalog may be retained; account-specific badge must not be.
+    _cartEpoch++;
+    _cartLoad = null;
+    _refreshOnActivation = true;
+    setState(() {
+      _cartCount = 0;
+      if (widget.active) _reload();
+    });
+    if (widget.active) _loadCartCount();
+  }
+
+  Future<T> _fetchOnce<T>(Map<int, Future<T>> pending, int key,
+      Future<T> Function() read, void Function(T) onSuccess) {
+    final existing = pending[key];
+    if (existing != null) return existing;
+    late final Future<T> request;
+    request = Future<T>.sync(read).then((value) {
+      if (mounted) onSuccess(value);
+      return value;
+    }).whenComplete(() {
+      if (identical(pending[key], request)) pending.remove(key);
+    });
+    pending[key] = request;
+    // Hidden tabs may not have a FutureBuilder subscribed yet.
+    request.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return request;
+  }
+
   void _reload() {
+    _refreshOnActivation = false;
     final tab = _tab;
-    final epoch = ++_engagementEpoch;
-    _engagement = MarketplaceApiService.instance.get('engagement.php').then((response) {
-      final data = MarketplaceEngagement.fromJson(Map<String,dynamic>.from(response['data'] as Map));
-      if (mounted && epoch == _engagementEpoch) setState(() => _engagementCache = data);
-      return data;
-    });
-    _engagement.then<void>((_) {}, onError: (Object _, StackTrace __) {});
-    _catalog = MarketplaceApiService.instance
-        .fetchCatalog(isService: tab == 1)
-        .then((items) {
-      _catalogCache[tab] = items;
-      if (mounted && tab == _tab) setState(() {});
-      return items;
-    });
-    _categoryOptions = MarketplaceApiService.instance
-        .fetchCategories(isService: tab == 1)
-        .then((categories) {
-      _categoryCache[tab] = categories;
-      return categories;
-    });
-    _catalog.then<void>((_) {}, onError: (Object _, StackTrace __) {});
-    _categoryOptions.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _fetchOnce(_engagementPending, 0, () async {
+      if (widget.loadEngagement != null) return widget.loadEngagement!();
+      final response = await MarketplaceApiService.instance.getPublic('engagement.php');
+      return MarketplaceEngagement.fromJson(
+        Map<String, dynamic>.from(response['data'] as Map));
+    }, (data) => setState(() => _engagementCache = data));
+    _catalog = _fetchOnce(_catalogPending, tab,
+        () => widget.loadCatalog?.call(tab == 1) ??
+          MarketplaceApiService.instance.fetchCatalog(isService: tab == 1),
+        (items) {
+          _catalogCache[tab] = items;
+          _lastCatalogSuccess[tab] = DateTime.now();
+          if (tab == _tab) setState(() {});
+        });
+    _categoryOptions = _fetchOnce(_categoryPending, tab,
+        () => widget.loadCategories?.call(tab == 1) ??
+          MarketplaceApiService.instance.fetchCategories(isService: tab == 1),
+        (categories) => _categoryCache[tab] = categories);
   }
 
   @override
   void dispose() {
+    _sessionChanges.removeListener(_onSessionChanged);
     _search.dispose();
     _addingNotifier.dispose();
     super.dispose();
@@ -153,19 +217,30 @@ class _MarketplacePageState extends State<MarketplacePage> {
             'Something went wrong. Please try again.');
   }
 
-  Future<void> _loadCartCount() async {
-    try {
-      final token = await AuthService.instance.getSessionToken();
-      if (token == null || token.isEmpty) {
-        if (mounted) setState(() => _cartCount = 0);
-        return;
-      }
-      final cart = await MarketplaceTransactionService.instance.getCart();
-      if (mounted) setState(() => _cartCount = cart.count);
-    } catch (_) {
-      // The public catalog remains usable even when a session expires.
-      if (mounted) setState(() => _cartCount = 0);
-    }
+  Future<int> _readCartCount() async {
+    if (widget.loadCartCount != null) return widget.loadCartCount!();
+    final token = await AuthService.instance.getSessionToken();
+    if (token == null || token.isEmpty) return 0;
+    final cart = await MarketplaceTransactionService.instance.getCart();
+    return cart.count;
+  }
+
+  Future<void> _loadCartCount() {
+    if (_adding) return Future<void>.value();
+    final current = _cartLoad;
+    if (current != null) return current;
+    final epoch = _cartEpoch;
+    late final Future<void> pending;
+    pending = Future<int>.sync(_readCartCount).then<void>((count) {
+      if (mounted && epoch == _cartEpoch) setState(() => _cartCount = count);
+    }, onError: (Object _, StackTrace __) {
+      // Never block the public catalog on an account-specific read.
+      if (mounted && epoch == _cartEpoch) setState(() => _cartCount = 0);
+    }).whenComplete(() {
+      if (identical(_cartLoad, pending)) _cartLoad = null;
+    });
+    _cartLoad = pending;
+    return pending;
   }
 
   Future<void> _add(MarketplaceItem item) async {
@@ -173,17 +248,22 @@ class _MarketplacePageState extends State<MarketplacePage> {
     if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
     final id = int.tryParse(item.id);
     if (id == null || id < 1) return;
+    // An earlier badge read must not overwrite this newer cart mutation.
+    _cartEpoch++;
+    _cartLoad = null;
+    final session = _sessionChanges.value;
     _setAdding(true);
     try {
       final service = MarketplaceTransactionService.instance;
       final cart = await service.getCart();
+      if (!mounted || session != _sessionChanges.value) return;
       final existing = cart.items.where((line) => line.productId == id);
       final quantity = existing.isEmpty ? 0 : existing.first.quantity;
       if (quantity >= 99 || quantity >= (item.stock ?? 0)) {
         throw const _StockLimitException();
       }
       final updated = await service.setQuantity(id, quantity + 1);
-      if (!mounted) return;
+      if (!mounted || session != _sessionChanges.value) return;
       setState(() => _cartCount = updated.count);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -196,6 +276,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
       );
     } finally {
       _setAdding(false);
+      if (mounted && session != _sessionChanges.value && widget.active) {
+        _loadCartCount();
+      }
     }
   }
 
@@ -212,6 +295,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => const MarketplaceHistoryPage(),
     ));
+    if (mounted) await _loadCartCount();
   }
 
   Future<void> _bookService(MarketplaceItem item) async {
@@ -926,6 +1010,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         backgroundColor: p.surface,
         onRefresh: () async {
           setState(_reload);
+          _loadCartCount();
           try {
             await _catalog;
           } catch (_) {
@@ -933,6 +1018,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           }
         },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             _productBanners(),
