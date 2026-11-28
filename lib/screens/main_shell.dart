@@ -66,7 +66,7 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         bottomNavigationBar: NavigationBar(
-          height: 72,
+          height: MediaQuery.textScalerOf(context).scale(11) > 14 ? 80 : 64,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           animationDuration: MediaQuery.of(context).disableAnimations
               ? Duration.zero : const Duration(milliseconds: 220),

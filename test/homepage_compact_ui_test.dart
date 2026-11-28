@@ -44,15 +44,15 @@ void main() {
     final first = grids[0].gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     final second = grids[1].gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(first.crossAxisCount, 3);
-    expect(first.mainAxisExtent, 88);
+    expect(first.mainAxisExtent, 80);
     expect(second.crossAxisCount, 4);
-    expect(second.mainAxisExtent, 84);
+    expect(second.mainAxisExtent, 78);
     final iconTops = [for (final target in ['alerts','mock','courses','directory'])
       tester.getTopLeft(find.byKey(ValueKey('home-career-icon-$target'))).dy];
     expect(iconTops.toSet().length, 1);
     final mockCard = tester.widget<Card>(find.byKey(const ValueKey('home-career-mock')));
     final shape = mockCard.shape! as RoundedRectangleBorder;
-    expect(shape.side.color.a, closeTo(.62, .01));
+    expect(shape.side.color.a, closeTo(.40, .01));
     expect(find.text('মার্কেটপ্লেস'), findsOneWidget);
     final marketplace = find.byKey(const ValueKey('home-marketplace-tile'));
     final marketIcon = find.byKey(const ValueKey('home-marketplace-icon'));
@@ -65,6 +65,18 @@ void main() {
     expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 15);
     expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
     expect(find.text('Fire Safety BD'), findsOneWidget);
+    final brand = find.byKey(const ValueKey('home-brand-title'));
+    final tagline = find.byKey(const ValueKey('home-brand-tagline'));
+    expect(tester.widget<Text>(brand).style?.fontSize, 20);
+    expect(tester.widget<Text>(brand).style?.fontWeight, FontWeight.w700);
+    expect(tester.widget<Text>(tagline).style?.fontSize, 10);
+    expect(tester.widget<Text>(tagline).style?.fontWeight, FontWeight.w400);
+    expect(tester.getTopLeft(tagline).dx, closeTo(tester.getTopLeft(brand).dx, .1));
+    expect(tester.getSize(tagline).width, lessThanOrEqualTo(tester.getSize(brand).width + .1));
+    expect(tester.getTopLeft(tagline).dy - tester.getBottomLeft(brand).dy, closeTo(2, .1));
+    expect(tester.widget<Text>(find.text('চাকরির খবর')).style?.fontWeight, FontWeight.w500);
+    expect(tester.widget<Text>(find.text('মক\nইন্টারভিউ')).style?.fontWeight, FontWeight.w500);
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w600);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
     expect(find.byTooltip('অ্যাডমিন সাপোর্ট'), findsOneWidget);
     expect(find.byIcon(Icons.support_agent_rounded), findsOneWidget);
@@ -87,7 +99,7 @@ void main() {
     final companyName = find.text('Example Company');
     expect(tester.getTopLeft(companyName).dy - tester.getBottomLeft(jobTitle).dy, closeTo(2, .1));
     expect(tester.widget<Text>(jobTitle).style?.fontSize, 14);
-    expect(tester.widget<Text>(jobTitle).style?.fontWeight, FontWeight.w700);
+    expect(tester.widget<Text>(jobTitle).style?.fontWeight, FontWeight.w600);
     expect(tester.widget<Text>(companyName).style?.fontSize, 12);
     expect(tester.widget<Text>(companyName).style?.fontWeight, FontWeight.w400);
     expect(find.text('Dhaka'), findsNothing);
