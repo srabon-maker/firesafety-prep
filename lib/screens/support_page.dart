@@ -281,13 +281,13 @@ class _GeneralSupportChatState extends State<_GeneralSupportChat>
         if(!older){
           // Replace the server's latest visible window, retaining older pages
           // already explicitly loaded. Never reinsert a locally hidden row.
-          if(rows.isNotEmpty){
+          if(rows.isNotEmpty&&data['next_before_id']!=null){
             final first=int.parse(rows.first['id'].toString());
             _messages.removeWhere((key,_)=>int.parse(key)>=first);
           }else{_messages.clear();}
         }
         for(final row in rows){_messages[row['id'].toString()]=row;}
-        if(older||_before==null||_messages.length<=rows.length){
+        if(older||data['next_before_id']==null||_before==null||_messages.length<=rows.length){
           _before=data['next_before_id']?.toString();
         }
         _error=false;
@@ -311,7 +311,7 @@ class _GeneralSupportChatState extends State<_GeneralSupportChat>
 
   Future<void> _send() async{
     final body=_body.text.trim();
-    if(_busy||body.isEmpty||body.runes.length>2000||_statusCode=='closed')return;
+    if(_busy||body.isEmpty||body.runes.length>2000||_statusCode=='closed'||(_id!=null&&_messages.isEmpty&&(_loading||_error)))return;
     _beginMutation();
     try{
       final id=_id;
@@ -443,7 +443,7 @@ class _GeneralSupportChatState extends State<_GeneralSupportChat>
             counterText:'',isDense:true,contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
             border:OutlineInputBorder(borderRadius:BorderRadius.circular(24))))),
         const SizedBox(width:8),
-        IconButton.filled(tooltip:_tr('পাঠান','Send'),onPressed:_busy||_body.text.trim().isEmpty?null:_send,
+        IconButton.filled(tooltip:_tr('পাঠান','Send'),onPressed:_busy||_body.text.trim().isEmpty||(_id!=null&&_messages.isEmpty&&(_loading||_error))?null:_send,
           icon:_busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):
             const Icon(Icons.send_rounded,size:20)),
       ]));
