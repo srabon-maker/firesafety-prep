@@ -292,7 +292,22 @@ class _HomePageState extends State<HomePage> {
         decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(20))),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Row(children:[
-            Container(width:42,height:42,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
+            Container(
+              key: const ValueKey('home-brand-icon'),
+              width: 42, height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 32, height: 32,
+                child: CustomPaint(
+                  key: ValueKey('home-brand-flame'),
+                  painter: _HomeBrandFlamePainter(),
+                ),
+              ),
+            ),
             const SizedBox(width:10),
             const Expanded(child: Text(
               'Fire Safety BD',
@@ -300,7 +315,7 @@ class _HomePageState extends State<HomePage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(color: Colors.white, fontSize: 20,
-                fontWeight: FontWeight.w700, height: 1.05, letterSpacing: 0),
+                fontWeight: FontWeight.w600, height: 1.05, letterSpacing: 0),
             )),
             IconButton(
               key: const ValueKey('home-admin-support'),
@@ -407,4 +422,52 @@ class _HomePageState extends State<HomePage> {
       })),
     ],
   )))));
+}
+
+// Same approved outline path as assets/launcher_foreground.svg. Paint directly
+// at device resolution so the small header mark remains sharp at every density.
+class _HomeBrandFlamePainter extends CustomPainter {
+  const _HomeBrandFlamePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(258, 109)
+      ..cubicTo(265, 105, 269, 109, 271, 118)
+      ..cubicTo(274, 137, 279, 149, 294, 165)
+      ..cubicTo(318, 189, 333, 211, 333, 240)
+      ..cubicTo(333, 283, 300, 317, 257, 317)
+      ..cubicTo(215, 317, 180, 280, 180, 242)
+      ..cubicTo(180, 224, 188, 207, 197, 199)
+      ..cubicTo(203, 193, 209, 197, 211, 205)
+      ..cubicTo(214, 216, 219, 221, 227, 220)
+      ..cubicTo(241, 220, 244, 207, 236, 190)
+      ..cubicTo(228, 174, 223, 165, 226, 151)
+      ..cubicTo(230, 134, 242, 119, 258, 109)
+      ..close()
+      ..moveTo(256, 136)
+      ..cubicTo(246, 146, 243, 155, 247, 167)
+      ..cubicTo(250, 177, 259, 190, 259, 204)
+      ..cubicTo(260, 225, 247, 240, 227, 240)
+      ..cubicTo(216, 240, 208, 235, 202, 229)
+      ..cubicTo(196, 248, 203, 266, 219, 282)
+      ..cubicTo(230, 293, 243, 298, 257, 298)
+      ..cubicTo(288, 298, 314, 273, 314, 241)
+      ..cubicTo(314, 218, 302, 201, 283, 181)
+      ..cubicTo(267, 164, 259, 152, 256, 136)
+      ..close();
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    final scale = size.shortestSide / 212;
+    canvas.scale(scale);
+    canvas.translate(-256.5, -212.5);
+    canvas.drawPath(path, Paint()
+      ..color = Colors.white
+      ..isAntiAlias = true);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeBrandFlamePainter oldDelegate) => false;
 }

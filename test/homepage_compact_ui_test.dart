@@ -67,7 +67,17 @@ void main() {
     expect(find.text('Fire Safety BD'), findsOneWidget);
     final brand = find.byKey(const ValueKey('home-brand-title'));
     expect(tester.widget<Text>(brand).style?.fontSize, 20);
-    expect(tester.widget<Text>(brand).style?.fontWeight, FontWeight.w700);
+    expect(tester.widget<Text>(brand).style?.fontWeight, FontWeight.w600);
+    final brandIcon = find.byKey(const ValueKey('home-brand-icon'));
+    final flame = find.byKey(const ValueKey('home-brand-flame'));
+    expect(tester.getSize(brandIcon), const Size(42, 42));
+    expect(tester.getSize(flame), const Size(32, 32));
+    expect(tester.widget<CustomPaint>(flame).painter, isNotNull);
+    final brandDecoration = tester.widget<Container>(brandIcon).decoration as BoxDecoration;
+    expect(brandDecoration.border, isNull);
+    expect(brandDecoration.color, Colors.white.withValues(alpha: .12));
+    expect(find.descendant(of: brandIcon, matching: find.byType(Image)), findsNothing);
+    expect(tester.getCenter(flame).dy, closeTo(tester.getCenter(brand).dy, .1));
     expect(find.text('Learn • Prepare • Connect'), findsNothing);
     expect(find.byKey(const ValueKey('home-brand-tagline')), findsNothing);
     expect(tester.getCenter(brand).dy, closeTo(tester.getCenter(find.byTooltip('অ্যাডমিন সাপোর্ট')).dy, .1));
@@ -82,6 +92,8 @@ void main() {
 
   testWidgets('Safe area protects scroll viewport and previews remain available', (tester) async {
     await mountHome(tester, 'en', mode: ThemeMode.light);
+    expect(find.byKey(const ValueKey('home-brand-flame')), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('home-brand-title'))).style?.fontWeight, FontWeight.w600);
     final list = find.byType(ListView).first;
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
     final status = tester.widget<DecoratedBox>(find.byKey(const ValueKey('home-status-gradient')));
