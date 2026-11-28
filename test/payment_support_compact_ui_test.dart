@@ -40,6 +40,20 @@ void main(){
       expect(title.data,'পেমেন্ট সহায়তা');
       expect(title.semanticsLabel,'পেমেন্ট ও সদস্যপদ সহায়তা');
       expect(title.style?.fontSize,15.5);
+      expect(title.style?.fontWeight,FontWeight.w500);
+      final header=tester.widget<AppBar>(find.byType(AppBar));
+      expect(header.toolbarHeight,68);
+      expect(header.backgroundColor,mode==ThemeMode.dark
+        ?const Color(0xFF36060D):const Color(0xFF650D18));
+      final tile=find.byKey(const ValueKey('payment-support-header-icon'));
+      final divider=find.byKey(const ValueKey('payment-support-header-divider'));
+      expect(tester.getSize(tile),const Size(40,40));
+      expect(tester.getSize(divider),const Size(1,42));
+      final icon=find.descendant(of:tile,matching:find.byIcon(Icons.account_balance_wallet_outlined));
+      expect(tester.widget<Icon>(icon).size,26);
+      final shape=tester.widget<Container>(tile).decoration as BoxDecoration;
+      expect(shape.borderRadius,BorderRadius.circular(12));
+      expect(tester.getCenter(tile).dy,closeTo(tester.getCenter(divider).dy,.1));
       final warning=find.descendant(of:find.byKey(const ValueKey('payment-support-warning')),
         matching:find.byType(Text));
       expect(tester.widget<Text>(warning).data,

@@ -159,13 +159,39 @@ class _SupportPageState extends State<SupportPage>{
         backgroundColor:Theme.of(context).brightness==Brightness.dark
           ?const Color(0xFF36060D):const Color(0xFF650D18),
         foregroundColor:Colors.white,
-        title:const Text('পেমেন্ট সহায়তা',
-          key:ValueKey('payment-support-title'),
-          semanticsLabel:'পেমেন্ট ও সদস্যপদ সহায়তা',
-          maxLines:2,overflow:TextOverflow.ellipsis,
-          style:TextStyle(fontSize:15.5,fontWeight:FontWeight.w500,height:1.2)),
+        automaticallyImplyLeading:false,
+        leadingWidth:ModalRoute.of(context)?.canPop==true?48:0,
+        leading:ModalRoute.of(context)?.canPop==true?IconButton(
+          tooltip:_tr('ফিরে যান','Back'),
+          onPressed:()=>Navigator.of(context).maybePop(),
+          icon:const Icon(Icons.arrow_back_ios_new_rounded,size:22),
+        ):null,
+        title:Row(children:[
+          Container(
+            key:const ValueKey('payment-support-header-icon'),
+            width:40,height:40,
+            decoration:BoxDecoration(
+              color:Colors.white.withValues(alpha:.13),
+              borderRadius:BorderRadius.circular(12),
+              border:Border.all(color:Colors.white.withValues(alpha:.24)),
+            ),
+            child:const Icon(Icons.account_balance_wallet_outlined,
+              color:Colors.white,size:26),
+          ),
+          const SizedBox(width:9),
+          Container(key:const ValueKey('payment-support-header-divider'),
+            width:1,height:42,color:Colors.white.withValues(alpha:.55)),
+          const SizedBox(width:9),
+          const Expanded(child:Text('পেমেন্ট সহায়তা',
+            key:ValueKey('payment-support-title'),
+            semanticsLabel:'পেমেন্ট ও সদস্যপদ সহায়তা',
+            maxLines:2,overflow:TextOverflow.ellipsis,
+            style:TextStyle(color:Colors.white,fontSize:15.5,
+              fontWeight:FontWeight.w500,height:1.2))),
+        ]),
         actions:[IconButton(onPressed:()=>_load(),
-          icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ')]),
+          icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ'),
+          const SizedBox(width:8)]),
     body:FutureBuilder<Map<String,dynamic>>(future:_data,builder:(context,snapshot){
       final data=snapshot.connectionState==ConnectionState.waiting?null:snapshot.data;
       final rows=(data?['data'] as List? ?? []).whereType<Map>();
