@@ -17,13 +17,12 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int index = 0;
+  bool _shopVisited = false;
 
   late final List<Widget> pages = [
     const HomePage(),
     // Community is mounted only after successful authentication.
     const SizedBox.shrink(),
-    const MarketplacePage(),
-
   ];
 
   void _goToHome() {
@@ -37,7 +36,10 @@ class _MainShellState extends State<MainShell> {
   Future<void> _onDestinationSelected(int i) async {
     // Home ও Marketplace সবার জন্য উন্মুক্ত
     if (i == 0 || i == 2) {
-      setState(() => index = i);
+      setState(() {
+        if (i == 2) _shopVisited = true;
+        index = i;
+      });
       return;
     }
 
@@ -58,7 +60,9 @@ class _MainShellState extends State<MainShell> {
             TickerMode(enabled: index == 0, child: pages[0]),
             if (index == 1) const CommunityPage()
             else pages[1],
-            pages[2],
+            // Mount on first visit, then keep filters and scroll state alive.
+            if (_shopVisited) MarketplacePage(active: index == 2)
+            else const SizedBox.shrink(),
             // Mount only after AuthGuard succeeds. Discard account-specific
             // state on leaving Profile so a new login cannot see stale data.
             if (index == 3) ProfilePage(onLogout: _goToHome)
