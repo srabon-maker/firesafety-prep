@@ -467,11 +467,11 @@ class _InterviewPageState extends State<InterviewPage> {
             final valid = data != null && data['data'] is List &&
                 (data['data'] as List).every((item) => item is Map) &&
                 data['roles'] is List && data['industries'] is List;
-            if (valid && !snapshot.hasError) {
+            if (data != null && valid && !snapshot.hasError) {
               _roles = HomepageService.strings(data['roles']);
               _industries = HomepageService.strings(data['industries']);
             }
-            final rows = valid ? HomepageService.rows(data['data']) : <Map<String, dynamic>>[];
+            final rows = data != null && valid ? HomepageService.rows(data['data']) : <Map<String, dynamic>>[];
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
