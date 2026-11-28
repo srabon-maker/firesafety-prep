@@ -9,7 +9,7 @@ import 'package:fire_safety_job_prep/theme/app_theme.dart';
 Future<void> mountHome(WidgetTester tester, String language,
     {ThemeMode mode = ThemeMode.dark, double scale = 1, double width = 360,
     List<String> sections = const ['marketplace', 'jobs', 'notes'],
-    String company = 'Example Company'}) async {
+    String company = 'Example Company', DateTime? deadline, int jobCount=1}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -25,8 +25,11 @@ Future<void> mountHome(WidgetTester tester, String language,
         textScaler: TextScaler.linear(scale)), child: child!),
     home: Scaffold(body: HomePage(
       loadHome: () async => {'sections': sections},
-      loadJobs: () async => [JobCircular(id: 1, organization: company,
-        title: 'Sample job', location: 'Dhaka', publishedAt: DateTime(2026, 1, 1))],
+      loadJobs: () async => [
+        for(int i=0;i<jobCount;i++)JobCircular(id:i+1,organization:company,
+          title:i==0?'Sample job':'Second job',location:'Dhaka',
+          publishedAt:DateTime(2026,1,2-i),deadline:deadline),
+      ],
       loadNotes: () async => const StudyNotesPage(notes: [], categories: [], page: 1, totalPages: 1, total: 0),
     )),
   ));
@@ -62,7 +65,7 @@ void main() {
     expect(tester.getSize(marketplace).height, closeTo(expectedHeight, .1));
     expect(tester.getSize(marketplace).height, greaterThanOrEqualTo(68));
     expect(tester.getSize(marketIcon), const Size(42, 42));
-    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 15);
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 14);
     expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     final brand = find.byKey(const ValueKey('home-brand-title'));
@@ -91,7 +94,7 @@ void main() {
     expect(tester.getCenter(brand).dy, closeTo(tester.getCenter(find.byTooltip('অ্যাডমিন সাপোর্ট')).dy, .1));
     expect(tester.widget<Text>(find.text('চাকরির খবর')).style?.fontWeight, FontWeight.w500);
     expect(tester.widget<Text>(find.text('মক\nইন্টারভিউ')).style?.fontWeight, FontWeight.w500);
-    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w600);
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w500);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
     expect(find.byTooltip('অ্যাডমিন সাপোর্ট'), findsOneWidget);
     expect(find.byIcon(Icons.support_agent_rounded), findsOneWidget);
@@ -127,6 +130,10 @@ void main() {
     expect(find.text('Dhaka'), findsNothing);
     expect(find.text('Example Company • Dhaka'), findsNothing);
     expect(find.text('No notes published.'), findsOneWidget);
+    final empty=find.byKey(const ValueKey('home-empty-notes'));
+    expect(tester.getSize(empty).height,lessThan(65));
+    expect(tester.widget<Text>(find.text('No notes published.')).style?.fontSize,12);
+    expect(find.textContaining('Deadline:'),findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -139,6 +146,54 @@ void main() {
     expect(find.text('Dhaka'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  for(final language in ['bn','en']){
+    testWidgets('Four home headings share 14dp medium styling and omit preview deadline in $language',(tester)async{
+      final deadline=DateTime(2099,12,31);
+      final bn=language=='bn';
+      await mountHome(tester,language,mode:bn?ThemeMode.dark:ThemeMode.light,deadline:deadline);
+      await tester.drag(find.byType(ListView).first,const Offset(0,-500));
+      await tester.pumpAndSettle();
+      final labels=bn
+        ?['ক্যারিয়ার ডেভেলপমেন্ট','সর্বশেষ চাকরির বিজ্ঞপ্তি','নতুন স্টাডি নোট','মার্কেটপ্লেস']
+        :['Career development','Latest jobs','New study notes','Marketplace'];
+      final headings=labels.map(find.text).toList();
+      for(final heading in headings){
+        expect(heading,findsOneWidget);
+        final text=tester.widget<Text>(heading);
+        expect(text.style?.fontSize,14);
+        expect(text.style?.fontWeight,FontWeight.w500);
+      }
+      expect(find.text('Sample job'),findsOneWidget);
+      expect(find.textContaining(bn?'শেষ তারিখ:':'Deadline:'),findsNothing);
+      expect(find.text('Example Company'),findsOneWidget);
+      expect(find.text('Dhaka'),findsNothing);
+      expect(tester.takeException(),isNull);
+    });
+  }
+
+  for(final mode in [ThemeMode.dark,ThemeMode.light]){
+    testWidgets('Home sections have 12dp gaps, 8dp header gaps and 6dp card gaps in $mode',(tester)async{
+      await mountHome(tester,mode==ThemeMode.dark?'bn':'en',mode:mode,jobCount:2);
+      await tester.drag(find.byType(ListView).first,const Offset(0,-500));
+      await tester.pumpAndSettle();
+      final career=find.byKey(const ValueKey('home-career-grid'));
+      final market=find.byKey(const ValueKey('home-marketplace-tile'));
+      final jobs=find.byKey(const ValueKey('home-section-header-jobs'));
+      final notes=find.byKey(const ValueKey('home-section-header-notes'));
+      final first=find.ancestor(of:find.text('Sample job'),matching:find.byType(Card)).first;
+      final second=find.ancestor(of:find.text('Second job'),matching:find.byType(Card)).first;
+      final empty=find.byKey(const ValueKey('home-empty-notes'));
+      double gap(Finder before,Finder after)=>tester.getTopLeft(after).dy-tester.getBottomLeft(before).dy;
+      expect(gap(career,market),closeTo(12,.1));
+      expect(gap(market,jobs),closeTo(12,.1));
+      expect(gap(jobs,first),closeTo(8,.1));
+      expect(gap(first,second),closeTo(6,.1));
+      expect(gap(second,notes),closeTo(12,.1));
+      expect(gap(notes,empty),closeTo(8,.1));
+      expect(tester.takeException(),isNull);
+    });
+  }
 
   testWidgets('Marketplace is exactly 68dp when both labels fit', (tester) async {
     await mountHome(tester, 'en', width: 600, sections: ['marketplace']);
