@@ -7,6 +7,47 @@ import '../settings/app_settings.dart';
 const _status={'open':'উত্তরের অপেক্ষায়','answered':'উত্তর দেওয়া হয়েছে','closed':'বন্ধ'};
 const _plans={'none':'নির্দিষ্ট নয়','monthly':'মাসিক','quarterly':'ত্রৈমাসিক','annual':'বার্ষিক'};
 const _warning='PIN, OTP, পাসওয়ার্ড বা কার্ডের তথ্য পাঠাবেন না। এটি সহায়তা, পেমেন্ট গ্রহণের মাধ্যম নয়।';
+// Match the Marketplace header in both themes; no visible status subtitle.
+AppBar _generalSupportHeader(BuildContext context,{required List<Widget> actions}){
+  final canGoBack=ModalRoute.of(context)?.canPop??false;
+  return AppBar(
+    toolbarHeight:68,
+    titleSpacing:8,
+    backgroundColor:Theme.of(context).brightness==Brightness.dark
+      ?const Color(0xFF36060D):const Color(0xFF650D18),
+    foregroundColor:Colors.white,
+    automaticallyImplyLeading:false,
+    leadingWidth:canGoBack?48:0,
+    leading:canGoBack?IconButton(
+      tooltip:AppText.of(context,'ফিরে যান','Back'),
+      onPressed:()=>Navigator.of(context).maybePop(),
+      icon:const Icon(Icons.arrow_back_ios_new_rounded,size:22),
+    ):null,
+    title:Row(children:[
+      Container(
+        key:const ValueKey('support-header-icon'),
+        width:40,height:40,
+        decoration:BoxDecoration(
+          color:Colors.white.withValues(alpha:.13),
+          borderRadius:BorderRadius.circular(12),
+          border:Border.all(color:Colors.white.withValues(alpha:.24)),
+        ),
+        child:const Icon(Icons.support_agent_rounded,color:Colors.white,size:29),
+      ),
+      const SizedBox(width:9),
+      Container(key:const ValueKey('support-header-divider'),width:1,height:42,
+        color:Colors.white.withValues(alpha:.55)),
+      const SizedBox(width:9),
+      Expanded(child:Text(AppText.of(context,'অ্যাডমিন সাপোর্ট','Admin support'),
+        key:const ValueKey('support-header-title'),
+        maxLines:2,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(color:Colors.white,fontSize:15.5,
+          fontWeight:FontWeight.w500,height:1.2))),
+    ]),
+    actions:[...actions,const SizedBox(width:8)],
+  );
+}
+
 class SupportPage extends StatefulWidget{
   const SupportPage({super.key, this.generalSupport = false, this.service});
   final SupportService? service;
@@ -69,7 +110,11 @@ class _SupportPageState extends State<SupportPage>{
 
   @override
   Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.generalSupport ? AppText.of(context,'অ্যাডমিন সাপোর্ট','Admin support') : 'পেমেন্ট ও সদস্যপদ সহায়তা'),actions:[IconButton(onPressed:()=>_load(),icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ')]),
+    appBar:widget.generalSupport
+      ?_generalSupportHeader(context,actions:[IconButton(onPressed:()=>_load(),
+        icon:const Icon(Icons.refresh),tooltip:_tr('রিফ্রেশ','Refresh'))])
+      :AppBar(title:const Text('পেমেন্ট ও সদস্যপদ সহায়তা'),actions:[IconButton(
+        onPressed:()=>_load(),icon:const Icon(Icons.refresh),tooltip:'রিফ্রেশ')]),
     body:FutureBuilder<Map<String,dynamic>>(future:_data,builder:(context,snapshot){
       final data=snapshot.connectionState==ConnectionState.waiting?null:snapshot.data;
       final rows=(data?['data'] as List? ?? []).whereType<Map>();
@@ -319,6 +364,7 @@ class _GeneralSupportChatState extends State<_GeneralSupportChat>
       else{await widget.service.reply(id,body);}
       if(!mounted)return;
       _body.clear();
+      FocusScope.of(context).unfocus();
     }catch(_){
       _notice('মেসেজ পাঠানো নিশ্চিত হয়নি। রিফ্রেশ করে দেখুন।','Message not confirmed. Refresh before trying again.');
     }finally{
@@ -451,17 +497,7 @@ class _GeneralSupportChatState extends State<_GeneralSupportChat>
 
   @override
   Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(toolbarHeight:56,titleSpacing:4,
-      title:Row(children:[
-        const Icon(Icons.support_agent_rounded,size:24),
-        const SizedBox(width:8),
-        Expanded(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(_tr('অ্যাডমিন সাপোর্ট','Admin support'),maxLines:1,overflow:TextOverflow.ellipsis,
-            style:const TextStyle(fontSize:16,fontWeight:FontWeight.w500)),
-          if(_id!=null)Text(_supportStatus(context,_statusCode),maxLines:1,overflow:TextOverflow.ellipsis,
-            style:const TextStyle(fontSize:11,fontWeight:FontWeight.w400)),
-        ])),
-      ]),
+    appBar:_generalSupportHeader(context,
       actions:[PopupMenuButton<String>(tooltip:_tr('আরও','More'),onSelected:(value){
         if(value=='refresh')_load();
         if(value=='delete')_hide();

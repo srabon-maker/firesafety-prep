@@ -62,11 +62,22 @@ void main(){
     expect(find.byType(TextField),findsOneWidget);
     expect(find.textContaining('PIN'),findsNothing);
     await tester.enterText(find.byType(TextField),'Hello');
+    await tester.pump(); // Rebuild the previously disabled Send button.
     await tester.tap(find.byTooltip('Send'));
     await tester.pumpAndSettle();
+    expect(calls,['create']);
     expect(find.text('Hello'),findsOneWidget);
     expect(find.text('Admin reply'),findsOneWidget);
     expect(find.text('Old subject'),findsNothing);
+    expect(find.text('Awaiting reply'),findsNothing);
+    final header=tester.widget<AppBar>(find.byType(AppBar));
+    expect(header.toolbarHeight,68);
+    expect(header.backgroundColor,const Color(0xFF650D18));
+    final title=tester.widget<Text>(find.byKey(const ValueKey('support-header-title')));
+    expect(title.style!.fontSize,15.5);
+    expect(title.style!.fontWeight,FontWeight.w500);
+    expect(tester.getSize(find.byKey(const ValueKey('support-header-icon'))),const Size(40,40));
+    expect(tester.getSize(find.byKey(const ValueKey('support-header-divider'))),const Size(1,42));
     expect(find.textContaining('UTC'),findsNothing);
     await tester.longPress(find.text('Hello'));
     await tester.pumpAndSettle();
