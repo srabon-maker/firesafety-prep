@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
+import '../services/auth_guard.dart';
+import '../services/support_service.dart';
 import '../services/model_test_service.dart';
 import '../settings/app_settings.dart';
 import 'settings_page.dart';
@@ -12,6 +14,7 @@ import 'saved_notes_page.dart';
 import 'notification_preferences_page.dart';
 import 'notification_inbox_page.dart';
 import 'premium_page.dart';
+import 'support_page.dart';
 
 // Private colours: other files can not clash with these names.
 const Color _maroon = Color(0xFF650D18);
@@ -26,6 +29,8 @@ class ProfilePage extends StatefulWidget {
     required this.onLogout,
     this.loadProfile,
     this.loadStats,
+    this.authorizeSupport,
+    this.supportService,
   });
 
   final VoidCallback onLogout;
@@ -33,6 +38,10 @@ class ProfilePage extends StatefulWidget {
   // authenticated service paths below.
   final Future<Map<String, dynamic>?> Function(bool forceRefresh)? loadProfile;
   final Future<List<dynamic>> Function()? loadStats;
+  // Optional fixture hooks for support navigation; production uses the same
+  // authentication guard and service as the home header.
+  final Future<bool> Function(BuildContext)? authorizeSupport;
+  final SupportService? supportService;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -289,6 +298,18 @@ class _ProfilePageState extends State<ProfilePage> {
     if (deleted == true && mounted) {
       widget.onLogout();
     }
+  }
+
+  Future<void> _openSupport() async {
+    final allowed = await (widget.authorizeSupport?.call(context) ??
+        AuthGuard.ensureAuthenticated(context));
+    if (!allowed || !mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => SupportPage(
+        generalSupport: true,
+        service: widget.supportService,
+      )),
+    );
   }
 
   Widget _sectionHeading(String title, IconData icon) {
@@ -796,6 +817,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     title: _tr(context, 'নোটিফিকেশন পছন্দ', 'Notification preferences'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(builder: (_) => const NotificationPreferencesPage())),
+                  ),
+                  _menuTile(
+                    icon: Icons.support_agent_rounded,
+                    title: _tr(context, 'অ্যাডমিন সাপোর্ট', 'Admin support'),
+                    onTap: _openSupport,
                   ),
                   _menuTile(
                     icon: Icons.info_outline_rounded,
