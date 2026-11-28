@@ -503,11 +503,112 @@ class _CommentsPageState extends State<CommentsPage> {
     }
   }
 
+  Widget _commentAvatar(Comment comment, ColorScheme scheme) {
+    final photo = comment.authorPhoto?.trim();
+    final uri = photo == null ? null : Uri.tryParse(photo);
+    final valid = uri != null && uri.scheme == 'https' &&
+        uri.host.isNotEmpty && uri.userInfo.isEmpty;
+    final fallback = Icon(Icons.person_rounded,
+      color: scheme.onPrimaryContainer, size: 18);
+    return CircleAvatar(
+      key: ValueKey('comment-avatar-${comment.id}'),
+      radius: 15,
+      backgroundColor: scheme.primaryContainer,
+      child: valid
+          ? ClipOval(child: Image.network(photo!, width: 30, height: 30,
+              fit: BoxFit.cover, excludeFromSemantics: true,
+              errorBuilder: (_, __, ___) => fallback))
+          : fallback,
+    );
+  }
+
+  Widget _commentCard(Comment comment, ColorScheme scheme) {
+    return Container(
+      // Preserve the existing scroll-to-new-comment target.
+      key: comment.id == _targetId ? _revealKey : ValueKey('comment-${comment.id}'),
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _commentAvatar(comment, scheme),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(comment.author, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w500,
+                  color: scheme.primary, fontSize: 13, height: 1.2)),
+              const SizedBox(height: 4),
+              Text(comment.text, style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w400, height: 1.35)),
+            ],
+          )),
+          if (comment.id > 0)
+            PopupMenuButton<String>(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant, size: 18),
+              tooltip: _tr(context, 'মন্তব্য অপশন', 'Comment options'),
+              onSelected: (action) => _commentAction(comment, action),
+              itemBuilder: (context) => [
+                if (comment.isOwner)
+                  PopupMenuItem(value: 'delete', child: Text(_tr(context, 'মুছুন', 'Delete comment')))
+                else
+                  PopupMenuItem(value: 'report', child: Text(_tr(context, 'রিপোর্ট', 'Report comment'))),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('পোস্ট ও মন্তব্য')),
+      appBar: AppBar(
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF36060D) : _maroon,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        leadingWidth: ModalRoute.of(context)?.canPop == true ? 48 : 0,
+        leading: ModalRoute.of(context)?.canPop == true
+            ? IconButton(
+                tooltip: _tr(context, 'ফিরে যান', 'Back'),
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22))
+            : null,
+        title: Row(children: [
+          Container(
+            key: const ValueKey('comments-header-icon'),
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.forum_outlined, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 9),
+          Container(key: const ValueKey('comments-header-divider'),
+            width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr(context, 'পোস্ট ও মন্তব্য', 'Post & comments'),
+            key: const ValueKey('comments-header-title'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -525,10 +626,10 @@ class _CommentsPageState extends State<CommentsPage> {
                   showActions: false,
                 ),
                 const SizedBox(height: 7),
-                const Text('মন্তব্য',
-                    style: TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 12),
+                Text(_tr(context, 'মন্তব্য', 'Comments'),
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
                 FutureBuilder<List<Comment>>(
                   future: _comments,
                   builder: (context, snapshot) {
@@ -555,43 +656,7 @@ class _CommentsPageState extends State<CommentsPage> {
                     return Column(
                       children: [
                         for (final comment in comments)
-                          Container(
-                            key: comment.id == _targetId ? _revealKey : ValueKey('comment-${comment.id}'),
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 9),
-                            padding: const EdgeInsets.all(13),
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: scheme.outlineVariant),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(child: Text(comment.author,
-                                      style: TextStyle(fontWeight: FontWeight.w800,
-                                        color: scheme.primary, fontSize: 12))),
-                                    if (comment.id > 0)
-                                      PopupMenuButton<String>(
-                                        tooltip: _tr(context, 'মন্তব্য অপশন', 'Comment options'),
-                                        onSelected: (action) => _commentAction(comment, action),
-                                        itemBuilder: (context) => [
-                                          if (comment.isOwner)
-                                            PopupMenuItem(value: 'delete', child: Text(_tr(context, 'মুছুন', 'Delete comment')))
-                                          else
-                                            PopupMenuItem(value: 'report', child: Text(_tr(context, 'রিপোর্ট', 'Report comment'))),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Text(comment.text,
-                                    style: const TextStyle(height: 1.5)),
-                              ],
-                            ),
-                          ),
+                          _commentCard(comment, scheme),
                       ],
                     );
                   },
@@ -613,8 +678,11 @@ class _CommentsPageState extends State<CommentsPage> {
                       maxLength: 1000,
                       maxLines: 1,
                       onSubmitted: (_) => _send(),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
                       decoration: InputDecoration(
-                        hintText: 'মন্তব্য লিখুন...',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        hintText: _tr(context, 'মন্তব্য লিখুন...', 'Write a comment...'),
                         counterText: '',
                         filled: true,
                         fillColor: scheme.surface,
@@ -630,7 +698,9 @@ class _CommentsPageState extends State<CommentsPage> {
                     style: IconButton.styleFrom(
                       backgroundColor: _maroon,
                       foregroundColor: Colors.white,
+                      minimumSize: const Size(40, 40),
                     ),
+                    tooltip: _tr(context, 'পাঠান', 'Send'),
                     icon: _sending
                         ? const SizedBox(width: 17, height: 17,
                             child: CircularProgressIndicator(
