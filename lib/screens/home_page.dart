@@ -161,8 +161,8 @@ class _HomePageState extends State<HomePage> {
       HomepageService.text(row,'body_en').isEmpty?HomepageService.text(row,'body'):HomepageService.text(row,'body_en'));
     showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
       title:Text(title),content:SingleChildScrollView(child:Text(body)),actions:[
-        TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('বন্ধ করুন')),
-        if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:const Text('দেখুন')),
+        TextButton(onPressed:()=>Navigator.pop(dialog),child:Text(_tr('বন্ধ করুন','Close'))),
+        if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:Text(_tr('দেখুন','View'))),
       ],
     ));
   }
@@ -172,8 +172,8 @@ class _HomePageState extends State<HomePage> {
     final title=AppText.of(context,HomepageService.text(row,'title'),HomepageService.text(row,'title_en').isEmpty?HomepageService.text(row,'title'):HomepageService.text(row,'title_en'));
     final body=AppText.of(context,HomepageService.text(row,'body'),HomepageService.text(row,'body_en').isEmpty?HomepageService.text(row,'body'):HomepageService.text(row,'body_en'));
     return Card(clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>showDialog<void>(context:context,builder:(dialog)=>AlertDialog(title:Text(title),content:SingleChildScrollView(child:Text(body)),actions:[
-      TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('বন্ধ করুন')),
-      if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:const Text('দেখুন')),
+      TextButton(onPressed:()=>Navigator.pop(dialog),child:Text(_tr('বন্ধ করুন','Close'))),
+      if(target!='none') TextButton(onPressed:(){Navigator.pop(dialog);_open(target);},child:Text(_tr('দেখুন','View'))),
     ])),child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
       if(banner&&HomepageService.safeImage(image)) Image.network(image,height:88,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink()),
       Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage> {
         // Quick access and the bottom navigation cannot be hidden by remote configuration.
         final top=sections.isNotEmpty&&sections.first=='banners';
         return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          if(pending&&activation!=null)Card(child:ListTile(leading:const Icon(Icons.campaign_outlined,color:maroon),title:const Text('Premium সুবিধা চালুর আগাম নোটিশ'),subtitle:Text('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।'))),
+          if(pending&&activation!=null)Card(child:ListTile(leading:Icon(Icons.campaign_outlined,color:Theme.of(context).colorScheme.primary),title:Text(_tr('Premium সুবিধা চালুর আগাম নোটিশ','Upcoming Premium access')),subtitle:Text(_tr('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।','Currently free. Access restrictions begin: ${activation.toString().substring(0,16)} (Bangladesh time).')))),
           if(top)_section('banners',data),
           const SizedBox(height: 8),
           LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:88,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
