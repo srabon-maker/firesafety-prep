@@ -152,7 +152,7 @@ class _NotesPageState extends State<NotesPage> {
         ]),
         actions: [
           _headerAction(Icons.bookmarks_outlined, _tr('সংরক্ষিত নোট', 'Saved notes'),
-            () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const SavedNotesPage()))),
+            () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const SavedNotesPage(openedFromNotes: true)))),
           const SizedBox(width: 5),
           _headerAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'),
             _loading ? null : () => _loadNotes()),
