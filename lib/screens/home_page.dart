@@ -201,7 +201,7 @@ class _HomePageState extends State<HomePage> {
         if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'), onRetry: _refresh);
         final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
         if(jobs.isEmpty)return FsStatusCard(icon:Icons.work_outline,message:_tr('বর্তমানে কোনো চলমান বিজ্ঞপ্তি নেই।','No active jobs published.'));
-        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),onTap:()=>_open('jobs',search:job.title))]);
+        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),compactJob:true,onTap:()=>_open('jobs',search:job.title))]);
       })]);
       case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
@@ -256,14 +256,26 @@ class _HomePageState extends State<HomePage> {
       default:return const SizedBox.shrink();
     }
   }
-  Widget _previewCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _previewCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, bool compactJob = false}) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Card(margin:const EdgeInsets.only(bottom:6),clipBehavior:Clip.antiAlias,
       child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:2),
         leading:Container(width:36,height:36,decoration:BoxDecoration(color:scheme.primary.withValues(alpha:.12),borderRadius:BorderRadius.circular(10)),child:Icon(icon,color:scheme.primary,size:21)),
-        title:Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w700)),
-        subtitle:subtitle.trim().isEmpty?null:Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.bodySmall?.copyWith(color:scheme.onSurfaceVariant)),
+        title:compactJob ? Column(
+          mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,
+          children:[
+            Text(title,maxLines:2,overflow:TextOverflow.ellipsis,
+              style:theme.textTheme.titleSmall?.copyWith(fontSize:14,height:1.2,fontWeight:FontWeight.w700)),
+            if(subtitle.trim().isNotEmpty)...[
+              const SizedBox(height:2),
+              Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,
+                style:theme.textTheme.bodySmall?.copyWith(fontSize:12,height:1.2,fontWeight:FontWeight.w400,color:scheme.onSurfaceVariant)),
+            ],
+          ],
+        ) : Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w700)),
+        subtitle:compactJob||subtitle.trim().isEmpty?null:Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,style:theme.textTheme.bodySmall?.copyWith(color:scheme.onSurfaceVariant)),
         trailing:Icon(Icons.chevron_right,color:scheme.primary,size:20),onTap:onTap));
   }
   @override
