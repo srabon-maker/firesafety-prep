@@ -6,7 +6,9 @@ import '../settings/app_settings.dart';
 import 'registration_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.signIn});
+
+  final Future<Map<String, dynamic>?> Function()? signIn;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -26,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final result =
-          await AuthService.instance.signInWithGoogle();
+          await (widget.signIn ?? AuthService.instance.signInWithGoogle)();
 
       if (!mounted) return;
 
@@ -99,12 +101,6 @@ class _LoginPageState extends State<LoginPage> {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     String t(String bn, String en) => AppText.of(context, bn, en);
-    final errorBackground = isDark
-        ? const Color(0xFF3A2028)
-        : const Color(0xFFFFF0F0);
-    final errorForeground = isDark
-        ? const Color(0xFFFFCDD2)
-        : const Color(0xFF9B1C25);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -243,70 +239,134 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: errorBackground,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.error_outline_rounded,
-                                  size: 20, color: errorForeground),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  t('লগইন সম্পন্ন হয়নি', 'Sign-in failed'),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: errorForeground,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            t('আবার চেষ্টা করুন।', 'Please try again.'),
-                            style: TextStyle(color: errorForeground),
-                          ),
-                          ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            childrenPadding: const EdgeInsets.only(bottom: 8),
-                            textColor: errorForeground,
-                            collapsedTextColor: errorForeground,
-                            iconColor: errorForeground,
-                            collapsedIconColor: errorForeground,
-                            title: Text(t('কারিগরি বিবরণ', 'Technical details')),
-                            children: [
-                              SelectableText(
-                                _errorMessage!,
-                                style: TextStyle(color: errorForeground),
-                              ),
-                            ],
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              foregroundColor: errorForeground,
-                            ),
-                            onPressed: () {
-                              setState(() => _errorMessage = null);
-                            },
-                            child: Text(t('বন্ধ করুন', 'Dismiss')),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _LoginErrorCard(message: _errorMessage!),
                   ],
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+enum _LoginIssue { blocked, network, server, google, other }
+
+_LoginIssue _issueFor(String message) {
+  final m = message.toLowerCase();
+  if (m.contains('imunify360') || m.contains('bot-protection') ||
+      m.contains('bot protection')) {
+    return _LoginIssue.blocked;
+  }
+  if (m.contains('network error') || m.contains('socketexception') ||
+      m.contains('failed host lookup') || m.contains('network is unreachable') ||
+      m.contains('connection refused') || m.contains('connection reset') ||
+      m.contains('no internet') || m.contains('no address associated')) {
+    return _LoginIssue.network;
+  }
+  if (m.contains('timeout') || m.contains('timed out') ||
+      m.contains('response আসতে দেরি') || m.contains('json response') ||
+      RegExp(r'(?:server|সার্ভার)\s*(?:error)?[: ]+5\d\d\b').hasMatch(m) ||
+      m.contains('service unavailable')) {
+    return _LoginIssue.server;
+  }
+  if (m.contains('google sign-in') || m.contains('google id token') ||
+      m.contains('google থেকে id token') || m.contains('signing identity')) {
+    return _LoginIssue.google;
+  }
+  return _LoginIssue.other;
+}
+
+class _LoginErrorCard extends StatelessWidget {
+  const _LoginErrorCard({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    String t(String bn, String en) => AppText.of(context, bn, en);
+    final issue = _issueFor(message);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = dark ? const Color(0xFFFFB3BE) : const Color(0xFF98202F);
+    final bodyColor = dark ? const Color(0xFFE8CCD0) : const Color(0xFF69434A);
+    final background = dark ? const Color(0xFF322126) : const Color(0xFFFBECEE);
+    final blocked = issue == _LoginIssue.blocked;
+    final summary = switch (issue) {
+      _LoginIssue.blocked => t(
+        'Imunify360 নিরাপত্তাব্যবস্থা আপনার নেটওয়ার্কের অনুরোধ ব্লক করেছে।',
+        'Imunify360 security has blocked a request from your network.'),
+      _LoginIssue.network => t('ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+        'Check your internet connection and try again.'),
+      _LoginIssue.server => t('সার্ভার থেকে উত্তর পাওয়া যাচ্ছে না। কিছুক্ষণ পর চেষ্টা করুন।',
+        'The server is not responding as expected. Try again later.'),
+      _LoginIssue.google => t('Google লগইন সম্পন্ন হয়নি। আবার চেষ্টা করুন।',
+        'Google sign-in did not complete. Try again.'),
+      _LoginIssue.other => t('আবার লগইন করার চেষ্টা করুন।',
+        'Please try signing in again.'),
+    };
+    // Keep diagnostic access compact. Do not echo arbitrary server bodies,
+    // credentials or tokens. Preserve only known, non-secret SDK diagnostics.
+    final diagnostics = <String>[
+      if (blocked) 'Access denied by Imunify360 bot-protection.',
+      if (message.toLowerCase().contains('signing identity differs'))
+        'Installed APK signing identity differs from the registered release.',
+      ...RegExp(r'Code: [A-Za-z_]+; Stage: [A-Za-z_]+')
+        .allMatches(message).map((m) => m.group(0)!),
+      ...RegExp(r'Installed APK SHA-1: (?:[0-9A-Fa-f]{2}:){19}[0-9A-Fa-f]{2}')
+        .allMatches(message).map((m) => m.group(0)!),
+      ...RegExp(r'Android detail: (?:Account reauth failed|Developer console configuration error|Network error)\.')
+        .allMatches(message).map((m) => m.group(0)!),
+    ];
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const ValueKey('login-error-card'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+        decoration: BoxDecoration(color: background,
+          borderRadius: BorderRadius.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(blocked ? Icons.gpp_maybe_outlined : Icons.error_outline_rounded,
+              color: foreground, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(
+              blocked ? t('লগইন বাধাগ্রস্ত হয়েছে', 'Sign-in blocked')
+                : t('লগইন করা যায়নি', 'Sign-in failed'),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500,
+                color: foreground),
+            )),
+            if (diagnostics.isNotEmpty)
+              IconButton(
+                tooltip: t('কারিগরি বিবরণ', 'Technical details'),
+                color: foreground,
+                iconSize: 18,
+                onPressed: () => showDialog<void>(context: context,
+                  builder: (dialog) => AlertDialog(
+                    title: Text(t('কারিগরি বিবরণ', 'Technical details')),
+                    content: SingleChildScrollView(child: SelectableText(
+                      diagnostics.join('\n'), style: const TextStyle(fontSize: 13))),
+                    actions: [TextButton(onPressed: () => Navigator.pop(dialog),
+                      child: Text(t('বন্ধ করুন', 'Close')))],
+                  )),
+                icon: const Icon(Icons.info_outline_rounded),
+              ),
+          ]),
+          Text(summary, style: TextStyle(fontSize: 13, height: 1.4, color: bodyColor)),
+          if (blocked) ...[
+            const SizedBox(height: 8),
+            Divider(height: 1, color: foreground.withValues(alpha: .20)),
+            const SizedBox(height: 8),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.wifi_rounded, color: foreground, size: 17),
+              const SizedBox(width: 8),
+              Expanded(child: Text(t(
+                'মোবাইল ডাটা অথবা অন্য Wi-Fi নেটওয়ার্ক দিয়ে আবার লগইন করার চেষ্টা করুন।',
+                'Try signing in using mobile data or another Wi-Fi network.'),
+                style: TextStyle(fontSize: 12, height: 1.4, color: bodyColor))),
+            ]),
+          ],
+        ]),
       ),
     );
   }

@@ -23,7 +23,8 @@ void main() {
   });
 
   Future<void> mount(WidgetTester tester,
-      {double width = 360, double height = 800, double scale = 1}) async {
+      {double width = 360, double height = 800, double scale = 1,
+      Future<Map<String, dynamic>?> Function()? signIn}) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = Size(width, height);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -45,7 +46,7 @@ void main() {
             ),
             child: child!,
           ),
-          home: const LoginPage(),
+          home: LoginPage(signIn: signIn),
         ),
       ),
     ));
@@ -97,6 +98,62 @@ void main() {
     await settings.setLanguage('en');
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(buttonKey));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Imunify360 error has localized network advice and compact diagnostics',
+      (tester) async {
+    var attempts = 0;
+    await settings.setTheme(ThemeMode.dark);
+    await mount(tester, signIn: () async {
+      if (++attempts == 1) {
+        throw Exception('Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted');
+      }
+      return null;
+    });
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('login-error-card')), findsOneWidget);
+    expect(find.textContaining('Imunify360'), findsOneWidget);
+    expect(find.textContaining('মোবাইল ডাটা'), findsOneWidget);
+    expect(find.byType(ExpansionTile), findsNothing);
+    await settings.setLanguage('en');
+    await settings.setTheme(ThemeMode.light);
+    await tester.pumpAndSettle();
+    expect(find.text('Sign-in blocked'), findsOneWidget);
+    expect(find.textContaining('mobile data'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('Technical details'));
+    await tester.tap(find.byTooltip('Technical details'));
+    await tester.pumpAndSettle();
+    expect(find.text('Access denied by Imunify360 bot-protection.'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(buttonKey));
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('login-error-card')), findsNothing);
+    expect(attempts, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Network and server failures get distinct advice without exposing raw data',
+      (tester) async {
+    var attempts = 0;
+    await settings.setLanguage('en');
+    await mount(tester, width: 300, height: 420, scale: 1.7, signIn: () async {
+      if (++attempts == 1) throw Exception('Failed host lookup');
+      throw Exception('Server Error: 503 secret-example');
+    });
+    await tester.ensureVisible(find.byKey(buttonKey));
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pumpAndSettle();
+    expect(find.text('Check your internet connection and try again.'), findsOneWidget);
+    expect(find.textContaining('mobile data'), findsNothing);
+    await tester.ensureVisible(find.byKey(buttonKey));
+    await tester.tap(find.byKey(buttonKey));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Try again later'), findsOneWidget);
+    expect(find.textContaining('secret-example'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
