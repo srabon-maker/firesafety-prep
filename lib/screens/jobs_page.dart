@@ -6,6 +6,7 @@ import '../models/job_circular.dart';
 import '../utils/job_notice_sections.dart';
 import '../services/job_circular_service.dart';
 import '../services/auth_guard.dart';
+import '../settings/app_settings.dart';
 import 'submit_job_page.dart';
 import 'career_page.dart';
 
@@ -47,8 +48,10 @@ Future<void> _openOfficialLink(BuildContext context, String? url) async {
 }
 
 class JobsPage extends StatefulWidget {
-  const JobsPage({super.key, this.initialSearch = ''});
+  const JobsPage({super.key, this.initialSearch = '', this.loadJobs});
   final String initialSearch;
+  // Test fixture loader; production retains the existing API service.
+  final Future<List<JobCircular>> Function()? loadJobs;
 
   @override
   State<JobsPage> createState() => _JobsPageState();
@@ -67,7 +70,7 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   void _reload() {
-    _jobs = JobCircularService.instance.fetchCirculars();
+    _jobs = widget.loadJobs?.call() ?? JobCircularService.instance.fetchCirculars();
   }
 
   Future<void> _openSubmit() async {
@@ -94,6 +97,8 @@ class _JobsPageState extends State<JobsPage> {
     super.dispose();
   }
 
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
+
   List<JobCircular> _filter(List<JobCircular> jobs) {
     final query = _search.text.trim().toLowerCase();
     return jobs.where((job) {
@@ -112,85 +117,73 @@ class _JobsPageState extends State<JobsPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFFFA6B4)
-        : _maroon;
+    final accent = scheme.primary;
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 80,
+        toolbarHeight: 68,
+        titleSpacing: 8,
         backgroundColor: _deepMaroon,
         foregroundColor: Colors.white,
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 39,
-              height: 39,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.work_outline, color: Colors.white, size: 23),
+        centerTitle: false,
+        leadingWidth: 48,
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Fire & Safety Jobs',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'সর্বশেষ প্রকাশিত চাকরির বিজ্ঞপ্তি',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFFF3D7DC),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(tooltip: 'Job Alert', onPressed: () => CareerPage.open(context, section: 'alerts'), icon: const Icon(Icons.notifications_active_outlined)),
-          IconButton(
-            tooltip: 'রিফ্রেশ',
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh_rounded),
+            child: const Icon(Icons.work_outline, color: Colors.white, size: 29),
           ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42,
+            color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr('চাকরির বিজ্ঞপ্তি', 'Fire & Safety Jobs'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
+        actions: [
+          _headerAction(
+            tooltip: _tr('চাকরির অ্যালার্ট', 'Job Alert'),
+            icon: Icons.notifications_active_outlined,
+            onPressed: () => CareerPage.open(context, section: 'alerts'),
+          ),
+          const SizedBox(width: 5),
+          _headerAction(
+            tooltip: _tr('রিফ্রেশ', 'Refresh'),
+            icon: Icons.refresh_rounded,
+            onPressed: _refresh,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
+        color: accent,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 30),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
           children: [
             _submitCallout(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             TextField(
               controller: _search,
               textInputAction: TextInputAction.search,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search_rounded, color: accent),
-                hintText: 'পদ, প্রতিষ্ঠান বা কর্মস্থল খুঁজুন',
+                hintText: _tr('চাকরি খুঁজুন', 'Search jobs'),
                 hintStyle: TextStyle(
                   fontSize: 14,
                   color: scheme.onSurfaceVariant,
                 ),
                 filled: true,
                 fillColor: scheme.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(color: scheme.outlineVariant),
@@ -202,21 +195,21 @@ class _JobsPageState extends State<JobsPage> {
                 suffixIcon: _search.text.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'সার্চ মুছুন',
+                        tooltip: _tr('সার্চ মুছুন', 'Clear search'),
                         onPressed: () => setState(_search.clear),
                         icon: const Icon(Icons.close_rounded),
                       ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
             _filterPanel(context),
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
             FutureBuilder<List<JobCircular>>(
               future: _jobs,
               builder: (context, snapshot) {
                 if (!snapshot.hasData && !snapshot.hasError) {
                   return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 70),
+                    padding: EdgeInsets.symmetric(vertical: 14),
                     child: FsLoadingCards(count: 3),
                   );
                 }
@@ -224,8 +217,8 @@ class _JobsPageState extends State<JobsPage> {
                   return _notice(
                     context,
                     Icons.wifi_off_outlined,
-                    'চাকরির বিজ্ঞপ্তি লোড করা যায়নি।',
-                    'সার্ভার সংযোগ ও Jobs API যাচাই করুন।',
+                    _tr('চাকরির বিজ্ঞপ্তি লোড হয়নি।', 'Could not load jobs.'),
+                    _tr('সংযোগ দেখে আবার চেষ্টা করুন।', 'Check your connection and try again.'),
                     onRetry: _refresh,
                   );
                 }
@@ -234,35 +227,30 @@ class _JobsPageState extends State<JobsPage> {
                   return _notice(
                     context,
                     Icons.search_off_outlined,
-                    'কোনো বিজ্ঞপ্তি পাওয়া যায়নি',
+                    _tr('কোনো বিজ্ঞপ্তি পাওয়া যায়নি', 'No jobs found'),
                     snapshot.data!.isEmpty
-                        ? 'এখনো কোনো চাকরির বিজ্ঞপ্তি প্রকাশ করা হয়নি।'
-                        : 'সার্চ বা ফিল্টার পরিবর্তন করে দেখুন।',
+                        ? _tr('এখনো কোনো বিজ্ঞপ্তি প্রকাশ হয়নি।', 'No jobs have been published yet.')
+                        : _tr('সার্চ বা ফিল্টার পরিবর্তন করুন।', 'Change your search or filters.'),
                   );
                 }
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.article_outlined, size: 19, color: accent),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${jobs.length}টি বিজ্ঞপ্তি পাওয়া গেছে',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(child: Text(_tr('চাকরি', 'Jobs'),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: scheme.onSurface, fontWeight: FontWeight.w800))),
+                      const SizedBox(width: 8),
+                      Flexible(child: Text(
+                        _tr('${jobs.length}টি বিজ্ঞপ্তি', '${jobs.length} listings'),
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant))),
+                    ]),
+                    const SizedBox(height: 8),
                     for (final job in jobs)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: _JobCard(
                           job: job,
                           onTap: () => Navigator.of(context).push(
@@ -278,7 +266,7 @@ class _JobsPageState extends State<JobsPage> {
             ),
             const SizedBox(height: 14),
             Text(
-              'আবেদনের আগে নিয়োগদাতার মূল বিজ্ঞপ্তি, যোগ্যতা ও শেষ তারিখ যাচাই করুন।',
+              _tr('আবেদনের আগে মূল বিজ্ঞপ্তি, যোগ্যতা ও শেষ তারিখ যাচাই করুন।', 'Verify the original notice, eligibility and deadline before applying.'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -292,58 +280,65 @@ class _JobsPageState extends State<JobsPage> {
     );
   }
 
+  Widget _headerAction({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(width: 48, height: 48,
+          child: Center(child: Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: Colors.white),
+          )),
+        ),
+      ),
+    ),
+  );
+
   Widget _submitCallout(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFFFA6B4)
-        : _maroon;
     return Material(
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(17),
-        side: BorderSide(color: accent.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: _openSubmit,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 43,
-                height: 43,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Icon(Icons.add_circle_outline_rounded,
-                    size: 24, color: accent),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'আপনার চাকরির সার্কুলার জমা দিন',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.arrow_forward_ios_rounded, size: 17, color: accent),
-            ],
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          child: Row(children: [
+            Container(width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.add_circle_outline_rounded,
+                size: 21, color: scheme.primary)),
+            const SizedBox(width: 9),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_tr('সার্কুলার জমা দিন', 'Submit a circular'),
+                  style: Theme.of(context).textTheme.titleSmall),
+                Text(_tr('অনুমোদন সাপেক্ষে', 'Subject to approval'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant)),
+              ],
+            )),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, color: scheme.primary),
+          ]),
         ),
       ),
     );
@@ -351,143 +346,70 @@ class _JobsPageState extends State<JobsPage> {
 
   Widget _filterPanel(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFFFA6B4)
-        : _maroon;
-    final hasFilters = _pinnedOnly ||
-        _deadline != 'active' ||
+    final hasFilters = _pinnedOnly || _deadline != 'active' ||
         _search.text.trim().isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(13, 10, 13, 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.tune_rounded, size: 19, color: accent),
-              const SizedBox(width: 7),
-              const Text(
-                'বিজ্ঞপ্তি বাছাই',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-              ),
-              const Spacer(),
-              if (hasFilters)
-                TextButton(
-                  onPressed: () => setState(() {
-                    _search.clear();
-                    _pinnedOnly = false;
-                    _deadline = 'active';
-                  }),
-                  style: TextButton.styleFrom(
-                    foregroundColor: accent,
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text('রিসেট'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _statusOption(
-                    context, 'চলমান', 'active', Icons.bolt_outlined,
-                  ),
-                ),
-                Expanded(
-                  child: _statusOption(
-                    context, 'সবগুলো', 'all', Icons.grid_view_rounded,
-                  ),
-                ),
-                Expanded(
-                  child: _statusOption(
-                    context, 'মেয়াদ শেষ', 'expired', Icons.history_rounded,
-                  ),
-                ),
-              ],
+    return Wrap(
+      spacing: 5, runSpacing: 5,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _statusOption(_tr('চলমান', 'Active'), 'active'),
+        _statusOption(_tr('সবগুলো', 'All'), 'all'),
+        _statusOption(_tr('মেয়াদ শেষ', 'Expired'), 'expired'),
+        Semantics(
+          selected: _pinnedOnly,
+          button: true,
+          child: IconButton(
+            tooltip: _tr('শুধু পিন করা', 'Pinned only'),
+            isSelected: _pinnedOnly,
+            onPressed: () => setState(() => _pinnedOnly = !_pinnedOnly),
+            icon: const Icon(Icons.push_pin_outlined, size: 19),
+            selectedIcon: const Icon(Icons.push_pin, size: 19),
+            style: IconButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              backgroundColor: _pinnedOnly ? scheme.primary : scheme.surface,
+              foregroundColor: _pinnedOnly ? scheme.onPrimary : scheme.primary,
+              side: BorderSide(color: _pinnedOnly ? scheme.primary : scheme.outlineVariant),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
-          const SizedBox(height: 8),
-          FilterChip(
-            label: const Text('শুধু পিন করা'),
-            avatar: Icon(
-              Icons.push_pin_outlined,
-              size: 17,
-              color: _pinnedOnly ? accent : scheme.onSurfaceVariant,
-            ),
-            selected: _pinnedOnly,
-            showCheckmark: false,
-            selectedColor: accent.withValues(alpha: 0.13),
-            backgroundColor: scheme.surface,
-            side: BorderSide(
-              color: _pinnedOnly
-                  ? accent.withValues(alpha: 0.45)
-                  : scheme.outlineVariant,
-            ),
-            visualDensity: VisualDensity.compact,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(11),
-            ),
-            onSelected: (selected) =>
-                setState(() => _pinnedOnly = selected),
+        ),
+        if (hasFilters)
+          IconButton(
+            tooltip: _tr('ফিল্টার রিসেট', 'Reset filters'),
+            onPressed: () => setState(() {
+              _search.clear();
+              _pinnedOnly = false;
+              _deadline = 'active';
+            }),
+            icon: Icon(Icons.restart_alt_rounded, color: scheme.primary),
           ),
-        ],
-      ),
+      ],
     );
   }
 
-  Widget _statusOption(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-  ) {
+  Widget _statusOption(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
     final selected = _deadline == value;
-    final textColor = selected
-        ? Colors.white
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => setState(() => _deadline = value),
-        borderRadius: BorderRadius.circular(10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 11),
-          decoration: BoxDecoration(
-            color: selected ? _maroon : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 15, color: textColor),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: textColor,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? scheme.primary : scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: selected ? scheme.primary : scheme.outlineVariant)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => setState(() => _deadline = value),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Align(widthFactor: 1, heightFactor: 1,
+                child: Text(label, style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700,
+                  color: selected ? scheme.onPrimary : scheme.onSurfaceVariant))),
+            ),
           ),
         ),
       ),
@@ -502,10 +424,10 @@ class _JobsPageState extends State<JobsPage> {
     VoidCallback? onRetry,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 54, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 8),
       child: Column(
         children: [
-          Icon(icon, size: 48, color: _maroon),
+          Icon(icon, size: 36, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 10),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 7),
@@ -521,7 +443,7 @@ class _JobsPageState extends State<JobsPage> {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('আবার চেষ্টা করুন'),
+              label: Text(_tr('আবার চেষ্টা করুন', 'Try again')),
             ),
           ],
         ],
@@ -536,6 +458,8 @@ class _JobCard extends StatelessWidget {
   final JobCircular job;
   final VoidCallback onTap;
 
+  String _tr(BuildContext context, String bn, String en) => AppText.of(context, bn, en);
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -546,14 +470,14 @@ class _JobCard extends StatelessWidget {
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -561,60 +485,53 @@ class _JobCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7E7E9),
-                      borderRadius: BorderRadius.circular(13),
+                      color: scheme.primary.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.business_center_outlined,
-                        color: _maroon, size: 25),
+                    child: Icon(Icons.business_center_outlined,
+                        color: accent, size: 23),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(job.title,
+                          style: TextStyle(fontSize: 15, height: 1.3,
+                            color: scheme.onSurface, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 3),
                         Text(job.organization.isEmpty
-                            ? 'প্রতিষ্ঠান উল্লেখ নেই' : job.organization,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                            )),
-                        const SizedBox(height: 5),
-                        Text(
-                          job.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.3,
-                            color: scheme.onSurface,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                            ? _tr(context, 'প্রতিষ্ঠান উল্লেখ নেই', 'Organization not specified')
+                            : job.organization,
+                          style: TextStyle(fontSize: 12,
+                            color: scheme.onSurfaceVariant)),
                       ],
                     ),
                   ),
                   Icon(Icons.chevron_right, color: accent),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
-                runSpacing: 7,
+                spacing: 6,
+                runSpacing: 5,
                 children: [
-                  if (job.isPinned) _tag('পিন করা', accent),
+                  if (job.isPinned) _tag(_tr(context, 'পিন করা', 'Pinned'), accent),
                   if (job.category.isNotEmpty)
                     _tag(job.category, accent),
                   if (location.isNotEmpty)
                     _tag(location, scheme.onSurfaceVariant),
                   _tag(
-                    job.isExpired ? 'মেয়াদ শেষ' : 'চলমান',
+                    job.isExpired ? _tr(context, 'মেয়াদ শেষ', 'Expired') : _tr(context, 'চলমান', 'Active'),
                     job.isExpired ? scheme.error : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8DDEB2) : const Color(0xFF176B46)),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              Divider(height: 9, color: scheme.outlineVariant),
               Row(
                 children: [
                   Icon(Icons.event_outlined,
@@ -622,21 +539,21 @@ class _JobCard extends StatelessWidget {
                   const SizedBox(width: 5),
                   Expanded(
                     child: Text(
-                      'শেষ তারিখ: ${_dateLabel(job.deadline)}',
+                      _tr(context, 'শেষ তারিখ: ${_dateLabel(job.deadline)}',
+                        'Deadline: ${job.deadline == null ? 'Not specified' : _dateLabel(job.deadline)}'),
                       style: TextStyle(
                         fontSize: 12,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  Text(
-                    'বিস্তারিত দেখুন',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(
+                    _tr(context, 'বিস্তারিত দেখুন', 'View details'),
+                    textAlign: TextAlign.end,
+                    style: TextStyle(color: accent, fontSize: 12,
+                      fontWeight: FontWeight.w700),
+                  )),
                 ],
               ),
             ],
@@ -647,7 +564,7 @@ class _JobCard extends StatelessWidget {
   }
 
   Widget _tag(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(8),
