@@ -3,9 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fire_safety_job_prep/screens/profile_page.dart';
 import 'package:fire_safety_job_prep/theme/app_theme.dart';
+import 'package:fire_safety_job_prep/screens/support_page.dart';
+import 'package:fire_safety_job_prep/services/support_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 Future<void> mountProfile(WidgetTester tester, ThemeMode mode, String language,
-    {double scale = 1}) async {
+    {double scale = 1, Future<bool> Function(BuildContext)? authorizeSupport,
+    SupportService? supportService}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(360, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -23,6 +28,8 @@ Future<void> mountProfile(WidgetTester tester, ThemeMode mode, String language,
     ),
     home: ProfilePage(
       onLogout: () {},
+      authorizeSupport: authorizeSupport,
+      supportService: supportService,
       loadProfile: (_) async => {
         'full_name': 'Sample User', 'email': 'sample@example.com',
         'mobile_number': '01000000000', 'current_status': 'Employed',
@@ -43,12 +50,30 @@ void main() {
     expect(find.text('ক্যারিয়ার ডেভেলপমেন্ট'), findsNothing);
     expect(find.text('দৈনিক লক্ষ্য ও শেখার অগ্রগতি'), findsNothing);
     expect(find.text('অনুশীলন ড্যাশবোর্ড'), findsOneWidget);
+    final summary = find.byKey(const ValueKey('profile-summary-card'));
+    final learning = find.byKey(const ValueKey('profile-learning-card'));
+    final badge = find.byKey(const ValueKey('profile-member-badge'));
+    expect(tester.getSize(summary).height, lessThan(105));
+    expect(tester.getSize(learning).height, lessThan(145));
+    expect(find.descendant(of: badge, matching: find.text('সদস্য')), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
+    expect(find.text('90%'), findsOneWidget);
+    expect(find.text('শেখার অগ্রগতি'), findsOneWidget);
+    final info = tester.widget<Tooltip>(find.byKey(const ValueKey('profile-learning-info')));
+    expect(info.message, 'প্রকাশিত পরীক্ষার ফলাফল ও সংরক্ষিত অনুশীলন সেশনের ভিত্তিতে।');
+    expect(find.text(info.message!), findsNothing);
+    final menu = find.text('অনুশীলন ড্যাশবোর্ড');
+    expect(tester.widget<Text>(menu).style?.fontWeight, FontWeight.w500);
+    final tile = find.ancestor(of: menu, matching: find.byType(InkWell)).first;
+    expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(tile).height, lessThan(56));
     final menuIcon = tester.widget<Icon>(find.byIcon(Icons.insights_rounded));
     expect(menuIcon.color, AppTheme.darkTheme.colorScheme.primary);
     await tester.ensureVisible(find.text('অ্যাকাউন্ট ও নিরাপত্তা'));
     await tester.pumpAndSettle();
     expect(find.text('প্রিমিয়াম সদস্যপদ'), findsOneWidget);
     expect(find.text('নোটিফিকেশন ইনবক্স'), findsOneWidget);
+    expect(find.text('অ্যাডমিন সাপোর্ট'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -97,6 +122,7 @@ void main() {
     expect(find.text('Saved notes'), findsOneWidget);
     expect(find.text('App settings'), findsOneWidget);
     expect(find.text('Notification preferences'), findsOneWidget);
+    expect(find.text('Admin support'), findsOneWidget);
     expect(find.text('Personal information'), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('profile-summary-card')));
     await tester.pumpAndSettle();
@@ -138,6 +164,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Permanently delete account?'), findsNothing);
     expect(find.byKey(const ValueKey('account-delete-tile')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Profile opens existing general support after authentication',
+      (tester) async {
+    var authorized = false;
+    var requests = 0;
+    final client = MockClient((request) async {
+      requests++;
+      expect(request.url.queryParameters['page'], '1');
+      expect(request.headers['Authorization'], 'Bearer test');
+      return http.Response('{"success":true,"data":[],"has_more":false}', 200);
+    });
+    addTearDown(client.close);
+    final service = SupportService(currentToken: () async => 'test', client: client);
+    await mountProfile(tester, ThemeMode.dark, 'en',
+      authorizeSupport: (_) async => authorized, supportService: service);
+    final entry = find.text('Admin support');
+    await tester.ensureVisible(entry);
+    await tester.pumpAndSettle();
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.byType(SupportPage), findsNothing);
+    expect(requests, 0);
+    authorized = true;
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.byType(SupportPage), findsOneWidget);
+    expect(tester.widget<SupportPage>(find.byType(SupportPage)).generalSupport, isTrue);
+    expect(find.text('New message'), findsOneWidget);
+    expect(requests, 1);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
