@@ -201,7 +201,7 @@ class _HomePageState extends State<HomePage> {
         if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'), onRetry: _refresh);
         final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
         if(jobs.isEmpty)return FsStatusCard(icon:Icons.work_outline,message:_tr('বর্তমানে কোনো চলমান বিজ্ঞপ্তি নেই।','No active jobs published.'));
-        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:[job.organization,job.location].where((v)=>v.trim().isNotEmpty).join(' • '),onTap:()=>_open('jobs',search:job.title))]);
+        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),onTap:()=>_open('jobs',search:job.title))]);
       })]);
       case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes'),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
