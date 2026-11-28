@@ -967,7 +967,7 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
             ),
             for (final value in [5, 10, 15, 20, 30, 50])
               ListTile(
-                title: Text(_tr('$valueটি প্রশ্ন', '$value questions')),
+                title: Text(_tr('${value}টি প্রশ্ন', '$value questions')),
                 trailing: value == current
                     ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary)
                     : null,
@@ -1012,7 +1012,7 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: LinearProgressIndicator(
-        value: value.clamp(0.0, 1.0),
+        value: value.clamp(0.0, 1.0).toDouble(),
         minHeight: 7,
         color: color ?? scheme.primary,
         backgroundColor: scheme.surfaceContainerHighest,
@@ -1077,7 +1077,7 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
         LayoutBuilder(builder: (context, constraints) {
           // The API provides only recorded dates, not the server's current date.
           // Plot actual records rather than inventing dates or zero values.
-          final width = (constraints.maxWidth / weekly.length).clamp(58.0, 104.0);
+          final width = (constraints.maxWidth / weekly.length).clamp(58.0, 104.0).toDouble();
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -1144,7 +1144,7 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
         Builder(builder: (context) {
           final subject = subjects[index];
           final accuracy = ((subject['accuracy'] as num?)?.toDouble() ?? 0)
-              .clamp(0.0, 100.0);
+              .clamp(0.0, 100.0).toDouble();
           final category = categoryDisplayFromRow(
             subject, 'category', Localizations.localeOf(context).languageCode);
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1294,14 +1294,20 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
               children: [
                 _panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: _heading(Icons.flag_outlined, _tr('আজকের লক্ষ্য', 'Today’s goal'))),
-                    TextButton.icon(
+                  LayoutBuilder(builder: (context, constraints) {
+                    final heading = _heading(Icons.flag_outlined, _tr('আজকের লক্ষ্য', 'Today’s goal'));
+                    final edit = TextButton.icon(
                       onPressed: _savingTarget ? null : () => _chooseTarget(target),
                       icon: const Icon(Icons.tune_rounded, size: 16),
                       label: Text(_tr('পরিবর্তন', 'Edit')),
-                    ),
-                  ]),
+                    );
+                    if (constraints.maxWidth < 230 ||
+                        MediaQuery.textScalerOf(context).scale(14) > 19) {
+                      return Column(crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [heading, edit]);
+                    }
+                    return Row(children: [Expanded(child: heading), edit]);
+                  }),
                   const SizedBox(height: 5),
                   Text(_tr('$done / $target প্রশ্ন', '$done / $target questions'),
                     style: theme.textTheme.headlineSmall?.copyWith(
