@@ -328,7 +328,7 @@ $fmtDate = static function($v) { return $v ? date('Y-m-d\TH:i', strtotime((strin
 <body>
 <div class="layout">
 <aside class="sidebar" id="modelTestSidebar">
- <div class="brand"><a href="index.php" aria-label="ড্যাশবোর্ডে ফিরুন"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"></a><div><a href="index.php"><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></a></div></div>
+ <div class="brand"><a href="index.php" aria-label="ড্যাশবোর্ডে ফিরুন"><img src="assets/fire-safety-bd-logo.png?v=177" alt="Fire Safety BD Logo"></a><div><a href="index.php"><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></a></div></div>
  <button type="button" class="mobile-menu-toggle" id="modelTestMenuToggle" aria-expanded="false" aria-controls="modelTestNav">☰ মেনু</button>
  <nav class="nav" id="modelTestNav">
   <a href="index.php"><span class="ico">▦</span>ড্যাশবোর্ড</a>

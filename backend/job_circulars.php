@@ -212,7 +212,7 @@ th,td{padding:13px 10px;text-align:left;border-bottom:1px solid #f1e5e1;vertical
 <div class="layout">
 <aside class="sidebar">
     <a href="fire_safety_job_prep_dashboard.php" class="brand">
-        <img src="assets/fire-safety-bd-logo.png" class="logo" alt="Logo">
+        <img src="assets/fire-safety-bd-logo.png?v=177" class="logo" alt="Logo">
         <div><div class="brand-title">Fire Safety BD</div><div class="brand-sub">অ্যাডমিন প্যানেল</div></div>
     </a>
     <nav class="nav">

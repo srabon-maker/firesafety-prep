@@ -199,7 +199,7 @@ function ao_nav(array $links,string $tab): void { ?>
 <?php } ?>
 <div class="ops-shell">
 <aside class="sidebar" aria-label="অ্যাডমিন নেভিগেশন">
-<a class="brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
+<a class="brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png?v=177" alt="Fire Safety BD"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a>
 <?php ao_nav($opsNav,$tab); ?>
 </aside>
 <main class="main">

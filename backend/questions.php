@@ -761,7 +761,7 @@ $token = csrf_token();
 <div class="layout">
 <aside class="sidebar" id="sidebar">
  <div class="brand">
-  <a href="fire_safety_job_prep_dashboard.php" aria-label="Fire Safety BD Dashboard"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD Logo"></a>
+  <a href="fire_safety_job_prep_dashboard.php" aria-label="Fire Safety BD Dashboard"><img src="assets/fire-safety-bd-logo.png?v=177" alt="Fire Safety BD Logo"></a>
   <div><a href="fire_safety_job_prep_dashboard.php"><div class="brand-name">Fire Safety BD</div><div class="brand-sub">অ্যাডমিন প্যানেল</div></a></div>
  </div>
  <nav class="nav-list" aria-label="Admin navigation">

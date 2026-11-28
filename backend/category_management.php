@@ -939,7 +939,7 @@ td {
            href="fire_safety_job_prep_dashboard.php">
 
             <img
-                src="assets/fire-safety-bd-logo.png"
+                src="assets/fire-safety-bd-logo.png?v=177"
                 alt="Fire Safety BD Logo"
                 onerror="this.style.display='none'"
             >

@@ -166,7 +166,7 @@ function hp_nav(array $links,string $active): void { ?>
 </nav>
 <?php } ?>
 <div class="layout">
-<aside class="hp-nav"><a class="hp-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png" alt="Fire Safety BD"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a><?php hp_nav($hpNav,$pageUrl); ?></aside>
+<aside class="hp-nav"><a class="hp-brand" href="fire_safety_job_prep_dashboard.php"><img src="assets/fire-safety-bd-logo.png?v=177" alt="Fire Safety BD"><span><strong>Fire Safety BD</strong><small>অ্যাডমিন প্যানেল</small></span></a><?php hp_nav($hpNav,$pageUrl); ?></aside>
 <main class="hp-main">
 <details class="hp-mobile"><summary>☰ Fire Safety BD · অ্যাডমিন মেনু</summary><?php hp_nav($hpNav,$pageUrl); ?></details>
 <div class="hp-top"><span><a href="fire_safety_job_prep_dashboard.php">ড্যাশবোর্ড</a> / <?=h($pageTitle)?></span><span class="hp-tag">● শুধু অ্যাডমিন</span></div>
