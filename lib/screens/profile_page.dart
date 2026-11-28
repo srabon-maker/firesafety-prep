@@ -362,23 +362,24 @@ class _ProfilePageState extends State<ProfilePage> {
   ) {
     final scheme = _scheme(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      key: ValueKey('profile-info-$label'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 19, color: scheme.primary),
-          const SizedBox(width: 11),
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
                     style: TextStyle(
-                        fontSize: 11, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 3),
+                        fontSize: 11, height: 1.2, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 2),
                 Text(_value(value),
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                        fontSize: 14, height: 1.2, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -635,25 +636,28 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 10),
                 Card(
+                  key: const ValueKey('profile-personal-card'),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(color: scheme.outlineVariant),
+                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .65)),
                   ),
                   child: Theme(
                     data: Theme.of(context)
                         .copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       leading:
-                          Icon(Icons.badge_outlined, color: scheme.primary),
+                          Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
                       title: Text(
                         _tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.2),
                       ),
                       tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                      minTileHeight: 48,
                       childrenPadding:
-                          const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                          const EdgeInsets.fromLTRB(12, 0, 12, 10),
                       children: [
+                        Divider(height: 8, color: scheme.outlineVariant.withValues(alpha: .65)),
                         _profileInfoRow(
                             context,
                             Icons.person_outline,
@@ -691,12 +695,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             Icons.home_outlined,
                             _tr(context, 'বর্তমান ঠিকানা', 'Current address'),
                             user['current_address']),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: () => _editProfile(user),
-                            icon: const Icon(Icons.edit_outlined),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(48, 44),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
                             label: Text(_tr(context, 'তথ্য পরিবর্তন করুন',
                                 'Edit information')),
                           ),
