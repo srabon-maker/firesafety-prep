@@ -227,20 +227,22 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: InkWell(
+              key: const ValueKey('home-marketplace-tile'),
               onTap: () => _open('shop'),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
                 child: Row(children: [
                   Container(
-                    width: 38, height: 38,
+                    key: const ValueKey('home-marketplace-icon'),
+                    width: 42, height: 42,
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(11)),
                     child: const Icon(Icons.storefront, color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                  Expanded(child: Column(key: const ValueKey('home-marketplace-labels'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, height: 1.2)),
                     const SizedBox(height: 1),
-                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.2)),
                   ])),
                   const SizedBox(width: 6),
                   const Icon(Icons.chevron_right, color: Colors.white, size: 20),
