@@ -292,16 +292,24 @@ class _HomePageState extends State<HomePage> {
         decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(20))),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Row(children:[
-            Container(width:42,height:42,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
+            Container(
+              key: const ValueKey('home-brand-icon'),
+              width: 42, height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 32, height: 32,
+                child: CustomPaint(
+                  key: ValueKey('home-brand-flame'),
+                  painter: _HomeBrandFlamePainter(),
+                ),
+              ),
+            ),
             const SizedBox(width:10),
-            const Expanded(child: Text(
-              'Fire Safety BD',
-              key: ValueKey('home-brand-title'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white, fontSize: 20,
-                fontWeight: FontWeight.w700, height: 1.05, letterSpacing: 0),
-            )),
+            const Expanded(child: _HomeBrandTitle()),
             IconButton(
               key: const ValueKey('home-admin-support'),
               tooltip: _tr('অ্যাডমিন সাপোর্ট', 'Admin support'),
@@ -407,4 +415,167 @@ class _HomePageState extends State<HomePage> {
       })),
     ],
   )))));
+}
+
+// Same approved outline path as assets/launcher_foreground.svg. Paint directly
+// at device resolution so the small header mark remains sharp at every density.
+class _HomeBrandFlamePainter extends CustomPainter {
+  const _HomeBrandFlamePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(258, 109)
+      ..cubicTo(265, 105, 269, 109, 271, 118)
+      ..cubicTo(274, 137, 279, 149, 294, 165)
+      ..cubicTo(318, 189, 333, 211, 333, 240)
+      ..cubicTo(333, 283, 300, 317, 257, 317)
+      ..cubicTo(215, 317, 180, 280, 180, 242)
+      ..cubicTo(180, 224, 188, 207, 197, 199)
+      ..cubicTo(203, 193, 209, 197, 211, 205)
+      ..cubicTo(214, 216, 219, 221, 227, 220)
+      ..cubicTo(241, 220, 244, 207, 236, 190)
+      ..cubicTo(228, 174, 223, 165, 226, 151)
+      ..cubicTo(230, 134, 242, 119, 258, 109)
+      ..close()
+      ..moveTo(256, 136)
+      ..cubicTo(246, 146, 243, 155, 247, 167)
+      ..cubicTo(250, 177, 259, 190, 259, 204)
+      ..cubicTo(260, 225, 247, 240, 227, 240)
+      ..cubicTo(216, 240, 208, 235, 202, 229)
+      ..cubicTo(196, 248, 203, 266, 219, 282)
+      ..cubicTo(230, 293, 243, 298, 257, 298)
+      ..cubicTo(288, 298, 314, 273, 314, 241)
+      ..cubicTo(314, 218, 302, 201, 283, 181)
+      ..cubicTo(267, 164, 259, 152, 256, 136)
+      ..close();
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    final scale = size.shortestSide / 212;
+    canvas.scale(scale);
+    canvas.translate(-256.5, -212.5);
+    canvas.drawPath(path, Paint()
+      ..color = Colors.white
+      ..isAntiAlias = true);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeBrandFlamePainter oldDelegate) => false;
+}
+
+
+// Keep the actual title as a normal Text widget: its original font, layout,
+// ellipsis and accessibility remain unchanged. Color only the counters behind
+// the white B and D glyphs, using the measured text positions and baseline.
+class _HomeBrandTitle extends StatelessWidget {
+  const _HomeBrandTitle();
+  static const _label = 'Fire Safety BD';
+  static const _style = TextStyle(
+    color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600,
+    height: 1.05, letterSpacing: 0,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final defaults = DefaultTextStyle.of(context);
+    return CustomPaint(
+      key: const ValueKey('home-brand-bd-counters'),
+      painter: _HomeBrandCountersPainter(
+        style: defaults.style.merge(_style),
+        textScaler: MediaQuery.textScalerOf(context),
+        direction: Directionality.of(context),
+        locale: Localizations.maybeLocaleOf(context),
+        textHeightBehavior: defaults.textHeightBehavior,
+      ),
+      child: const Text(
+        _label,
+        key: ValueKey('home-brand-title'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: _style,
+      ),
+    );
+  }
+}
+
+class _HomeBrandCountersPainter extends CustomPainter {
+  const _HomeBrandCountersPainter({
+    required this.style, required this.textScaler, required this.direction,
+    required this.locale, required this.textHeightBehavior,
+  });
+
+  final TextStyle style;
+  final TextScaler textScaler;
+  final TextDirection direction;
+  final Locale? locale;
+  final TextHeightBehavior? textHeightBehavior;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final text = TextPainter(
+      text: TextSpan(text: _HomeBrandTitle._label, style: style),
+      textDirection: direction,
+      textScaler: textScaler,
+      locale: locale,
+      textHeightBehavior: textHeightBehavior,
+      maxLines: 1,
+      ellipsis: '\u2026',
+    )..layout(maxWidth: size.width);
+    try {
+      // Do not paint any floating marks when the title is truncated.
+      if (text.didExceedMaxLines) return;
+      final lines = text.computeLineMetrics();
+      if (lines.isEmpty) return;
+      final baseline = lines.first.baseline;
+      final em = textScaler.scale(style.fontSize ?? 20);
+      // Nominal Android sans-serif counter silhouettes, slightly overlapping
+      // the white strokes. The real text is painted above them.
+      final b = Path()
+        ..moveTo(375, 1295)
+        ..lineTo(655, 1295)
+        ..quadraticBezierTo(960, 1295, 960, 1040)
+        ..quadraticBezierTo(960, 790, 655, 790)
+        ..lineTo(375, 790)
+        ..close()
+        ..moveTo(375, 710)
+        ..lineTo(700, 710)
+        ..quadraticBezierTo(985, 710, 985, 430)
+        ..quadraticBezierTo(985, 145, 685, 145)
+        ..lineTo(375, 145)
+        ..close();
+      final d = Path()
+        ..moveTo(375, 1295)
+        ..lineTo(580, 1295)
+        ..cubicTo(875, 1295, 1035, 1040, 1035, 750)
+        ..cubicTo(1035, 420, 875, 145, 570, 145)
+        ..lineTo(375, 145)
+        ..close();
+      void fill(int offset, Path path, Color color, double advance) {
+        final boxes = text.getBoxesForSelection(
+          TextSelection(baseOffset: offset, extentOffset: offset + 1),
+        );
+        if (boxes.length != 1) return;
+        final rect = boxes.single.toRect();
+        if (rect.width <= 0) return;
+        canvas.save();
+        canvas.clipRect(Offset.zero & size);
+        canvas.translate(rect.left, baseline);
+        canvas.scale(rect.width / advance, -em / 2048);
+        canvas.drawPath(path, Paint()..color = color..isAntiAlias = true);
+        canvas.restore();
+      }
+      fill(12, b, const Color(0xFF006A4E), 1300);
+      fill(13, d, const Color(0xFFB91025), 1335);
+    } finally {
+      text.dispose();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeBrandCountersPainter oldDelegate) =>
+      style != oldDelegate.style || textScaler != oldDelegate.textScaler ||
+      direction != oldDelegate.direction || locale != oldDelegate.locale ||
+      textHeightBehavior != oldDelegate.textHeightBehavior;
 }
