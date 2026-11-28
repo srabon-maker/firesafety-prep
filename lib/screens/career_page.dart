@@ -51,8 +51,9 @@ class CareerPage extends StatelessWidget {
 }
 
 class CareerSection extends StatefulWidget {
-  const CareerSection({super.key, required this.section, this.alertRequest});
+  const CareerSection({super.key, required this.section, this.alertRequest, this.loadCourses});
   final String section;
+  final Future<Map<String, dynamic>> Function(Map<String, String> filters)? loadCourses;
   // Optional alert-only fixture for widget tests. Normal navigation uses CareerService.
   final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic>? body, Map<String, String> filters)? alertRequest;
   @override
@@ -61,6 +62,7 @@ class CareerSection extends StatefulWidget {
 
 class _CareerSectionState extends State<CareerSection> {
   final _directorySearch = TextEditingController();
+  final _courseSearch = TextEditingController();
   final _keyword = TextEditingController(), _location = TextEditingController(),
       _name = TextEditingController(), _role = TextEditingController(),
       _organization = TextEditingController(), _city = TextEditingController(),
@@ -78,26 +80,27 @@ class _CareerSectionState extends State<CareerSection> {
   void initState() { super.initState(); _load(); }
   @override
   void dispose() {
-    for (final c in [_directorySearch,_keyword,_location,_name,_role,_organization,_city,_bio]) { c.dispose(); }
+    for (final c in [_directorySearch,_courseSearch,_keyword,_location,_name,_role,_organization,_city,_bio]) { c.dispose(); }
     super.dispose();
   }
   Future<void> _load({bool more = false}) async {
     setState(() { _busy = true; _error = null; if (!more) { _rows = []; _next = null; } });
     try {
+      final coursesLoader = _section == 'courses' ? widget.loadCourses : null;
       final fixture = _section == 'alerts' ? widget.alertRequest : null;
-      final token = fixture == null ? await AuthService.instance.getSessionToken() : null;
+      final token = fixture == null && coursesLoader == null ? await AuthService.instance.getSessionToken() : null;
       final filters = <String, String>{
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
         if (_section == 'directory' && _directoryQuery.isNotEmpty) 'q': _directoryQuery,
       };
-      final data = await (fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
+      final data = await (coursesLoader?.call(filters) ?? fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
       Map<String, dynamic>? profile;
       if (_section == 'directory' && !more) {
         final mine = await CareerService.request('my_profile');
         if (mine['profile'] is Map) profile = Map<String, dynamic>.from(mine['profile'] as Map);
       }
-      if (fixture == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
+      if (fixture == null && coursesLoader == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
       if (!mounted) return;
       setState(() {
         _rows = [..._rows, ...CareerService.rows(data)];
@@ -152,20 +155,6 @@ class _CareerSectionState extends State<CareerSection> {
   Widget _field(TextEditingController controller, String label, int max) => Padding(
     padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: controller,
       enabled: !_busy, maxLength: max, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), counterText: '')));
-  Widget _link(String raw) {
-    final uri = CareerService.safeLink(raw);
-    if (uri == null) return const SizedBox.shrink();
-    return TextButton.icon(icon: const Icon(Icons.open_in_new), label: const Text('বিস্তারিত লিংক'),
-      onPressed: () async {
-        try { if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return; } catch (_) {}
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('লিংক খোলা যায়নি')));
-      });
-  }
-  Widget _card(String title, String detail, {String link = ''}) => Card(child: Padding(
-    padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 6), Text(detail), _link(link),
-    ])));
   void _showProfileDetails(Map<String, dynamic> profile) {
     showModalBottomSheet<void>(
       context: context,
@@ -351,6 +340,172 @@ class _CareerSectionState extends State<CareerSection> {
     for (final row in _rows) _alertJobCard(row),
   ];
 
+  void _showCourseInfo() {
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(_tr('প্রশিক্ষণ ও কোর্স সম্পর্কে', 'About training and courses')),
+      content: SingleChildScrollView(child: Text(_tr(
+        'প্রতিষ্ঠান, তারিখ, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন। অ্যাপের মাধ্যমে কোর্সে ভর্তি বা পেমেন্ট হয় না।',
+        'Verify the provider, dates, fees and certificates with official sources. This app does not enroll users or accept course payments.',
+      ))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(_tr('বন্ধ করুন', 'Close')))],
+    ));
+  }
+
+  PreferredSizeWidget _coursesAppBar() => AppBar(
+    toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
+    backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
+    title: LayoutBuilder(builder: (context, constraints) => Row(children: [
+      if (constraints.maxWidth >= 125) ...[
+        Container(width: 40, height: 40,
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: .24))),
+          child: const Icon(Icons.school_outlined, size: 29, color: Colors.white)),
+        const SizedBox(width: 9),
+        Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+        const SizedBox(width: 9),
+      ],
+      Expanded(child: Text(_tr('প্রশিক্ষণ ও কোর্স', 'Training & Courses'),
+        maxLines: 2, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Colors.white, fontSize: 15.5,
+          fontWeight: FontWeight.w500, height: 1.2))),
+    ])),
+    actions: [
+      _alertHeaderAction(Icons.info_outline_rounded, _tr('কোর্স সম্পর্কে', 'About courses'), _showCourseInfo),
+      _alertHeaderAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'), _busy ? null : () => _load()),
+      const SizedBox(width: 8),
+    ],
+  );
+
+  Widget _courseMeta(IconData icon, String value) {
+    final theme = Theme.of(context);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: theme.colorScheme.primary, size: 18),
+      const SizedBox(width: 6),
+      Expanded(child: Text(value, style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant))),
+    ]);
+  }
+
+  void _showCourseDetails(Map<String, dynamic> row) {
+    final uri = CareerService.safeLink(CareerService.text(row, 'course_url'));
+    final provider = CareerService.text(row, 'provider');
+    final location = CareerService.text(row, 'location');
+    final date = CareerService.text(row, 'start_date');
+    final description = CareerService.text(row, 'description');
+    showModalBottomSheet<void>(
+      context: context, isScrollControlled: true, useSafeArea: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * .82),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              Text(CareerService.text(row, 'title'), style: theme.textTheme.titleLarge),
+              if (provider.isNotEmpty) ...[const SizedBox(height: 8), _courseMeta(Icons.business_outlined, provider)],
+              if (location.isNotEmpty) ...[const SizedBox(height: 8), _courseMeta(Icons.location_on_outlined, location)],
+              if (date.isNotEmpty) ...[const SizedBox(height: 8), _courseMeta(Icons.event_outlined, date)],
+              if (description.isNotEmpty) ...[const Divider(height: 24), SelectableText(description)],
+              const SizedBox(height: 12),
+              if (uri != null)
+                FilledButton.icon(
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(_tr('কোর্সের ওয়েবসাইট', 'Course website')),
+                  onPressed: () async {
+                    try {
+                      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+                    } catch (_) {
+                      // Show the failure to the user below.
+                    }
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(_tr('লিংক খোলা যায়নি', 'Could not open link'))));
+                  },
+                ),
+              const SizedBox(height: 8),
+              Text(_tr('ভর্তি, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন।',
+                'Verify enrollment, fees and certificates with official sources.'),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _courseCard(Map<String, dynamic> row) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final provider = CareerService.text(row, 'provider');
+    final location = CareerService.text(row, 'location');
+    final date = CareerService.text(row, 'start_date');
+    return Card(margin: const EdgeInsets.only(bottom: 8), clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: () => _showCourseDetails(row),
+        child: Padding(padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(width: 42, height: 42, decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.school_outlined, color: scheme.primary, size: 25)),
+              const SizedBox(width: 9),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(CareerService.text(row, 'title'), style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                if (provider.isNotEmpty) Text(provider, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              ])),
+              Icon(Icons.chevron_right_rounded, color: scheme.primary),
+            ]),
+            if (date.isNotEmpty || location.isNotEmpty) ...[
+              Divider(height: 18, color: scheme.outlineVariant),
+              if (date.isNotEmpty) _courseMeta(Icons.event_outlined, date),
+              if (date.isNotEmpty && location.isNotEmpty) const SizedBox(height: 6),
+              if (location.isNotEmpty) _courseMeta(Icons.location_on_outlined, location),
+            ],
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: () => _showCourseDetails(row),
+              child: Text(_tr('বিস্তারিত দেখুন', 'View details'))),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _coursesContent() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final query = _courseSearch.text.trim().toLowerCase();
+    final visible = _rows.where((row) => ['title', 'provider', 'location', 'description']
+      .any((field) => CareerService.text(row, field).toLowerCase().contains(query))).toList();
+    return [
+      TextField(controller: _courseSearch, maxLength: 160,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          hintText: _tr('প্রশিক্ষণ বা কোর্স খুঁজুন', 'Search courses'),
+          counterText: '', filled: true, fillColor: scheme.surface,
+          prefixIcon: Icon(Icons.search_rounded, color: scheme.primary),
+          suffixIcon: query.isEmpty ? null : IconButton(
+            tooltip: _tr('সার্চ মুছুন', 'Clear search'),
+            onPressed: () => setState(_courseSearch.clear), icon: const Icon(Icons.close_rounded)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        )),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(child: Text(_tr('প্রকাশিত কোর্স', 'Published courses'), style: theme.textTheme.titleMedium)),
+        const SizedBox(width: 8),
+        Flexible(child: Text(_tr('${visible.length}টি কোর্স${_next != null ? " (লোড হওয়া)" : ""}',
+          '${visible.length} courses${_next != null ? " (loaded)" : ""}'),
+          textAlign: TextAlign.end, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+      ]),
+      const SizedBox(height: 8),
+      if (!_busy && _error == null && visible.isEmpty)
+        FsStatusCard(icon: query.isEmpty ? Icons.school_outlined : Icons.search_off_rounded,
+          message: query.isEmpty ? _tr('এখনো কোনো কোর্স প্রকাশিত হয়নি।', 'No courses published yet.')
+            : _tr('লোড হওয়া কোর্সে কোনো মিল নেই।', 'No matches in loaded courses.')),
+      for (final row in visible) _courseCard(row),
+    ];
+  }
+
   List<Widget> _content() {
     if (_section == 'alerts') return _alertContent();
     if (_section == 'mock') return [
@@ -368,11 +523,7 @@ class _CareerSectionState extends State<CareerSection> {
         onRestart: _busy ? null : () => _load(),
       ),
     ];
-    if (_section == 'courses') return [
-      const Text('প্রতিষ্ঠান, তারিখ, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন। অ্যাপের মাধ্যমে কোর্সে ভর্তি বা পেমেন্ট হয় না।'),
-      for(final row in _rows) _card(CareerService.text(row,'title'),
-        ['provider','location','start_date','description'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n'),link:CareerService.text(row,'course_url')),
-    ];
+    if (_section == 'courses') return _coursesContent();
     final query = _directoryQuery;
     final visibleProfiles = _rows;
     return [
@@ -524,7 +675,7 @@ class _CareerSectionState extends State<CareerSection> {
       'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
     };
     return Scaffold(
-    appBar: _section == 'alerts' ? _alertAppBar() : AppBar(
+    appBar: _section == 'courses' ? _coursesAppBar() : _section == 'alerts' ? _alertAppBar() : AppBar(
       title: Row(
         children: [
           if (_section == 'directory') ...[
@@ -557,12 +708,12 @@ class _CareerSectionState extends State<CareerSection> {
         ),
       ],
     ),
-    body: ListView(padding: _section == 'alerts' ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
+    body: ListView(padding: (_section == 'alerts' || _section == 'courses') ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
-      if(_section!='directory'&&_section!='alerts'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
-      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text(_section == 'alerts' ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
+      if(_section!='directory'&&_section!='alerts'&&_section!='courses'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
+      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text((_section == 'alerts' || _section == 'courses') ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
     ]));
   }
 }
