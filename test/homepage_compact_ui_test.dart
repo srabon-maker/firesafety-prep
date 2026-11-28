@@ -9,7 +9,7 @@ import 'package:fire_safety_job_prep/theme/app_theme.dart';
 Future<void> mountHome(WidgetTester tester, String language,
     {ThemeMode mode = ThemeMode.dark, double scale = 1, double width = 360,
     List<String> sections = const ['marketplace', 'jobs', 'notes'],
-    String company = 'Example Company', DateTime? deadline}) async {
+    String company = 'Example Company', DateTime? deadline, int jobCount=1}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 800);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -25,8 +25,11 @@ Future<void> mountHome(WidgetTester tester, String language,
         textScaler: TextScaler.linear(scale)), child: child!),
     home: Scaffold(body: HomePage(
       loadHome: () async => {'sections': sections},
-      loadJobs: () async => [JobCircular(id: 1, organization: company,
-        title: 'Sample job', location: 'Dhaka', publishedAt: DateTime(2026, 1, 1), deadline: deadline)],
+      loadJobs: () async => [
+        for(int i=0;i<jobCount;i++)JobCircular(id:i+1,organization:company,
+          title:i==0?'Sample job':'Second job',location:'Dhaka',
+          publishedAt:DateTime(2026,1,2-i),deadline:deadline),
+      ],
       loadNotes: () async => const StudyNotesPage(notes: [], categories: [], page: 1, totalPages: 1, total: 0),
     )),
   ));
@@ -165,6 +168,29 @@ void main() {
       expect(find.textContaining(bn?'শেষ তারিখ:':'Deadline:'),findsNothing);
       expect(find.text('Example Company'),findsOneWidget);
       expect(find.text('Dhaka'),findsNothing);
+      expect(tester.takeException(),isNull);
+    });
+  }
+
+  for(final mode in [ThemeMode.dark,ThemeMode.light]){
+    testWidgets('Home sections have 12dp gaps, 8dp header gaps and 6dp card gaps in $mode',(tester)async{
+      await mountHome(tester,mode==ThemeMode.dark?'bn':'en',mode:mode,jobCount:2);
+      await tester.drag(find.byType(ListView).first,const Offset(0,-500));
+      await tester.pumpAndSettle();
+      final career=find.byKey(const ValueKey('home-career-grid'));
+      final market=find.byKey(const ValueKey('home-marketplace-tile'));
+      final jobs=find.byKey(const ValueKey('home-section-header-jobs'));
+      final notes=find.byKey(const ValueKey('home-section-header-notes'));
+      final first=find.ancestor(of:find.text('Sample job'),matching:find.byType(Card)).first;
+      final second=find.ancestor(of:find.text('Second job'),matching:find.byType(Card)).first;
+      final empty=find.byKey(const ValueKey('home-empty-notes'));
+      double gap(Finder before,Finder after)=>tester.getTopLeft(after).dy-tester.getBottomLeft(before).dy;
+      expect(gap(career,market),closeTo(12,.1));
+      expect(gap(market,jobs),closeTo(12,.1));
+      expect(gap(jobs,first),closeTo(8,.1));
+      expect(gap(first,second),closeTo(6,.1));
+      expect(gap(second,notes),closeTo(12,.1));
+      expect(gap(notes,empty),closeTo(8,.1));
       expect(tester.takeException(),isNull);
     });
   }

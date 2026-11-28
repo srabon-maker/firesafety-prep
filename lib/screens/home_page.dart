@@ -105,10 +105,13 @@ class _HomePageState extends State<HomePage> {
     ])));
     if(mounted&&target!=null) await _open(target,search:query);
   }
+  static const double _sectionGap=12, _headingGap=8, _previewGap=6;
+
   Widget _heading(String title,{String? target,IconData? icon,
     bool compact = false,EdgeInsets padding = const EdgeInsets.fromLTRB(2,8,2,2)}) {
     final theme=Theme.of(context);
-    return Padding(padding:padding,child:Row(children:[
+    return Padding(padding:padding,child:Row(
+      key:target==null?null:ValueKey('home-section-header-$target'),children:[
       if(icon!=null)...[
         Icon(icon,color:theme.colorScheme.primary,size:20),
         const SizedBox(width:6),
@@ -128,7 +131,7 @@ class _HomePageState extends State<HomePage> {
     final scheme=Theme.of(context).colorScheme;
     return Card(
       key:const ValueKey('home-empty-notes'),
-      margin:const EdgeInsets.only(bottom:6),
+      margin:EdgeInsets.zero,
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
         side:BorderSide(color:scheme.outlineVariant)),
       child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
@@ -230,27 +233,58 @@ class _HomePageState extends State<HomePage> {
         final rows=data==null?<Map<String,dynamic>>[]:HomepageService.rows(data['banners']);
         if(rows.isEmpty)return const SizedBox.shrink();
         return HomeHeroBanner(items: rows, onOpen: _openBanner);
-      case 'jobs':return Column(children:[_heading(_tr('সর্বশেষ চাকরির বিজ্ঞপ্তি','Latest jobs'),target:'jobs',icon:Icons.work_outline,compact:true),FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
-        if(snapshot.hasError)return FsStatusCard(icon: Icons.cloud_off_outlined, message: _tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'), onRetry: _refresh);
-        final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
-        if(jobs.isEmpty)return FsStatusCard(icon:Icons.work_outline,message:_tr('বর্তমানে কোনো চলমান বিজ্ঞপ্তি নেই।','No active jobs published.'));
-        return Column(children:[for(final job in jobs.take(3)) _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),compactJob:true,onTap:()=>_open('jobs',search:job.title))]);
-      })]);
-      case 'notes':return Column(children:[_heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes',icon:Icons.menu_book_outlined,compact:true),FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 2);
-        if(snapshot.hasError) {
-          final error = snapshot.error;
-          return FsStatusCard(icon: Icons.cloud_off_outlined,
-            message: error is NotesLoadException ? _tr(error.message(), error.message(english: true)) : _tr('নোট লোড হয়নি।','Notes could not load.'),
-            onRetry: _retryNotesPreview);
-        }
-        final notes=snapshot.data?.notes??[];
-        if(notes.isEmpty)return _emptyNotesCard();
-        return Column(children:[for(final note in notes.take(3)) _previewCard(icon:note.locked?Icons.lock_outline:Icons.menu_book_outlined,title:note.title,subtitle:note.displayCategory(Localizations.localeOf(context).languageCode),onTap:()=>_open('notes',search:note.title))]);
-      })]);
+      case 'jobs':return Padding(
+        padding:const EdgeInsets.only(top:_sectionGap),
+        child:Column(children:[
+          _heading(_tr('সর্বশেষ চাকরির বিজ্ঞপ্তি','Latest jobs'),target:'jobs',
+            icon:Icons.work_outline,compact:true,
+            padding:const EdgeInsets.fromLTRB(2,0,2,_headingGap)),
+          FutureBuilder<List<JobCircular>>(future:_jobs,builder:(context,snapshot){
+            if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count:2,cardSpacing:_previewGap);
+            if(snapshot.hasError)return FsStatusCard(margin:EdgeInsets.zero,icon:Icons.cloud_off_outlined,
+              message:_tr('চাকরির খবর লোড হয়নি।','Jobs could not load.'),onRetry:_refresh);
+            final jobs=(snapshot.data??[]).where((j)=>!j.isExpired).toList()..sort((a,b)=>b.publishedAt.compareTo(a.publishedAt));
+            if(jobs.isEmpty)return FsStatusCard(margin:EdgeInsets.zero,icon:Icons.work_outline,
+              message:_tr('বর্তমানে কোনো চলমান বিজ্ঞপ্তি নেই।','No active jobs published.'));
+            return Column(children:[
+              for(final (index,job) in jobs.take(3).indexed)...[
+                if(index>0)const SizedBox(height:_previewGap),
+                _previewCard(icon:Icons.work_outline,title:job.title,subtitle:job.organization.trim(),
+                  compactJob:true,onTap:()=>_open('jobs',search:job.title)),
+              ],
+            ]);
+          }),
+        ]),
+      );
+      case 'notes':return Padding(
+        padding:const EdgeInsets.only(top:_sectionGap),
+        child:Column(children:[
+          _heading(_tr('নতুন স্টাডি নোট','New study notes'),target:'notes',
+            icon:Icons.menu_book_outlined,compact:true,
+            padding:const EdgeInsets.fromLTRB(2,0,2,_headingGap)),
+          FutureBuilder<StudyNotesPage>(future:_notes,builder:(context,snapshot){
+            if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count:2,cardSpacing:_previewGap);
+            if(snapshot.hasError){
+              final error=snapshot.error;
+              return FsStatusCard(margin:EdgeInsets.zero,icon:Icons.cloud_off_outlined,
+                message:error is NotesLoadException ? _tr(error.message(),error.message(english:true)) : _tr('নোট লোড হয়নি।','Notes could not load.'),
+                onRetry:_retryNotesPreview);
+            }
+            final notes=snapshot.data?.notes??[];
+            if(notes.isEmpty)return _emptyNotesCard();
+            return Column(children:[
+              for(final (index,note) in notes.take(3).indexed)...[
+                if(index>0)const SizedBox(height:_previewGap),
+                _previewCard(icon:note.locked?Icons.lock_outline:Icons.menu_book_outlined,title:note.title,
+                  subtitle:note.displayCategory(Localizations.localeOf(context).languageCode),
+                  onTap:()=>_open('notes',search:note.title)),
+              ],
+            ]);
+          }),
+        ]),
+      );
       case 'marketplace':return Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 2),
+        padding: const EdgeInsets.only(top:_sectionGap),
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -295,7 +329,7 @@ class _HomePageState extends State<HomePage> {
   Widget _previewCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, bool compactJob = false}) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Card(margin:const EdgeInsets.only(bottom:6),clipBehavior:Clip.antiAlias,
+    return Card(margin:EdgeInsets.zero,clipBehavior:Clip.antiAlias,
       child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:2),
         leading:Container(width:36,height:36,decoration:BoxDecoration(color:scheme.primary.withValues(alpha:.12),borderRadius:BorderRadius.circular(10)),child:Icon(icon,color:scheme.primary,size:21)),
         title:compactJob ? Column(
@@ -412,12 +446,13 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 10),
           _heading(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'),
             icon:Icons.work_outline,compact:true,padding:const EdgeInsets.symmetric(horizontal:2)),
-          const SizedBox(height: 6),
+          const SizedBox(height:_headingGap),
                 LayoutBuilder(builder: (context, box) {
                   final largeText = MediaQuery.textScalerOf(context).scale(13) > 17;
                   // Four compact shortcuts in one row at normal phone widths.
                   final columns = box.maxWidth < 260 || largeText ? 2 : 4;
                   return GridView.count(
+                    key:const ValueKey('home-career-grid'),
                     padding: EdgeInsets.zero,
                     crossAxisCount: columns,
                     shrinkWrap: true,
