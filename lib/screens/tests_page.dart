@@ -913,7 +913,11 @@ class _SubjectPracticePageState extends State<SubjectPracticePage> {
 }
 
 class PracticeDashboardPage extends StatefulWidget {
-  const PracticeDashboardPage();
+  const PracticeDashboardPage({super.key, this.loadDashboard});
+
+  // Optional loader allows deterministic UI tests without a live account.
+  final Future<Map<String, dynamic>> Function()? loadDashboard;
+
   @override
   State<PracticeDashboardPage> createState() => _PracticeDashboardPageState();
 }
@@ -921,37 +925,59 @@ class PracticeDashboardPage extends StatefulWidget {
 class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
   late Future<Map<String, dynamic>> _data;
   bool _savingTarget = false;
+
+  String _tr(String bn, String en) =>
+      Localizations.localeOf(context).languageCode == 'en' ? en : bn;
+
+  Future<Map<String, dynamic>> _load() =>
+      widget.loadDashboard?.call() ??
+      ModelTestService.instance.practiceDashboard();
+
   @override
   void initState() {
     super.initState();
-    _data = ModelTestService.instance.practiceDashboard();
+    _data = _load();
   }
 
   Future<void> _refresh() async {
-    final next = ModelTestService.instance.practiceDashboard();
+    if (!mounted) return;
+    final next = _load();
     setState(() => _data = next);
-    await next;
+    try {
+      await next;
+    } catch (_) {
+      // FutureBuilder presents the retry state.
+    }
   }
 
   Future<void> _chooseTarget(int current) async {
+    if (_savingTarget) return;
     final selected = await showModalBottomSheet<int>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('দৈনিক অনুশীলনের লক্ষ্য', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-          ),
-          for (final value in [5, 10, 15, 20, 30, 50])
-            ListTile(
-              title: Text('$valueটি প্রশ্ন'),
-              trailing: value == current ? const Icon(Icons.check, color: _maroon) : null,
-              onTap: () => Navigator.pop(ctx, value),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _tr('দৈনিক অনুশীলনের লক্ষ্য', 'Daily practice goal'),
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
             ),
-        ]),
+            for (final value in [5, 10, 15, 20, 30, 50])
+              ListTile(
+                title: Text(_tr('${value}টি প্রশ্ন', '$value questions')),
+                trailing: value == current
+                    ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary)
+                    : null,
+                onTap: () => Navigator.pop(ctx, value),
+              ),
+          ]),
+        ),
       ),
     );
-    if (selected == null) return;
+    if (!mounted || selected == null || selected == current) return;
     setState(() => _savingTarget = true);
     try {
       await ModelTestService.instance.updatePracticeTarget(selected);
@@ -965,150 +991,348 @@ class _PracticeDashboardPageState extends State<PracticeDashboardPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('প্র্যাকটিস ড্যাশবোর্ড')),
-    body: FutureBuilder<Map<String, dynamic>>(
-      future: _data,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('প্র্যাকটিস রিপোর্ট লোড হয়নি।'),
-            TextButton(onPressed: _refresh, child: const Text('আবার চেষ্টা করুন')),
-          ]));
-        }
-        final data = snapshot.data ?? {};
-        final today = Map<String, dynamic>.from(data['today'] as Map? ?? {});
-        final overall = Map<String, dynamic>.from(data['overall'] as Map? ?? {});
-        final target = (data['daily_target'] as num?)?.toInt() ?? 10;
-        final done = (today['questions'] as num?)?.toInt() ?? 0;
-        final weekly = (data['weekly'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        final weak = (data['weak_subjects'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        final maxDaily = weekly.fold<int>(1, (m, e) =>
-            m > ((e['questions'] as num?)?.toInt() ?? 0) ? m : ((e['questions'] as num?)?.toInt() ?? 0));
-        final totalQuestions = (overall['questions'] as num?)?.toInt() ?? 0;
-        final totalCorrect = (overall['correct'] as num?)?.toInt() ?? 0;
-        final overallAccuracy = totalQuestions == 0 ? 0.0 : totalCorrect / totalQuestions * 100;
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(padding: const EdgeInsets.all(16), children: [
-            Card(
-              color: const Color(0xFFFFF5E8),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    const Expanded(child: Text('আজকের অনুশীলন',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
-                    TextButton(
-                      onPressed: _savingTarget ? null : () => _chooseTarget(target),
-                      child: const Text('লক্ষ্য পরিবর্তন'),
-                    ),
-                  ]),
-                  Text('$done / $target প্রশ্ন সম্পন্ন',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _maroon)),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: (done / target).clamp(0.0, 1.0), minHeight: 10,
-                      color: _maroon, backgroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(done >= target ? 'দারুণ! আজকের লক্ষ্য পূরণ হয়েছে।' : 'আর ${target - done}টি প্রশ্ন অনুশীলন করুন।'),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: _dashboardMetric('মোট প্রশ্ন', '$totalQuestions')),
-              const SizedBox(width: 8),
-              Expanded(child: _dashboardMetric('সঠিকের হার', '${overallAccuracy.toStringAsFixed(1)}%')),
-              const SizedBox(width: 8),
-              Expanded(child: _dashboardMetric('স্ট্রিক', '${(overall['streak'] as num?)?.toInt() ?? 0} দিন')),
-            ]),
-            const SizedBox(height: 14),
-            Card(child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('গত ৭ দিনের অগ্রগতি', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
-                for (final day in weekly) ...[
-                  Row(children: [
-                    SizedBox(width: 82, child: Text(day['date']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
-                    Expanded(child: ClipRRect(
-                      borderRadius: BorderRadius.circular(5),
-                      child: LinearProgressIndicator(
-                        value: (((day['questions'] as num?)?.toDouble() ?? 0) / maxDaily).clamp(0.0, 1.0),
-                        minHeight: 8, color: _maroon, backgroundColor: Colors.grey.shade200,
+  int _count(dynamic value) => ((value as num?)?.toInt() ?? 0)
+      .clamp(0, 2147483647).toInt();
+
+  Widget _heading(IconData icon, String text) {
+    final theme = Theme.of(context);
+    return Row(children: [
+      Icon(icon, size: 20, color: theme.colorScheme.primary),
+      const SizedBox(width: 8),
+      Expanded(child: Text(text, style: theme.textTheme.titleMedium)),
+    ]);
+  }
+
+  Widget _panel(Widget child) => Card(
+    child: Padding(padding: const EdgeInsets.all(14), child: child),
+  );
+
+  Widget _progress(double value, {Color? color}) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: LinearProgressIndicator(
+        value: value.clamp(0.0, 1.0).toDouble(),
+        minHeight: 7,
+        color: color ?? scheme.primary,
+        backgroundColor: scheme.surfaceContainerHighest,
+      ),
+    );
+  }
+
+  Widget _dashboardMetric(IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 20, color: scheme.primary),
+          const SizedBox(height: 6),
+          Text(value, textAlign: TextAlign.center,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontSize: 19, color: scheme.onSurface)),
+          const SizedBox(height: 3),
+          Text(label, textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _metricGrid(int total, double accuracy, int streak) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+      final columns = constraints.maxWidth < 300 || largeText ? 1 : 3;
+      final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+      return Wrap(spacing: 8, runSpacing: 8, children: [
+        SizedBox(width: width, child: _dashboardMetric(
+          Icons.menu_book_outlined, _tr('মোট প্রশ্ন', 'Questions'), '$total')),
+        SizedBox(width: width, child: _dashboardMetric(
+          Icons.track_changes_rounded, _tr('সঠিকের হার', 'Accuracy'),
+          '${accuracy.toStringAsFixed(1)}%')),
+        SizedBox(width: width, child: _dashboardMetric(
+          Icons.local_fire_department_outlined, _tr('ধারাবাহিকতা', 'Streak'),
+          _tr('$streak দিন', '$streak days'))),
+      ]);
+    });
+  }
+
+  Widget _weeklyChart(List<Map<String, dynamic>> weekly) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final maxDaily = weekly.fold<int>(1, (max, row) {
+      final count = _count(row['questions']);
+      return count > max ? count : max;
+    });
+    return _panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _heading(Icons.bar_chart_rounded, _tr('সাপ্তাহিক অগ্রগতি', 'Weekly progress')),
+      const SizedBox(height: 14),
+      if (weekly.isEmpty)
+        Text(_tr('এখনো কোনো অনুশীলনের রেকর্ড নেই।', 'No practice recorded yet.'),
+          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant))
+      else ...[
+        LayoutBuilder(builder: (context, constraints) {
+          // The API provides only recorded dates, not the server's current date.
+          // Plot actual records rather than inventing dates or zero values.
+          final width = (constraints.maxWidth / weekly.length).clamp(58.0, 104.0).toDouble();
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (final day in weekly)
+                SizedBox(
+                  width: width,
+                  child: Semantics(
+                    label: '${day['date'] ?? ''}: ${_count(day['questions'])}',
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('${_count(day['questions'])}',
+                        style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurface)),
+                      const SizedBox(height: 5),
+                      Container(
+                        height: 74,
+                        width: 22,
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6)),
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          height: 74 * _count(day['questions']) / maxDaily,
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            borderRadius: BorderRadius.circular(6)),
+                        ),
                       ),
-                    )),
-                    const SizedBox(width: 8),
-                    Text('${day['questions'] ?? 0}', style: const TextStyle(fontSize: 12)),
-                  ]),
-                  const SizedBox(height: 8),
-                ],
-                if (weekly.isEmpty) const Text('এখনো কোনো অনুশীলনের রেকর্ড নেই।'),
-              ]),
-            )),
-            const SizedBox(height: 10),
-            Card(child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('যে বিষয়গুলোতে আরও অনুশীলন দরকার',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 8),
-                for (final subject in weak)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(subject['category']?.toString() ?? 'অন্যান্য'),
-                    subtitle: Text('${subject['questions']} প্রশ্ন • ${subject['sessions']} সেশন'),
-                    trailing: Text('${subject['accuracy']}%',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: _maroon)),
+                      const SizedBox(height: 6),
+                      Text(
+                        _shortDate(day['date']),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ]),
                   ),
-                if (weak.isEmpty) const Text('বিষয়ভিত্তিক পরামর্শ পেতে অনুশীলন সম্পন্ন করুন।'),
-              ]),
-            )),
-            const SizedBox(height: 10),
-            Card(child: Padding(
+                ),
+            ]),
+          );
+        }),
+        const SizedBox(height: 8),
+        Text(_tr('গত ৭ দিনের রেকর্ড করা দিন', 'Recorded days in the last 7 days'),
+          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+      ],
+    ]));
+  }
+
+  String _shortDate(dynamic raw) {
+    final date = DateTime.tryParse(raw?.toString() ?? '');
+    if (date == null) return raw?.toString() ?? '—';
+    return MaterialLocalizations.of(context).formatShortDate(date);
+  }
+
+  Widget _subjectCard(List<Map<String, dynamic>> subjects) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return _panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _heading(Icons.auto_stories_outlined, _tr('বিষয়ভিত্তিক দক্ষতা', 'Subject performance')),
+      const SizedBox(height: 8),
+      if (subjects.isEmpty)
+        Text(_tr('বিষয়ভিত্তিক ফলাফলের জন্য অনুশীলন করুন।',
+          'Complete practice to see subject results.'),
+          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+      for (var index = 0; index < subjects.length; index++) ...[
+        if (index > 0) const Divider(height: 20),
+        Builder(builder: (context) {
+          final subject = subjects[index];
+          final accuracy = ((subject['accuracy'] as num?)?.toDouble() ?? 0)
+              .clamp(0.0, 100.0).toDouble();
+          final category = categoryDisplayFromRow(
+            subject, 'category', Localizations.localeOf(context).languageCode);
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text(category.isEmpty ? _tr('অন্যান্য', 'Other') : category,
+                style: theme.textTheme.titleSmall)),
+              const SizedBox(width: 8),
+              Text('${accuracy.toStringAsFixed(0)}%',
+                style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary)),
+            ]),
+            const SizedBox(height: 7),
+            _progress(accuracy / 100),
+            const SizedBox(height: 6),
+            Text(_tr('${_count(subject['questions'])} প্রশ্ন · ${_count(subject['sessions'])} সেশন',
+              '${_count(subject['questions'])} questions · ${_count(subject['sessions'])} sessions'),
+              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          ]);
+        }),
+      ],
+    ]));
+  }
+
+  Widget _achievement(String label, bool unlocked, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = unlocked
+        ? (dark ? const Color(0xFFA5E8B6) : const Color(0xFF185B31))
+        : scheme.onSurfaceVariant;
+    final background = unlocked
+        ? (dark ? const Color(0xFF193A2A) : const Color(0xFFE3F4E8))
+        : scheme.surfaceContainerHighest;
+    return Semantics(
+      label: '$label, ${unlocked ? _tr('অর্জিত', 'Unlocked') : _tr('অনর্জিত', 'Locked')}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: unlocked ? foreground.withValues(alpha: .35) : scheme.outlineVariant),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 24, color: foreground),
+          const SizedBox(height: 6),
+          Text(label, textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: foreground)),
+          const SizedBox(height: 5),
+          Icon(unlocked ? Icons.check_circle_outline : Icons.lock_outline,
+            size: 15, color: foreground),
+        ]),
+      ),
+    );
+  }
+
+  Widget _achievements(int total, int streak, bool goalReached) {
+    return _panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _heading(Icons.emoji_events_outlined, _tr('আপনার অর্জন', 'Achievements')),
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+        final columns = constraints.maxWidth < 240 || largeText ? 2 : 3;
+        final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+        return Wrap(spacing: 8, runSpacing: 8, children: [
+          SizedBox(width: width, child: _achievement(_tr('প্রথম পদক্ষেপ', 'First step'), total >= 1, Icons.flag_outlined)),
+          SizedBox(width: width, child: _achievement(_tr('৫০ প্রশ্ন', '50 questions'), total >= 50, Icons.school_outlined)),
+          SizedBox(width: width, child: _achievement(_tr('১০০ প্রশ্ন', '100 questions'), total >= 100, Icons.workspace_premium_outlined)),
+          SizedBox(width: width, child: _achievement(_tr('৭ দিনের স্ট্রিক', '7-day streak'), streak >= 7, Icons.local_fire_department_outlined)),
+          SizedBox(width: width, child: _achievement(_tr('লক্ষ্য পূরণ', 'Goal reached'), goalReached, Icons.task_alt)),
+        ]);
+      }),
+    ]));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final canGoBack = ModalRoute.of(context)?.canPop ?? false;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        backgroundColor: _deepMaroon,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        leadingWidth: canGoBack ? 48 : 0,
+        leading: canGoBack ? IconButton(
+          tooltip: _tr('ফিরে যান', 'Back'),
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+        ) : null,
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.insights_rounded, size: 29, color: Colors.white),
+          ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr('প্র্যাকটিস ড্যাশবোর্ড', 'Practice Dashboard'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
+        actions: [
+          IconButton(tooltip: _tr('রিফ্রেশ', 'Refresh'), onPressed: _refresh,
+            icon: const Icon(Icons.refresh_rounded)),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('আপনার অর্জন', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  _achievementChip('প্রথম পদক্ষেপ', totalQuestions >= 1, Icons.flag),
-                  _achievementChip('৫০ প্রশ্ন', totalQuestions >= 50, Icons.school),
-                  _achievementChip('১০০ প্রশ্ন', totalQuestions >= 100, Icons.workspace_premium),
-                  _achievementChip('৭ দিনের ধারাবাহিকতা', ((overall['streak'] as num?)?.toInt() ?? 0) >= 7, Icons.local_fire_department),
-                  _achievementChip('লক্ষ্য পূরণ', done >= target, Icons.check_circle),
-                ]),
-              ]),
-            )),
-          ]),
-        );
-      },
-    ),
-  );
-
-  Widget _dashboardMetric(String label, String value) => Card(
-    child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _maroon)),
-      const SizedBox(height: 4), Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
-    ])),
-  );
-
-  Widget _achievementChip(String label, bool unlocked, IconData icon) => Chip(
-    avatar: Icon(icon, size: 16, color: unlocked ? Colors.green : Colors.grey),
-    label: Text(label),
-    backgroundColor: unlocked ? Colors.green.shade50 : Colors.grey.shade100,
-    side: BorderSide(color: unlocked ? Colors.green.shade200 : Colors.grey.shade300),
-  );
+              child: FsStatusCard(icon: Icons.error_outline,
+                message: _tr('প্র্যাকটিস রিপোর্ট লোড হয়নি।', 'Could not load practice report.'),
+                onRetry: _refresh),
+            ));
+          }
+          final data = snapshot.data ?? {};
+          final today = Map<String, dynamic>.from(data['today'] as Map? ?? {});
+          final overall = Map<String, dynamic>.from(data['overall'] as Map? ?? {});
+          final rawTarget = (data['daily_target'] as num?)?.toInt() ?? 10;
+          final target = rawTarget > 0 ? rawTarget : 10;
+          final done = _count(today['questions']);
+          final weekly = (data['weekly'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          final weak = (data['weak_subjects'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          final totalQuestions = _count(overall['questions']);
+          final totalCorrect = _count(overall['correct']);
+          final streak = _count(overall['streak']);
+          final accuracy = totalQuestions == 0 ? 0.0 : totalCorrect / totalQuestions * 100;
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+              children: [
+                _panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  LayoutBuilder(builder: (context, constraints) {
+                    final heading = _heading(Icons.flag_outlined, _tr('আজকের লক্ষ্য', 'Today’s goal'));
+                    final edit = TextButton.icon(
+                      onPressed: _savingTarget ? null : () => _chooseTarget(target),
+                      icon: const Icon(Icons.tune_rounded, size: 16),
+                      label: Text(_tr('পরিবর্তন', 'Edit')),
+                    );
+                    if (constraints.maxWidth < 230 ||
+                        MediaQuery.textScalerOf(context).scale(14) > 19) {
+                      return Column(crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [heading, edit]);
+                    }
+                    return Row(children: [Expanded(child: heading), edit]);
+                  }),
+                  const SizedBox(height: 5),
+                  Text(_tr('$done / $target প্রশ্ন', '$done / $target questions'),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800, color: scheme.primary)),
+                  const SizedBox(height: 12),
+                  _progress(done / target),
+                  const SizedBox(height: 8),
+                  Text(done >= target
+                    ? _tr('আজকের লক্ষ্য পূরণ হয়েছে।', 'Today’s goal reached.')
+                    : _tr('আর ${target - done}টি প্রশ্ন বাকি', '${target - done} questions left'),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ])),
+                const SizedBox(height: 8),
+                _metricGrid(totalQuestions, accuracy, streak),
+                const SizedBox(height: 8),
+                _weeklyChart(weekly),
+                _subjectCard(weak),
+                _achievements(totalQuestions, streak, done >= target),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _WrongAnswerPracticePage extends StatefulWidget {
