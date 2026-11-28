@@ -51,8 +51,10 @@ class CareerPage extends StatelessWidget {
 }
 
 class CareerSection extends StatefulWidget {
-  const CareerSection({super.key, required this.section, this.alertRequest, this.loadCourses});
+  const CareerSection({super.key, required this.section, this.alertRequest, this.loadCourses, this.directoryRequest});
   final String section;
+  // Optional fixture for directory presentation tests only.
+  final Future<Map<String, dynamic>> Function(String action, Map<String, String> filters)? directoryRequest;
   final Future<Map<String, dynamic>> Function(Map<String, String> filters)? loadCourses;
   // Optional alert-only fixture for widget tests. Normal navigation uses CareerService.
   final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic>? body, Map<String, String> filters)? alertRequest;
@@ -86,21 +88,22 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _load({bool more = false}) async {
     setState(() { _busy = true; _error = null; if (!more) { _rows = []; _next = null; } });
     try {
+      final directoryLoader = _section == 'directory' ? widget.directoryRequest : null;
       final coursesLoader = _section == 'courses' ? widget.loadCourses : null;
       final fixture = _section == 'alerts' ? widget.alertRequest : null;
-      final token = fixture == null && coursesLoader == null ? await AuthService.instance.getSessionToken() : null;
+      final token = fixture == null && coursesLoader == null && directoryLoader == null ? await AuthService.instance.getSessionToken() : null;
       final filters = <String, String>{
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
         if (_section == 'directory' && _directoryQuery.isNotEmpty) 'q': _directoryQuery,
       };
-      final data = await (coursesLoader?.call(filters) ?? fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
+      final data = await (directoryLoader?.call(_section, filters) ?? coursesLoader?.call(filters) ?? fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
       Map<String, dynamic>? profile;
       if (_section == 'directory' && !more) {
-        final mine = await CareerService.request('my_profile');
+        final mine = await (directoryLoader?.call('my_profile', const {}) ?? CareerService.request('my_profile'));
         if (mine['profile'] is Map) profile = Map<String, dynamic>.from(mine['profile'] as Map);
       }
-      if (fixture == null && coursesLoader == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
+      if (fixture == null && coursesLoader == null && directoryLoader == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
       if (!mounted) return;
       setState(() {
         _rows = [..._rows, ...CareerService.rows(data)];
@@ -156,14 +159,33 @@ class _CareerSectionState extends State<CareerSection> {
     padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: controller,
       enabled: !_busy, maxLength: max, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), counterText: '')));
   void _showProfileDetails(Map<String, dynamic> profile) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ProfessionalProfileDetailsSheet(profile: profile),
-    );
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => _ProfessionalProfileDetailsPage(profile: profile),
+    ));
   }
+
+  PreferredSizeWidget _directoryAppBar() => AppBar(
+    toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
+    backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
+    title: Row(children: [
+      Container(width: 40, height: 40,
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: .24))),
+        child: const Icon(Icons.groups_outlined, size: 29, color: Colors.white)),
+      const SizedBox(width: 9),
+      Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+      const SizedBox(width: 9),
+      Expanded(child: Text(_tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
+        maxLines: 2, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Colors.white, fontSize: 15.5,
+          fontWeight: FontWeight.w500, height: 1.2))),
+    ]),
+    actions: [
+      _alertHeaderAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'), _busy ? null : () => _load()),
+      const SizedBox(width: 8),
+    ],
+  );
 
   String _tr(String bn, String en) => AppText.of(context, bn, en);
 
@@ -526,62 +548,61 @@ class _CareerSectionState extends State<CareerSection> {
     if (_section == 'courses') return _coursesContent();
     final query = _directoryQuery;
     final visibleProfiles = _rows;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return [
-      Card(child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('পেশাজীবী খুঁজুন বা নিজের প্রোফাইল যোগ করুন।'),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _directorySearch,
-            enabled: !_busy && !_editingProfile,
-            maxLength: 160,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _searchDirectory(),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'নাম, পদবি বা প্রতিষ্ঠান খুঁজুন',
-              border: const OutlineInputBorder(),
-              counterText: '',
-              suffixIcon: IconButton(onPressed: _busy || _editingProfile ? null : _searchDirectory, icon: const Icon(Icons.search), tooltip: 'খুঁজুন'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(width: double.infinity, child: FilledButton.icon(
-            onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
-            icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1),
-            label: Text(_editingProfile ? 'বন্ধ করুন' : 'প্রোফাইল যোগ করুন'),
-          )),
-        ]),
+      TextField(
+        controller: _directorySearch,
+        enabled: !_busy && !_editingProfile,
+        maxLength: 160,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => _searchDirectory(),
+        decoration: InputDecoration(
+          prefixIcon: IconButton(onPressed: _busy || _editingProfile ? null : _searchDirectory,
+            icon: Icon(Icons.search_rounded, color: scheme.primary),
+            tooltip: _tr('খুঁজুন', 'Search')),
+          hintText: _tr('পেশাজীবী খুঁজুন', 'Search professionals'),
+          filled: true, fillColor: scheme.surface,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          counterText: '',
+        ),
+      ),
+      const SizedBox(height: 8),
+      SizedBox(width: double.infinity, child: FilledButton.icon(
+        onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
+        icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1, size: 20),
+        label: Text(_editingProfile ? _tr('বন্ধ করুন', 'Close')
+          : _status.isEmpty ? _tr('প্রোফাইল যোগ করুন', 'Add profile') : _tr('প্রোফাইল সম্পাদনা', 'Edit profile')),
       )),
       if (_status.isNotEmpty) Card(child: ListTile(
         leading: Icon(_status == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
           color: _status == 'approved' ? Colors.green : null),
-        title: const Text('আপনার প্রোফাইলের অবস্থা'),
-        subtitle: Text(({'pending':'অনুমোদনের অপেক্ষায়','approved':'প্রকাশিত','hidden':'লুকানো'})[_status] ?? _status),
+        title: Text(_tr('আপনার প্রোফাইলের অবস্থা', 'Your profile status')),
+        subtitle: Text(({'pending':_tr('অনুমোদনের অপেক্ষায়','Pending approval'),'approved':_tr('প্রকাশিত','Published'),'hidden':_tr('লুকানো','Hidden')})[_status] ?? _status),
       )),
       if (_editingProfile) ...[
         const SizedBox(height: 8),
         Center(child: Column(children: [
           if (_selectedPhoto != null)
-            CircleAvatar(radius: 46, backgroundImage: MemoryImage(_selectedPhoto!))
+            CircleAvatar(radius: 40, backgroundImage: MemoryImage(_selectedPhoto!))
           else
-            _PrivateProfileAvatar(photoKey: _removePhoto ? '' : _photoPath, radius: 46),
+            _PrivateProfileAvatar(photoKey: _removePhoto ? '' : _photoPath, radius: 40),
           if (_selectedPhoto != null || (!_removePhoto && _photoPath.isNotEmpty))
             TextButton.icon(onPressed: _busy ? null : () => setState(() {
               _selectedPhoto = null;
               _removePhoto = true;
-            }), icon: const Icon(Icons.delete_outline), label: const Text('ছবি সরান')),
-          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:const Text('ছবি নির্বাচন করুন')),
-          const Text('ছবি স্বয়ংক্রিয়ভাবে ছোট হবে',style:TextStyle(fontSize:12)), 
+            }), icon: const Icon(Icons.delete_outline), label: Text(_tr('ছবি সরান', 'Remove photo'))),
+          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:Text(_tr('ছবি নির্বাচন করুন','Choose photo'))),
+          Text(_tr('ছবি স্বয়ংক্রিয়ভাবে ছোট হবে','Photo will be resized automatically'),style:theme.textTheme.bodySmall), 
         ])),
-        Text('প্রোফাইল তথ্য', style: Theme.of(context).textTheme.titleMedium),
-        const Text('অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখবেন। ফোন বা ইমেইল দেবেন না। এটি সনদ যাচাই নয়।'),
+        Text(_tr('প্রোফাইল তথ্য','Profile information'), style: Theme.of(context).textTheme.titleMedium),
+        Text(_tr('অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখবেন। ফোন বা ইমেইল দেবেন না। এটি সনদ যাচাই নয়।','Visible to registered users after approval. Do not include phone or email. This is not certificate verification.')),
         const SizedBox(height: 12),
-        _field(_name,'প্রদর্শিত নাম',100),
-        _field(_role,'পদ / পেশা',120),
-        _field(_organization,'প্রতিষ্ঠান (ঐচ্ছিক)',120),
-        _field(_city,'শহর (ঐচ্ছিক)',100),
+        _field(_name,_tr('প্রদর্শিত নাম','Display name'),100),
+        _field(_role,_tr('পদ / পেশা','Position / profession'),120),
+        _field(_organization,_tr('প্রতিষ্ঠান (ঐচ্ছিক)','Organization (optional)'),120),
+        _field(_city,_tr('শহর (ঐচ্ছিক)','City (optional)'),100),
         TextField(
           controller: _bio,
           enabled: !_busy,
@@ -601,42 +622,41 @@ class _CareerSectionState extends State<CareerSection> {
         ),
         const SizedBox(height: 8),
         CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
-          title:const Text('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।')),
+          title:Text(_tr('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।','I consent to showing my information to registered users.'))),
         SizedBox(width: double.infinity, child: FilledButton.icon(
           onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,'bio':_bio.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
-          icon: const Icon(Icons.send_outlined), label:const Text('জমা দিন'))),
+          icon: const Icon(Icons.send_outlined), label:Text(_tr('জমা দিন','Submit')))),
         if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
-          onPressed:_busy?null:()=>_write('hide_profile',{}),child:const Text('আমার পরিচিতি লুকান')),
+          onPressed:_busy?null:()=>_write('hide_profile',{}),child:Text(_tr('আমার পরিচিতি লুকান','Hide my profile'))),
       ],
       const SizedBox(height: 16),
       Row(children: [
-        Expanded(child: Text('পেশাজীবী', 
+        Expanded(child: Text(_tr('পেশাজীবী','Professionals'), 
           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-        Text('${visibleProfiles.length} জন', style: Theme.of(context).textTheme.bodySmall),
+        Text(_tr('${visibleProfiles.length} জন','${visibleProfiles.length} loaded'), style: Theme.of(context).textTheme.bodySmall),
       ]),
       const SizedBox(height: 8),
-      if (visibleProfiles.isEmpty) Card(
-        child: Padding(padding: const EdgeInsets.all(20), child: Center(
-          child: Text(query.isEmpty ? 'এখনো কোনো প্রোফাইল নেই।' : 'কোনো প্রোফাইল পাওয়া যায়নি।'),
-        )),
-      ),
+      if (!_busy && _error == null && visibleProfiles.isEmpty)
+        FsStatusCard(icon: Icons.groups_outlined,
+          message: query.isEmpty ? _tr('এখনো কোনো প্রোফাইল নেই।', 'No profiles yet.')
+            : _tr('কোনো প্রোফাইল পাওয়া যায়নি।', 'No matching profiles.')),
       for (final row in visibleProfiles) Card(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 8),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _showProfileDetails(row),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               _PrivateProfileAvatar(
                 key: ValueKey(CareerService.text(row,'id')),
                 photoKey: CareerService.text(row,'photo_path'),
-                radius: 30,
+                radius: 26,
               ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(CareerService.text(row,'display_name'),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 3),
                 Text(CareerService.text(row,'role_name'),
                   style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
@@ -650,15 +670,9 @@ class _CareerSectionState extends State<CareerSection> {
                   Row(children: [const Icon(Icons.location_on_outlined,size:16),const SizedBox(width:5),
                     Expanded(child: Text(CareerService.text(row,'city')))]),
                 ],
-                const SizedBox(height: 5),
-                const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-                  SizedBox(width: 4),
-                  Text('অ্যাডমিন অনুমোদিত পরিচিতি', style: TextStyle(fontSize: 11)),
-                ]),
               ])),
               const SizedBox(width: 6),
-              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
+              Tooltip(message: _tr('বিস্তারিত দেখুন', 'View details'), child: Icon(Icons.chevron_right, color: scheme.primary)),
             ]),
           ),
         ),
@@ -675,7 +689,7 @@ class _CareerSectionState extends State<CareerSection> {
       'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
     };
     return Scaffold(
-    appBar: _section == 'courses' ? _coursesAppBar() : _section == 'alerts' ? _alertAppBar() : AppBar(
+    appBar: _section == 'directory' ? _directoryAppBar() : _section == 'courses' ? _coursesAppBar() : _section == 'alerts' ? _alertAppBar() : AppBar(
       title: Row(
         children: [
           if (_section == 'directory') ...[
@@ -708,106 +722,109 @@ class _CareerSectionState extends State<CareerSection> {
         ),
       ],
     ),
-    body: ListView(padding: (_section == 'alerts' || _section == 'courses') ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
+    body: ListView(padding: (_section == 'alerts' || _section == 'courses' || _section == 'directory') ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
       if(_section!='directory'&&_section!='alerts'&&_section!='courses'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
-      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text((_section == 'alerts' || _section == 'courses') ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
+      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text((_section == 'alerts' || _section == 'courses' || _section == 'directory') ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
     ]));
   }
 }
 
 
-class _ProfessionalProfileDetailsSheet extends StatelessWidget {
-  const _ProfessionalProfileDetailsSheet({required this.profile});
+class _ProfessionalProfileDetailsPage extends StatelessWidget {
+  const _ProfessionalProfileDetailsPage({required this.profile});
   final Map<String, dynamic> profile;
 
   Widget _detail(BuildContext context, IconData icon, String label, String value) {
-    if (value.trim().isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 21, color: Theme.of(context).colorScheme.primary),
+    final theme = Theme.of(context);
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 22, color: theme.colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 2),
-          Text(value, style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w600)),
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 3),
+          Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
         ])),
-      ]),
-    );
+      ],
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     String tr(String bn, String en) => AppText.of(context, bn, en);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final name = CareerService.text(profile, 'display_name');
     final role = CareerService.text(profile, 'role_name');
     final organization = CareerService.text(profile, 'organization');
     final city = CareerService.text(profile, 'city');
     final bio = CareerService.text(profile, 'bio');
-    final photoKey = CareerService.text(profile, 'photo_path');
-    final theme = Theme.of(context);
-
-    return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.82),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Container(width: 42, height: 4,
-            decoration: BoxDecoration(color: theme.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(4))),
-          const SizedBox(height: 22),
-          _PrivateProfileAvatar(photoKey: photoKey, radius: 54),
-          const SizedBox(height: 14),
-          Text(name, textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 5),
+    return Scaffold(
+      appBar: AppBar(toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48,
+        centerTitle: false, backgroundColor: const Color(0xFF36060D),
+        foregroundColor: Colors.white,
+        title: Text(tr('পেশাগত পরিচিতি','Professional profile'),
+          style: const TextStyle(fontSize: 15.5, color: Colors.white))),
+      body: ListView(padding: const EdgeInsets.fromLTRB(14, 16, 14, 24), children: [
+        Center(child: _PrivateProfileAvatar(photoKey: CareerService.text(profile, 'photo_path'), radius: 48)),
+        const SizedBox(height: 12),
+        Text(name, textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        if (role.isNotEmpty) ...[
+          const SizedBox(height: 4),
           Text(role, textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 18),
-          const Divider(),
-          _detail(context, Icons.work_outline, tr('পদ / পেশা', 'Position / Profession'), role),
-          _detail(context, Icons.business_outlined, tr('প্রতিষ্ঠান', 'Organization'), organization),
-          _detail(context, Icons.location_on_outlined, tr('শহর', 'City'), city),
-          if (bio.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(tr('বিস্তারিত পরিচিতি', 'Professional summary'),
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SelectableText(bio, textAlign: TextAlign.start,
-                style: theme.textTheme.bodyLarge?.copyWith(height: 1.55)),
-            ),
-          ],
-          const Divider(),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.verified_outlined, color: Colors.green, size: 20),
-            const SizedBox(width: 9),
-            Expanded(child: Text(
-              tr('অ্যাডমিন অনুমোদিত পরিচিতি। এটি পেশাগত সনদ যাচাইয়ের বিকল্প নয়।',
-                'Admin-approved profile. This is not a verification of professional certificates.'),
-              style: theme.textTheme.bodySmall,
-            )),
-          ]),
-          const SizedBox(height: 16),
-          SizedBox(width: double.infinity, child: OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(tr('বন্ধ করুন', 'Close')),
-          )),
+            style: theme.textTheme.titleMedium?.copyWith(color: scheme.primary)),
+        ],
+        const SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.check_circle_outline, size: 17, color: scheme.primary),
+          const SizedBox(width: 5),
+          Flexible(child: Text(tr('অনুমোদিত প্রোফাইল','Approved profile'),
+            textAlign: TextAlign.center, style: theme.textTheme.bodySmall)),
         ]),
-      ),
+        const SizedBox(height: 16),
+        if (role.isNotEmpty || organization.isNotEmpty || city.isNotEmpty)
+          Card(margin: EdgeInsets.zero, child: Padding(padding: const EdgeInsets.all(12),
+            child: Column(children: [
+              if (role.isNotEmpty) _detail(context, Icons.work_outline, tr('পদবি','Position'), role),
+              if (organization.isNotEmpty) ...[
+                if (role.isNotEmpty) Divider(height: 12, color: scheme.outlineVariant),
+                _detail(context, Icons.business_outlined, tr('প্রতিষ্ঠান','Organization'), organization),
+              ],
+              if (city.isNotEmpty) ...[
+                if (role.isNotEmpty || organization.isNotEmpty) Divider(height: 12, color: scheme.outlineVariant),
+                _detail(context, Icons.location_on_outlined, tr('কর্মস্থল / শহর','Workplace / city'), city),
+              ],
+            ]),
+          )),
+        if (bio.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Card(margin: EdgeInsets.zero, child: Padding(padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.description_outlined, color: scheme.primary, size: 21),
+                const SizedBox(width: 8),
+                Expanded(child: Text(tr('বিস্তারিত পরিচিতি','Professional summary'),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+              ]),
+              const SizedBox(height: 10),
+              SelectableText(bio, style: theme.textTheme.bodyMedium?.copyWith(height: 1.55)),
+            ]),
+          )),
+        ],
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.info_outline, color: scheme.onSurfaceVariant, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(tr(
+            'অ্যাডমিন অনুমোদিত পরিচিতি। এটি পেশাগত সনদ যাচাইয়ের বিকল্প নয়।',
+            'Admin-approved profile. This is not a verification of professional certificates.'),
+            style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+        ]),
+      ]),
     );
   }
 }
