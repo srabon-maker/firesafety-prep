@@ -5,12 +5,16 @@ on:
     paths:
       - 'backend/**/*.php'
       - '.cpanel.yml'
+      - 'scripts/deploy_admin_logo_cache.sh'
+      - 'scripts/test_admin_logo_cache.sh'
       - '.github/workflows/admin-php-checks.yml'
   push:
     branches: [main]
     paths:
       - 'backend/**/*.php'
       - '.cpanel.yml'
+      - 'scripts/deploy_admin_logo_cache.sh'
+      - 'scripts/test_admin_logo_cache.sh'
       - '.github/workflows/admin-php-checks.yml'
   workflow_dispatch:
 
@@ -39,3 +43,6 @@ jobs:
           echo "Validated ${#php_files[@]} PHP files."
       - name: Premium access policy tests
         run: php backend/tests/premium_policy_test.php
+
+      - name: Logo-only deployment regression test
+        run: bash scripts/test_admin_logo_cache.sh
