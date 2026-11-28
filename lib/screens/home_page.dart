@@ -309,14 +309,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(width:10),
-            const Expanded(child: Text(
-              'Fire Safety BD',
-              key: ValueKey('home-brand-title'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white, fontSize: 20,
-                fontWeight: FontWeight.w600, height: 1.05, letterSpacing: 0),
-            )),
+            const Expanded(child: _HomeBrandTitle()),
             IconButton(
               key: const ValueKey('home-admin-support'),
               tooltip: _tr('অ্যাডমিন সাপোর্ট', 'Admin support'),
@@ -470,4 +463,119 @@ class _HomeBrandFlamePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _HomeBrandFlamePainter oldDelegate) => false;
+}
+
+
+// Keep the actual title as a normal Text widget: its original font, layout,
+// ellipsis and accessibility remain unchanged. Color only the counters behind
+// the white B and D glyphs, using the measured text positions and baseline.
+class _HomeBrandTitle extends StatelessWidget {
+  const _HomeBrandTitle();
+  static const _label = 'Fire Safety BD';
+  static const _style = TextStyle(
+    color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600,
+    height: 1.05, letterSpacing: 0,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final defaults = DefaultTextStyle.of(context);
+    return CustomPaint(
+      key: const ValueKey('home-brand-bd-counters'),
+      painter: _HomeBrandCountersPainter(
+        style: defaults.style.merge(_style),
+        textScaler: MediaQuery.textScalerOf(context),
+        direction: Directionality.of(context),
+        locale: Localizations.maybeLocaleOf(context),
+        textHeightBehavior: defaults.textHeightBehavior,
+      ),
+      child: const Text(
+        _label,
+        key: ValueKey('home-brand-title'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: _style,
+      ),
+    );
+  }
+}
+
+class _HomeBrandCountersPainter extends CustomPainter {
+  const _HomeBrandCountersPainter({
+    required this.style, required this.textScaler, required this.direction,
+    required this.locale, required this.textHeightBehavior,
+  });
+
+  final TextStyle style;
+  final TextScaler textScaler;
+  final TextDirection direction;
+  final Locale? locale;
+  final TextHeightBehavior? textHeightBehavior;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final text = TextPainter(
+      text: TextSpan(text: _HomeBrandTitle._label, style: style),
+      textDirection: direction,
+      textScaler: textScaler,
+      locale: locale,
+      textHeightBehavior: textHeightBehavior,
+      maxLines: 1,
+      ellipsis: '\u2026',
+    )..layout(maxWidth: size.width);
+    try {
+      // Do not paint any floating marks when the title is truncated.
+      if (text.didExceedMaxLines) return;
+      final lines = text.computeLineMetrics();
+      if (lines.isEmpty) return;
+      final baseline = lines.first.baseline;
+      final em = textScaler.scale(style.fontSize ?? 20);
+      // Nominal Android sans-serif counter silhouettes, slightly overlapping
+      // the white strokes. The real text is painted above them.
+      final b = Path()
+        ..moveTo(375, 1295)
+        ..lineTo(655, 1295)
+        ..quadraticBezierTo(960, 1295, 960, 1040)
+        ..quadraticBezierTo(960, 790, 655, 790)
+        ..lineTo(375, 790)
+        ..close()
+        ..moveTo(375, 710)
+        ..lineTo(700, 710)
+        ..quadraticBezierTo(985, 710, 985, 430)
+        ..quadraticBezierTo(985, 145, 685, 145)
+        ..lineTo(375, 145)
+        ..close();
+      final d = Path()
+        ..moveTo(375, 1295)
+        ..lineTo(580, 1295)
+        ..cubicTo(875, 1295, 1035, 1040, 1035, 750)
+        ..cubicTo(1035, 420, 875, 145, 570, 145)
+        ..lineTo(375, 145)
+        ..close();
+      void fill(int offset, Path path, Color color, double advance) {
+        final boxes = text.getBoxesForSelection(
+          TextSelection(baseOffset: offset, extentOffset: offset + 1),
+        );
+        if (boxes.length != 1) return;
+        final rect = boxes.single.toRect();
+        if (rect.width <= 0) return;
+        canvas.save();
+        canvas.clipRect(Offset.zero & size);
+        canvas.translate(rect.left, baseline);
+        canvas.scale(rect.width / advance, -em / 2048);
+        canvas.drawPath(path, Paint()..color = color..isAntiAlias = true);
+        canvas.restore();
+      }
+      fill(12, b, const Color(0xFF006A4E), 1300);
+      fill(13, d, const Color(0xFFB91025), 1335);
+    } finally {
+      text.dispose();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeBrandCountersPainter oldDelegate) =>
+      style != oldDelegate.style || textScaler != oldDelegate.textScaler ||
+      direction != oldDelegate.direction || locale != oldDelegate.locale ||
+      textHeightBehavior != oldDelegate.textHeightBehavior;
 }

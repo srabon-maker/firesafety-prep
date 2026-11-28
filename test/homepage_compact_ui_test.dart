@@ -68,6 +68,13 @@ void main() {
     final brand = find.byKey(const ValueKey('home-brand-title'));
     expect(tester.widget<Text>(brand).style?.fontSize, 20);
     expect(tester.widget<Text>(brand).style?.fontWeight, FontWeight.w600);
+    final counters = find.byKey(const ValueKey('home-brand-bd-counters'));
+    expect(tester.widget<CustomPaint>(counters).painter, isNotNull);
+    expect(find.descendant(of: counters, matching: brand), findsOneWidget);
+    expect(tester.getSize(counters), tester.getSize(brand));
+    expect(tester.widget<Text>(brand).style?.color, Colors.white);
+    expect(tester.widget<Text>(brand).maxLines, 1);
+    expect(tester.widget<Text>(brand).overflow, TextOverflow.ellipsis);
     final brandIcon = find.byKey(const ValueKey('home-brand-icon'));
     final flame = find.byKey(const ValueKey('home-brand-flame'));
     expect(tester.getSize(brandIcon), const Size(42, 42));
