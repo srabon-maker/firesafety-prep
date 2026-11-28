@@ -6,8 +6,25 @@ import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
 
+class ModelTestRequestException implements Exception {
+  const ModelTestRequestException(this.code, this.message, {this.status});
+  final String code;
+  final String message;
+  final int? status;
+
+  @override
+  String toString() => message;
+}
+
 class ModelTestService {
-  ModelTestService._();
+  ModelTestService._()
+      : _currentToken = AuthService.instance.getSessionToken, _client = null;
+
+  ModelTestService({required Future<String?> Function() currentToken,
+    required http.Client client}) : _currentToken = currentToken, _client = client;
+
+  final Future<String?> Function() _currentToken;
+  final http.Client? _client;
 
   static final ModelTestService instance = ModelTestService._();
 
@@ -44,11 +61,11 @@ class ModelTestService {
     }
 
     // Authentication
-    final token = (auth || action=='list') ? await AuthService.instance.getSessionToken() : null;
+    final token = (auth || action=='list') ? await _currentToken() : null;
     if (auth) {
 
       if (token == null || token.isEmpty) {
-        throw Exception('পরীক্ষা দিতে লগইন করুন।');
+        throw const ModelTestRequestException('AUTH_REQUIRED', 'পরীক্ষা দিতে লগইন করুন।');
       }
 
       headers['Authorization'] = 'Bearer $token';
@@ -56,27 +73,19 @@ class ModelTestService {
 
     try {
       final response = body == null
-          ? await http
-              .get(uri, headers: headers)
-              .timeout(_requestTimeout)
-          : await http
-              .post(
-                uri,
-                headers: headers,
-                body: jsonEncode(body),
-              )
-              .timeout(_requestTimeout);
+          ? await (_client?.get(uri, headers: headers) ??
+              http.get(uri, headers: headers)).timeout(_requestTimeout)
+          : await (_client?.post(uri, headers: headers, body: jsonEncode(body)) ??
+              http.post(uri, headers: headers, body: jsonEncode(body))).timeout(_requestTimeout);
 
-      if((auth||action=='list')&&await AuthService.instance.getSessionToken()!=token)throw const FormatException('সেশন পরিবর্তিত হয়েছে।');
+      if((auth||action=='list')&&await _currentToken()!=token)throw const ModelTestRequestException('SESSION_CHANGED', 'সেশন পরিবর্তিত হয়েছে।');
       return _handleResponse(response);
     } on TimeoutException {
-      throw Exception(
-        'সার্ভার থেকে Response পেতে দেরি হচ্ছে। আবার চেষ্টা করুন।',
-      );
+      throw const ModelTestRequestException('TIMEOUT',
+        'সার্ভার থেকে Response পেতে দেরি হচ্ছে। আবার চেষ্টা করুন।');
     } on http.ClientException {
-      throw Exception(
-        'ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
-      );
+      throw const ModelTestRequestException('NETWORK',
+        'ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।');
     }
   }
 
@@ -87,35 +96,26 @@ class ModelTestService {
   Map<String, dynamic> _handleResponse(
     http.Response response,
   ) {
+    final status = response.statusCode;
+    if (status == 401) {
+      throw const ModelTestRequestException('AUTH_REQUIRED',
+        'সেশন শেষ হয়েছে। আবার লগইন করুন।', status: 401);
+    }
     Map<String, dynamic> data;
-
     try {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is! Map) {
-        throw const FormatException();
-      }
-
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! Map) throw const FormatException();
       data = Map<String, dynamic>.from(decoded);
     } catch (_) {
-      throw Exception(
-        'সার্ভার থেকে সঠিক JSON Response পাওয়া যায়নি।',
-      );
+      throw ModelTestRequestException(
+        status == 404 ? 'ENDPOINT_NOT_FOUND' : 'INVALID_RESPONSE',
+        'সার্ভার থেকে সঠিক JSON Response পাওয়া যায়নি।', status: status);
     }
-
-    if (response.statusCode < 200 ||
-        response.statusCode >= 300) {
-      throw Exception(
-        data['message']?.toString() ??
-            'সার্ভার Error: ${response.statusCode}',
-      );
-    }
-
-    if (data['success'] != true) {
-      throw Exception(
-        data['message']?.toString() ??
-            'অনুরোধটি সম্পন্ন করা যায়নি।',
-      );
+    if (status < 200 || status >= 300 || data['success'] != true) {
+      final code = data['code']?.toString() ??
+          (status == 404 ? 'ENDPOINT_NOT_FOUND' : status >= 500 ? 'SERVER_ERROR' : 'REQUEST_FAILED');
+      throw ModelTestRequestException(code,
+        data['message']?.toString() ?? 'অনুরোধটি সম্পন্ন করা যায়নি।', status: status);
     }
 
     return data;
@@ -367,6 +367,10 @@ class ModelTestService {
       auth: true,
     );
 
-    return _toList(data['data']);
+    final rows = data['data'];
+    if (rows is! List || rows.any((row) => row is! Map)) {
+      throw const ModelTestRequestException('INVALID_RESPONSE', 'ফলাফলের তথ্য সঠিক নয়।');
+    }
+    return _toList(rows);
   }
 }
