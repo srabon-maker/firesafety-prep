@@ -23,9 +23,15 @@ class ProfilePage extends StatefulWidget {
   const ProfilePage({
     super.key,
     required this.onLogout,
+    this.loadProfile,
+    this.loadStats,
   });
 
   final VoidCallback onLogout;
+  // Optional loaders for deterministic widget tests. Production uses the
+  // authenticated service paths below.
+  final Future<Map<String, dynamic>?> Function(bool forceRefresh)? loadProfile;
+  final Future<List<dynamic>> Function()? loadStats;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -48,13 +54,15 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<List<dynamic>> _startStats() {
-    final future = _loadStats();
+    final future = widget.loadStats?.call() ?? _loadStats();
     // Profile may fail before the stats FutureBuilder is mounted.
     future.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return future;
   }
 
   Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
+    final loader = widget.loadProfile;
+    if (loader != null) return loader(forceRefresh);
     final session =
         await AuthService.instance.validateSession(forceRefresh: forceRefresh);
 
