@@ -18,7 +18,12 @@ class _PremiumPageState extends State<PremiumPage> {
   Future<Map<String, dynamic>> _status() =>
       widget.loadStatus?.call() ?? _service.status();
 
-  void _refresh() => setState(() => _future = _status());
+  void _refresh() {
+    final next = _status();
+    setState(() {
+      _future = next;
+    });
+  }
   String _tr(String bn, String en) => AppText.of(context, bn, en);
 
   void _support() => Navigator.push(context,
