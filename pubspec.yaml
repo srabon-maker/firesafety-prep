@@ -53,5 +53,5 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/fire_safety_job_prep_logo.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#650D18"
+  adaptive_icon_background: "#3B000A"
   adaptive_icon_foreground: "assets/fire_safety_job_prep_logo.png"

@@ -1,5 +1,5 @@
 ---
-# Temporary scoped deployment: Career / Professional Directory, Exam Results and Admin Support.
+# Temporary scoped deployment: Career / Professional Directory, Exam Results, Admin Support and branding.
 # Restore the previous full deployment configuration after this release is verified.
 deployment:
   tasks:
@@ -9,6 +9,7 @@ deployment:
     - /bin/test -d "$DEPLOYPATH"
     - /bin/test -f "$DEPLOYPATH/db.php"
     - /bin/test -f "$DEPLOYPATH/admin_helpers.php"
+    - 'set -eu; /bin/test -s backend/assets/fire-safety-bd-logo.png; /bin/test -s assets/fire_safety_job_prep_logo.png; /bin/test -d "$DEPLOYPATH/assets"; /bin/test ! -L "$DEPLOYPATH/assets"; /bin/test -f "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; /bin/test ! -L "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; echo "1adc98f58261474be38e1c68197a99388428f63762fc21e611fff64b8b87164e  backend/assets/fire-safety-bd-logo.png" | sha256sum -c -; echo "1adc98f58261474be38e1c68197a99388428f63762fc21e611fff64b8b87164e  assets/fire_safety_job_prep_logo.png" | sha256sum -c -'
     - /bin/test -f backend/support_common.php
     - /bin/test -f backend/support_admin.php
     - /bin/test -f backend/api/support/index.php
@@ -31,3 +32,4 @@ deployment:
     - 'set -eu; for f in career_common.php career_admin.php api/career/index.php api/tests.php; do if /bin/test -e "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; fi; done; /bin/test -s "$RELEASEBACKUP/api/tests.php"; /bin/cp -p backend/career_common.php "$DEPLOYPATH/career_common.php"; /bin/cp -p backend/career_admin.php "$DEPLOYPATH/career_admin.php"; /bin/cp -p backend/api/career/index.php "$DEPLOYPATH/api/career/index.php"; /bin/cp -p backend/api/tests.php "$DEPLOYPATH/api/tests.php"; /bin/test -s "$DEPLOYPATH/api/tests.php"; /bin/test -s "$DEPLOYPATH/career_common.php"; /bin/test -s "$DEPLOYPATH/career_admin.php"; /bin/test -s "$DEPLOYPATH/api/career/index.php"'
     - '/bin/mkdir -p "$DEPLOYPATH/api/support" "$RELEASEBACKUP/api/support"'
     - 'set -eu; for f in support_common.php support_admin.php api/support/index.php premium_access.php; do if /bin/test -f "$DEPLOYPATH/$f"; then /bin/cp -p "$DEPLOYPATH/$f" "$RELEASEBACKUP/$f"; /bin/test -s "$RELEASEBACKUP/$f"; fi; done; if /bin/test ! -e "$DEPLOYPATH/premium_access.php"; then /bin/cp -p backend/premium_access.php "$DEPLOYPATH/premium_access.php"; fi; for f in support_common.php support_admin.php api/support/index.php; do /bin/cp -p "backend/$f" "$DEPLOYPATH/$f"; /bin/test -s "$DEPLOYPATH/$f"; php -l "$DEPLOYPATH/$f" >/dev/null; done; echo "Support files installed; verify authenticated user and admin flows"'
+    - 'set -eu; /bin/mkdir -p -m 700 "$RELEASEBACKUP/assets"; /bin/cp -p "$DEPLOYPATH/assets/fire-safety-bd-logo.png" "$RELEASEBACKUP/assets/fire-safety-bd-logo.png"; /bin/test -s "$RELEASEBACKUP/assets/fire-safety-bd-logo.png"; tmp=$(mktemp "$DEPLOYPATH/assets/.fire-safety-bd-logo.XXXXXX"); trap "/bin/rm -f -- \"$tmp\"" EXIT; /bin/cp backend/assets/fire-safety-bd-logo.png "$tmp"; /bin/chmod --reference="$DEPLOYPATH/assets/fire-safety-bd-logo.png" "$tmp"; /bin/mv -f "$tmp" "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; /bin/cmp -s backend/assets/fire-safety-bd-logo.png "$DEPLOYPATH/assets/fire-safety-bd-logo.png"; echo "Brand logo deployed"'
