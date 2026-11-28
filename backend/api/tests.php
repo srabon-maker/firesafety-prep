@@ -173,8 +173,29 @@ try {
 
     if($method==='GET' && $action==='my_results'){
         $userId=exam_user($pdo);
-        $q=$pdo->prepare("SELECT a.id AS attempt_id,a.test_id,t.title,a.started_at,a.submitted_at,a.question_count,a.total_marks,a.score,a.correct_count,a.incorrect_count,a.unanswered_count,a.passed FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.user_id=? AND a.status IN ('submitted','expired') AND t.results_released=1 ORDER BY a.submitted_at DESC,a.id DESC LIMIT 100");
-        $q->execute([$userId]); exam_reply(200,['success'=>true,'data'=>$q->fetchAll(PDO::FETCH_ASSOC)]);
+        try {
+            $q=$pdo->prepare("SELECT a.id AS attempt_id,a.test_id,t.title,a.started_at,a.submitted_at,a.question_count,a.total_marks,a.score,a.correct_count,a.incorrect_count,a.unanswered_count,a.passed FROM model_test_attempts a JOIN model_tests t ON t.id=a.test_id WHERE a.user_id=? AND a.status IN ('submitted','expired') AND t.results_released=1 ORDER BY a.submitted_at DESC,a.id DESC LIMIT 100");
+            $q->execute([$userId]);
+            $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Do not bypass result-release rules when migrations are missing.
+            $state=(string)($e->errorInfo[0]??$e->getCode());
+            if (in_array($state,['42S02','42S22'],true)) {
+                error_log('Model test my_results schema error: '.$e->getMessage());
+                exam_reply(503,['success'=>false,'code'=>'MODEL_TEST_MIGRATION_REQUIRED','message'=>'ফলাফল দেখানোর জন্য সার্ভারের ডেটাবেজ আপডেট প্রয়োজন।']);
+            }
+            throw $e;
+        }
+        foreach($rows as &$row) {
+            foreach(['attempt_id','test_id','question_count','correct_count','incorrect_count','unanswered_count'] as $key) {
+                $row[$key]=(int)$row[$key];
+            }
+            $row['total_marks']=(float)$row['total_marks'];
+            $row['score']=$row['score']===null?null:(float)$row['score'];
+            $row['passed']=$row['passed']===null?null:(bool)$row['passed'];
+        }
+        unset($row);
+        exam_reply(200,['success'=>true,'data'=>$rows]);
     }
 
     if($method!=='POST') exam_reply(405,['success'=>false,'message'=>'Unsupported method.']);
