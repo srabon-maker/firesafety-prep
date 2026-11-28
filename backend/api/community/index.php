@@ -181,6 +181,26 @@ try {
         );
         $q->execute([$userId ?? 0, $postId]);
         $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        // Keep the existing first 100 comments, but include the newly posted
+        // visible comment when requested, even on a very long thread.
+        if (isset($_GET['include_comment_id'])) {
+            $includeId = community_id($_GET['include_comment_id']);
+            $found = false;
+            foreach ($rows as $row) {
+                if ((int)$row['id'] === $includeId) { $found = true; break; }
+            }
+            if (!$found) {
+                $extra = $pdo->prepare(
+                    "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author,
+                            (c.user_id=?) AS is_owner
+                     FROM community_comments c JOIN users u ON u.id=c.user_id
+                     WHERE c.post_id=? AND c.status='visible' AND c.id=? AND c.user_id=?"
+                );
+                $extra->execute([$userId ?? 0, $postId, $includeId, $userId ?? 0]);
+                $own = $extra->fetch(PDO::FETCH_ASSOC);
+                if ($own) $rows[] = $own;
+            }
+        }
         foreach ($rows as &$row) {
             $row['id'] = (int)$row['id'];
             $row['is_owner'] = (int)$row['is_owner'] > 0;
@@ -246,7 +266,8 @@ try {
         }
         $stmt = $pdo->prepare("INSERT INTO community_comments (post_id,user_id,body,status) VALUES (?, ?, ?, 'visible')");
         $stmt->execute([$postId, $userId, $body]);
-        community_reply(201, ['success'=>true,'message'=>'মন্তব্য প্রকাশিত হয়েছে।']);
+        community_reply(201, ['success'=>true,'message'=>'মন্তব্য প্রকাশিত হয়েছে।',
+                              'comment_id'=>(int)$pdo->lastInsertId()]);
     }
     if ($method === 'POST' && in_array($action, ['edit_post','delete_post','delete_comment','report'], true)) {
         $userId = community_auth($pdo);

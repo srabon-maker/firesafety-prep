@@ -105,13 +105,16 @@ class CommunityService {
     await _post('like', {'post_id': postId});
   }
 
-  Future<void> comment(int postId, String text) async {
-    await _post('comment', {'post_id': postId, 'text': text});
+  Future<int?> comment(int postId, String text) async {
+    final result = await _post('comment', {'post_id': postId, 'text': text});
+    final id = int.tryParse(result['comment_id']?.toString() ?? '');
+    return id != null && id > 0 ? id : null;
   }
 
-  Future<List<Comment>> comments(int postId) async {
+  Future<List<Comment>> comments(int postId, {int? includeCommentId}) async {
     final uri = Uri.parse(_url).replace(queryParameters: {
       'action': 'comments', 'post_id': '$postId',
+      if (includeCommentId != null) 'include_comment_id': '$includeCommentId',
     });
     final headers = await _headers();
     final response = await http.get(uri, headers: headers).timeout(_timeout);
@@ -124,7 +127,7 @@ class CommunityService {
         Comment.fromJson(Map<String, dynamic>.from(item as Map))).toList();
   }
 
-  Future<void> _post(String action, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> _post(String action, Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$_url?action=$action'),
       headers: {
@@ -133,6 +136,6 @@ class CommunityService {
       },
       body: jsonEncode(data),
     ).timeout(_timeout);
-    _decode(response);
+    return _decode(response);
   }
 }
