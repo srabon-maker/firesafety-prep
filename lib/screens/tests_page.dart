@@ -1832,6 +1832,34 @@ class _MyTestResultsPageState extends State<MyTestResultsPage> {
       ]);
   }
 
+  String _loadError(Object? error) {
+    final generic = _tr('ফলাফল লোড করা যায়নি। লগইন ও সংযোগ পরীক্ষা করুন।',
+      'Could not load results. Check your login and connection.');
+    if (error is! ModelTestRequestException) return generic;
+    switch (error.code) {
+      case 'AUTH_REQUIRED':
+      case 'SESSION_CHANGED':
+        return _tr('সেশন পাওয়া যায়নি বা শেষ হয়েছে। আবার লগইন করুন।',
+          'Session missing or expired. Sign in again.');
+      case 'NETWORK':
+      case 'TIMEOUT':
+        return _tr('সার্ভারের সঙ্গে সংযোগ হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।',
+          'Connection failed. Check your internet and try again.');
+      case 'MODEL_TEST_MIGRATION_REQUIRED':
+        return _tr('ফলাফল দেখাতে সার্ভারের ডেটাবেজ আপডেট প্রয়োজন। অ্যাডমিনকে জানান।',
+          'Results require a server database update. Contact the administrator.');
+      case 'ENDPOINT_NOT_FOUND':
+      case 'INVALID_RESPONSE':
+        return _tr('ফলাফলের API থেকে সঠিক তথ্য আসেনি। অ্যাডমিনকে জানান।',
+          'The results API returned an invalid response. Contact the administrator.');
+      case 'SERVER_ERROR':
+        return _tr('সার্ভারে সমস্যা হয়েছে। পরে চেষ্টা করুন বা অ্যাডমিনকে জানান।',
+          'Server error. Try again later or contact the administrator.');
+      default:
+        return generic;
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: _header(),
@@ -1846,8 +1874,7 @@ class _MyTestResultsPageState extends State<MyTestResultsPage> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(14), children: [
               FsStatusCard(icon: Icons.cloud_off_outlined,
-                message: _tr('ফলাফল লোড করা যায়নি। লগইন ও সংযোগ পরীক্ষা করুন।',
-                  'Could not load results. Check your login and connection.'),
+                message: _loadError(snapshot.error),
                 onRetry: _refresh),
             ]);
           final rows = snapshot.data ?? [];
