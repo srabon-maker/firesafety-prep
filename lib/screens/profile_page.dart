@@ -499,7 +499,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         final user = loadedUser;
         final name = _value(user['full_name']);
-        final email = _value(user['email']);
         final photo = user['profile_photo']?.toString().trim() ?? '';
         // Only a full web link (http/https) counts as a usable photo.
         final hasPhoto = photo.startsWith('http://') ||
@@ -522,118 +521,115 @@ class _ProfilePageState extends State<ProfilePage> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _openPersonalInformation(user),
                     child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_deepMaroon, _maroon, Color(0xFF891C32)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _maroon.withValues(alpha: .08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                      key: const ValueKey('profile-summary-surface'),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [_deepMaroon, _maroon, Color(0xFF891C32)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _maroon.withValues(alpha: .08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
+                            key: const ValueKey('profile-avatar-frame'),
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: .55),
-                                width: 1,
+                                width: 1.5,
                               ),
                             ),
                             child: CircleAvatar(
-                              radius: 24,
+                              key: const ValueKey('profile-summary-avatar'),
+                              radius: 30,
                               backgroundColor: const Color(0xFFFFEDF0),
-                              // If the photo fails to load, the icon is shown.
                               child: hasPhoto
                                   ? ClipOval(
                                       child: Image.network(
                                         photo,
-                                        width: 48,
-                                        height: 48,
+                                        width: 60,
+                                        height: 60,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
-                                            const Icon(
-                                          Icons.person_rounded,
-                                          color: _maroon,
-                                          size: 28,
-                                        ),
+                                            const Icon(Icons.person_rounded,
+                                              color: _maroon, size: 34),
                                       ),
                                     )
-                                  : const Icon(
-                                      Icons.person_rounded,
-                                      color: _maroon,
-                                      size: 28,
-                                    ),
+                                  : const Icon(Icons.person_rounded,
+                                      color: _maroon, size: 34),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
+                              key: const ValueKey('profile-name-and-badge'),
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   name,
+                                  key: const ValueKey('profile-summary-name'),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 16,
+                                    fontSize: 17,
                                     height: 1.2,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  email,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFFF1CBD2),
-                                    fontSize: 12,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 5),
                                 Container(
                                   key: const ValueKey('profile-member-badge'),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 3),
+                                      horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: .12),
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(
-                                    _tr(context, 'সদস্য', 'Member'),
-                                    semanticsLabel: _tr(context, 'Fire Safety BD সদস্য', 'Fire Safety BD member'),
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFE4E9),
-                                      fontSize: 10,
-                                      height: 1.2,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.badge_outlined,
+                                        size: 12, color: Color(0xFFF1CBD2)),
+                                      const SizedBox(width: 3),
+                                      Flexible(child: Text(
+                                        _tr(context, 'সাধারণ সদস্য', 'General member'),
+                                        semanticsLabel: _tr(context,
+                                          'Fire Safety BD সাধারণ সদস্য',
+                                          'Fire Safety BD general member'),
+                                        style: const TextStyle(
+                                          color: Color(0xFFF1CBD2),
+                                          fontSize: 10,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      )),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
+                          const Icon(Icons.chevron_right_rounded,
+                            color: Colors.white, size: 20),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
