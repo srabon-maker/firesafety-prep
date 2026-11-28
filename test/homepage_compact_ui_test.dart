@@ -71,6 +71,13 @@ void main() {
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
     expect(find.text('Sample job'), findsOneWidget);
     expect(find.text('Example Company'), findsOneWidget);
+    final jobTitle = find.text('Sample job');
+    final companyName = find.text('Example Company');
+    expect(tester.getTopLeft(companyName).dy - tester.getBottomLeft(jobTitle).dy, closeTo(2, .1));
+    expect(tester.widget<Text>(jobTitle).style?.fontSize, 14);
+    expect(tester.widget<Text>(jobTitle).style?.fontWeight, FontWeight.w700);
+    expect(tester.widget<Text>(companyName).style?.fontSize, 12);
+    expect(tester.widget<Text>(companyName).style?.fontWeight, FontWeight.w400);
     expect(find.text('Dhaka'), findsNothing);
     expect(find.text('Example Company • Dhaka'), findsNothing);
     expect(find.text('No notes published.'), findsOneWidget);
