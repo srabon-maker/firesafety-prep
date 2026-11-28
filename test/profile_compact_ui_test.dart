@@ -99,6 +99,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+    testWidgets('Learning tooltip is compact, readable and themed in $mode', (tester) async {
+      final dark = mode == ThemeMode.dark;
+      await mountProfile(tester, mode, dark ? 'bn' : 'en',
+        scale: dark ? 1 : 1.5);
+      final infoFinder = find.byKey(const ValueKey('profile-learning-info'));
+      final info = tester.widget<Tooltip>(infoFinder);
+      final scheme = (dark ? AppTheme.darkTheme : AppTheme.lightTheme).colorScheme;
+      expect(info.triggerMode, TooltipTriggerMode.tap);
+      expect(info.preferBelow, isFalse);
+      expect(info.constraints, const BoxConstraints(maxWidth: 240));
+      expect(info.padding, const EdgeInsets.all(8));
+      expect(info.textStyle?.fontSize, 11);
+      expect(info.textStyle?.color, scheme.onSurface);
+      final decoration = info.decoration as BoxDecoration;
+      expect(decoration.color, scheme.surfaceContainerHighest);
+      expect(decoration.borderRadius, BorderRadius.circular(8));
+      expect(info.message, dark
+        ? 'প্রকাশিত পরীক্ষার ফলাফল ও সংরক্ষিত অনুশীলন সেশনের ভিত্তিতে।'
+        : 'Based on released test results and saved practice sessions.');
+      final message = find.text(info.message!, findRichText: true);
+      expect(message, findsNothing);
+      await tester.tap(find.descendant(of: infoFinder,
+        matching: find.byIcon(Icons.info_outline_rounded)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(message, findsOneWidget);
+      expect(tester.getSize(message).width, lessThanOrEqualTo(240));
+      expect(tester.getBottomLeft(message).dy,
+        lessThan(tester.getTopLeft(find.text('90%')).dy));
+      await tester.tap(find.text('90%'));
+      await tester.pumpAndSettle();
+      expect(message, findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('Personal information uses compact spacing without losing any fields', (tester) async {
     await mountProfile(tester, ThemeMode.dark, 'en');
     expect(find.text('Personal information'), findsNothing);
