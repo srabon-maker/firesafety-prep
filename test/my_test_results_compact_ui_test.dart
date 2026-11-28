@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fire_safety_job_prep/screens/tests_page.dart';
+import 'package:fire_safety_job_prep/services/model_test_service.dart';
 import 'package:fire_safety_job_prep/theme/app_theme.dart';
 
 Future<void> mountResults(WidgetTester tester, {
@@ -55,6 +56,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, 3);
     expect(find.text('এখনো কোনো প্রকাশিত ফলাফল নেই।'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Schema and expired-session errors give distinct actionable messages', (tester) async {
+    var calls = 0;
+    await mountResults(tester, language: 'en', load: () async {
+      if (++calls == 1) {
+        throw const ModelTestRequestException('MODEL_TEST_MIGRATION_REQUIRED',
+          'schema missing', status: 503);
+      }
+      throw const ModelTestRequestException('AUTH_REQUIRED', 'expired', status: 401);
+    });
+    expect(find.text('Results require a server database update. Contact the administrator.'), findsOneWidget);
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pumpAndSettle();
+    expect(find.text('Session missing or expired. Sign in again.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
