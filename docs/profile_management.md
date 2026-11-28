@@ -3,7 +3,7 @@
 ## App behavior
 
 - Profile header shows avatar, name and email.
-- Personal information is in a **collapsed** expandable section, not eight always-visible cards.
+- Tap the profile summary card to open the standalone Personal information page; the eight fields and Edit information action are no longer shown in an expandable card on the main profile.
 - **Edit profile** opens a form for name, phone, employment status, company, designation, workplace and address. Google email is read-only.
 - **Delete account** requires the user to type `DELETE`. It never deletes anything on opening the dialog. It only clears the local session after a verified server response `{"success":true,"deleted":true}`.
 - On failed API calls, the app shows an error and does not claim the update or deletion succeeded.
@@ -39,6 +39,6 @@ The supplied SQL schema uses restrictive foreign keys on `market_orders.user_id`
 3. Verify unauthenticated requests fail (401), invalid fields fail (422), and deleting with wrong confirmation fails (422).
 4. Verify an account with active orders cannot be deleted (409) and retains its session.
 5. Verify deletion of a disposable test account removes its sessions and user-owned records; `me.php` rejects the old token afterward.
-6. Build the Flutter feature branch in Codemagic; inspect the collapsed details, edit form, error handling and delete confirmation in both Light and Dark modes.
+6. Build the Flutter feature branch in Codemagic; inspect the standalone personal information page, edit form, error handling and delete confirmation in both Light and Dark modes.
 
 **Not yet deployed or tested against a live server.** The PR must remain draft until server and mobile tests pass.

@@ -54,12 +54,14 @@ void main() {
 
   testWidgets('Personal information uses compact spacing without losing any fields', (tester) async {
     await mountProfile(tester, ThemeMode.dark, 'en');
+    expect(find.text('Personal information'), findsNothing);
+    expect(find.byKey(const ValueKey('profile-personal-card')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('profile-summary-card')));
+    await tester.pumpAndSettle();
     final heading = find.text('Personal information');
-    await tester.ensureVisible(heading);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(heading).style?.fontSize, 16);
-    await tester.tap(heading);
-    await tester.pumpAndSettle();
+    expect(heading, findsOneWidget);
+    expect(tester.widget<Text>(heading).style?.fontSize, 15.5);
+    expect(find.text('Profile'), findsNothing);
     final card = find.byKey(const ValueKey('profile-personal-card'));
     final labels = <String, String>{
       'Full name': 'Sample User', 'Email': 'sample@example.com',
@@ -95,12 +97,20 @@ void main() {
     expect(find.text('Saved notes'), findsOneWidget);
     expect(find.text('App settings'), findsOneWidget);
     expect(find.text('Notification preferences'), findsOneWidget);
-    await tester.ensureVisible(find.text('Personal information'));
+    expect(find.text('Personal information'), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('profile-summary-card')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Personal information'));
+    await tester.tap(find.byKey(const ValueKey('profile-summary-card')));
     await tester.pumpAndSettle();
     expect(find.text('Full name'), findsOneWidget);
     expect(find.text('Edit information'), findsOneWidget);
+    await tester.ensureVisible(find.text('Edit information'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Personal information'), findsNothing);
     await tester.ensureVisible(find.text('Log out'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

@@ -188,6 +188,21 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _openPersonalInformation(Map<String, dynamic> user) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => _PersonalInformationPage(
+          user: user,
+          reload: () async {
+            if (!mounted) return null;
+            await _refreshProfile();
+            return _profileFuture;
+          },
+        ),
+      ),
+    );
+  }
+
   /// Returns true only if the account was really deleted.
   Future<bool> _deleteAccount(String email) async {
     if (_deleting) return false;
@@ -354,40 +369,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _profileInfoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    dynamic value,
-  ) {
-    final scheme = _scheme(context);
-    return Padding(
-      key: ValueKey('profile-info-$label'),
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: scheme.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 11, height: 1.2, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 2),
-                Text(_value(value),
-                    style: const TextStyle(
-                        fontSize: 14, height: 1.2, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _learningMetric(String value, String label, IconData icon) {
     final scheme = _scheme(context);
     return Column(
@@ -526,7 +507,14 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
+                Semantics(
+                  button: true,
+                  label: _tr(context, 'ব্যক্তিগত তথ্য দেখুন', 'View personal information'),
+                  child: GestureDetector(
+                    key: const ValueKey('profile-summary-card'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _openPersonalInformation(user),
+                    child: Container(
                   padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -629,89 +617,13 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 23),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Card(
-                  key: const ValueKey('profile-personal-card'),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .65)),
-                  ),
-                  child: Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      leading:
-                          Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
-                      title: Text(
-                        _tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.2),
-                      ),
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-                      minTileHeight: 48,
-                      childrenPadding:
-                          const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                      children: [
-                        Divider(height: 8, color: scheme.outlineVariant.withValues(alpha: .65)),
-                        _profileInfoRow(
-                            context,
-                            Icons.person_outline,
-                            _tr(context, 'পূর্ণ নাম', 'Full name'),
-                            user['full_name']),
-                        _profileInfoRow(context, Icons.email_outlined,
-                            _tr(context, 'ইমেইল', 'Email'), user['email']),
-                        _profileInfoRow(
-                            context,
-                            Icons.phone_outlined,
-                            _tr(context, 'মোবাইল', 'Mobile'),
-                            user['mobile_number']),
-                        _profileInfoRow(
-                            context,
-                            Icons.work_outline,
-                            _tr(context, 'বর্তমান অবস্থা', 'Current status'),
-                            user['current_status']),
-                        _profileInfoRow(
-                            context,
-                            Icons.business_outlined,
-                            _tr(context, 'প্রতিষ্ঠান', 'Company'),
-                            user['company_name']),
-                        _profileInfoRow(
-                            context,
-                            Icons.badge_outlined,
-                            _tr(context, 'পদবি', 'Designation'),
-                            user['designation']),
-                        _profileInfoRow(
-                            context,
-                            Icons.location_on_outlined,
-                            _tr(context, 'কর্মস্থল', 'Job location'),
-                            user['job_location']),
-                        _profileInfoRow(
-                            context,
-                            Icons.home_outlined,
-                            _tr(context, 'বর্তমান ঠিকানা', 'Current address'),
-                            user['current_address']),
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _editProfile(user),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(48, 44),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                            ),
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: Text(_tr(context, 'তথ্য পরিবর্তন করুন',
-                                'Edit information')),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -994,6 +906,215 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: _profileBody(),
+    );
+  }
+}
+
+class _PersonalInformationPage extends StatefulWidget {
+  const _PersonalInformationPage({required this.user, required this.reload});
+  final Map<String, dynamic> user;
+  final Future<Map<String, dynamic>?> Function() reload;
+
+  @override
+  State<_PersonalInformationPage> createState() => _PersonalInformationPageState();
+}
+
+class _PersonalInformationPageState extends State<_PersonalInformationPage> {
+  late Map<String, dynamic>? _user = widget.user;
+  bool _loading = false;
+
+  String _tr(BuildContext context, String bn, String en) => AppText.of(context, bn, en);
+
+  String _value(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? '—' : text;
+  }
+
+  Future<void> _reload() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    Map<String, dynamic>? user;
+    try {
+      user = await widget.reload();
+    } catch (_) {
+      // Do not continue displaying stale personal details after a failed reload.
+    }
+    if (!mounted) return;
+    setState(() {
+      _user = user;
+      _loading = false;
+    });
+  }
+
+  Future<void> _editProfile(Map<String, dynamic> user) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => EditProfilePage(user: user)),
+    );
+    if (!mounted || saved != true) return;
+    await _reload();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(_tr(context, 'প্রোফাইল আপডেট হয়েছে।', 'Profile updated.')),
+    ));
+  }
+
+  Widget _profileInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    dynamic value,
+  ) {
+    final scheme = _scheme(context);
+    return Padding(
+      key: ValueKey('profile-info-$label'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 11, height: 1.2, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 2),
+                Text(_value(value),
+                    style: const TextStyle(
+                        fontSize: 14, height: 1.2, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = _scheme(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final user = _user;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        leadingWidth: 48,
+        centerTitle: false,
+        backgroundColor: dark ? _deepMaroon : _maroon,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          tooltip: _tr(context, 'ফিরে যান', 'Back'),
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+        ),
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.badge_outlined, size: 29, color: Colors.white),
+          ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : user == null
+              ? Center(child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(_tr(context, 'প্রোফাইল তথ্য লোড করা যায়নি।',
+                      'Could not load profile information.'), textAlign: TextAlign.center),
+                    TextButton(onPressed: _reload,
+                      child: Text(_tr(context, 'আবার চেষ্টা করুন', 'Try again'))),
+                  ]),
+                ))
+              : RefreshIndicator(
+                  onRefresh: _reload,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+                    children: [
+                      Card(
+                        key: const ValueKey('profile-personal-card'),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .65)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                        _profileInfoRow(
+                            context,
+                            Icons.person_outline,
+                            _tr(context, 'পূর্ণ নাম', 'Full name'),
+                            user['full_name']),
+                        _profileInfoRow(context, Icons.email_outlined,
+                            _tr(context, 'ইমেইল', 'Email'), user['email']),
+                        _profileInfoRow(
+                            context,
+                            Icons.phone_outlined,
+                            _tr(context, 'মোবাইল', 'Mobile'),
+                            user['mobile_number']),
+                        _profileInfoRow(
+                            context,
+                            Icons.work_outline,
+                            _tr(context, 'বর্তমান অবস্থা', 'Current status'),
+                            user['current_status']),
+                        _profileInfoRow(
+                            context,
+                            Icons.business_outlined,
+                            _tr(context, 'প্রতিষ্ঠান', 'Company'),
+                            user['company_name']),
+                        _profileInfoRow(
+                            context,
+                            Icons.badge_outlined,
+                            _tr(context, 'পদবি', 'Designation'),
+                            user['designation']),
+                        _profileInfoRow(
+                            context,
+                            Icons.location_on_outlined,
+                            _tr(context, 'কর্মস্থল', 'Job location'),
+                            user['job_location']),
+                        _profileInfoRow(
+                            context,
+                            Icons.home_outlined,
+                            _tr(context, 'বর্তমান ঠিকানা', 'Current address'),
+                            user['current_address']),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => _editProfile(user),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(48, 44),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                label: Text(_tr(context, 'তথ্য পরিবর্তন করুন', 'Edit information')),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
     );
   }
 }
