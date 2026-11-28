@@ -51,10 +51,11 @@ class CareerPage extends StatelessWidget {
 }
 
 class CareerSection extends StatefulWidget {
-  const CareerSection({super.key, required this.section, this.alertRequest, this.loadCourses, this.directoryRequest});
+  const CareerSection({super.key, required this.section, this.alertRequest, this.loadCourses, this.directoryRequest, this.directoryWrite});
   final String section;
   // Optional fixture for directory presentation tests only.
   final Future<Map<String, dynamic>> Function(String action, Map<String, String> filters)? directoryRequest;
+  final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic> body)? directoryWrite;
   final Future<Map<String, dynamic>> Function(Map<String, String> filters)? loadCourses;
   // Optional alert-only fixture for widget tests. Normal navigation uses CareerService.
   final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic>? body, Map<String, String> filters)? alertRequest;
@@ -66,15 +67,11 @@ class _CareerSectionState extends State<CareerSection> {
   final _directorySearch = TextEditingController();
   final _courseSearch = TextEditingController();
   final _keyword = TextEditingController(), _location = TextEditingController(),
-      _name = TextEditingController(), _role = TextEditingController(),
-      _organization = TextEditingController(), _city = TextEditingController(),
-      _bio = TextEditingController();
+      _role = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
-  bool _busy = true, _enabled = false, _consent = false, _editingProfile = false;
-  Uint8List? _selectedPhoto;
-  String _photoPath = '';
+  bool _busy = true, _enabled = false;
+  Map<String, dynamic> _ownProfile = {};
   String _directoryQuery = '';
-  bool _removePhoto = false;
   String? _error, _next;
   String _status = '';
   String get _section => widget.section;
@@ -82,7 +79,7 @@ class _CareerSectionState extends State<CareerSection> {
   void initState() { super.initState(); _load(); }
   @override
   void dispose() {
-    for (final c in [_directorySearch,_courseSearch,_keyword,_location,_name,_role,_organization,_city,_bio]) { c.dispose(); }
+    for (final c in [_directorySearch,_courseSearch,_keyword,_location,_role]) { c.dispose(); }
     super.dispose();
   }
   Future<void> _load({bool more = false}) async {
@@ -114,34 +111,48 @@ class _CareerSectionState extends State<CareerSection> {
         }
         if (_section == 'directory' && !more) {
           final p = profile ?? <String,dynamic>{};
-          _name.text = CareerService.text(p,'display_name'); _role.text = CareerService.text(p,'role_name');
-          _organization.text = CareerService.text(p,'organization'); _city.text = CareerService.text(p,'city');
-          _bio.text = CareerService.text(p,'bio');
-          _status = CareerService.text(p,'status'); _photoPath = CareerService.text(p,'photo_path'); _consent = false; _selectedPhoto = null; _removePhoto = false;
+          _ownProfile = p;
+          _status = CareerService.text(p,'status');
         }
       });
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
   }
   void _searchDirectory() {
-    if (_busy || _editingProfile) return;
+    if (_busy) return;
     _directoryQuery = _directorySearch.text.trim();
     _load();
   }
-  Future<void> _pickProfilePhoto() async {
-    try {
-      final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 82, maxWidth: 720, maxHeight: 720);
-      if (image == null) return;
-      final bytes = await image.readAsBytes();
-      if (bytes.length > 2097152) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবির আকার ২ MB-এর মধ্যে রাখুন')));
-        return;
-      }
-      if (mounted) setState(() { _selectedPhoto = bytes; _removePhoto = false; });
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছবি নির্বাচন করা যায়নি')));
+  Future<void> _openProfileEditor() async {
+    if (_busy || _error != null) return;
+    final writer = widget.directoryWrite;
+    final token = writer == null ? await AuthService.instance.getSessionToken() : null;
+    if (!mounted || _busy) return;
+    if (writer == null && (token == null || token.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
+        Text(_tr('আবার লগইন করুন।', 'Please sign in again.'))));
+      return;
+    }
+    final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => _ProfessionalProfileEditorPage(
+        profile: Map.of(_ownProfile),
+        write: (action, body) async {
+          if (writer != null) return writer(action, body);
+          if (await AuthService.instance.getSessionToken() != token) {
+            throw const FormatException('Session changed');
+          }
+          return CareerService.request(action, body: body);
+        },
+      ),
+    ));
+    if (!mounted || changed != true) return;
+    await _load();
+    if (mounted && _error == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
+        Text(_tr('প্রোফাইল আপডেট হয়েছে।', 'Profile updated.'))));
     }
   }
+
   Future<void> _write(String action, Map<String,dynamic> body) async {
     setState(() { _busy = true; _error = null; });
     try {
@@ -150,7 +161,6 @@ class _CareerSectionState extends State<CareerSection> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'check_alerts'
           ? _tr('নতুন নোটিফিকেশন: ${data['new_alerts']}', 'New notifications: ${data['new_alerts']}') : action == 'save_alerts' ? _tr('সংরক্ষণ হয়েছে', 'Preferences saved') : 'সংরক্ষণ হয়েছে')));
-      if (action == 'save_profile' || action == 'hide_profile') setState(() => _editingProfile = false);
       await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -553,12 +563,12 @@ class _CareerSectionState extends State<CareerSection> {
     return [
       TextField(
         controller: _directorySearch,
-        enabled: !_busy && !_editingProfile,
+        enabled: !_busy,
         maxLength: 160,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _searchDirectory(),
         decoration: InputDecoration(
-          prefixIcon: IconButton(onPressed: _busy || _editingProfile ? null : _searchDirectory,
+          prefixIcon: IconButton(onPressed: _busy ? null : _searchDirectory,
             icon: Icon(Icons.search_rounded, color: scheme.primary),
             tooltip: _tr('খুঁজুন', 'Search')),
           hintText: _tr('পেশাজীবী খুঁজুন', 'Search professionals'),
@@ -570,10 +580,9 @@ class _CareerSectionState extends State<CareerSection> {
       ),
       const SizedBox(height: 8),
       SizedBox(width: double.infinity, child: FilledButton.icon(
-        onPressed: _busy ? null : () => setState(() => _editingProfile = !_editingProfile),
-        icon: Icon(_editingProfile ? Icons.close : Icons.person_add_alt_1, size: 20),
-        label: Text(_editingProfile ? _tr('বন্ধ করুন', 'Close')
-          : _status.isEmpty ? _tr('প্রোফাইল যোগ করুন', 'Add profile') : _tr('প্রোফাইল সম্পাদনা', 'Edit profile')),
+        onPressed: _busy || _error != null ? null : _openProfileEditor,
+        icon: Icon(_status.isEmpty ? Icons.person_add_alt_1 : Icons.edit_outlined, size: 20),
+        label: Text(_status.isEmpty ? _tr('প্রোফাইল যোগ করুন', 'Add profile') : _tr('প্রোফাইল সম্পাদনা', 'Edit profile')),
       )),
       if (_status.isNotEmpty) Card(child: ListTile(
         leading: Icon(_status == 'approved' ? Icons.verified_outlined : Icons.hourglass_top,
@@ -581,54 +590,6 @@ class _CareerSectionState extends State<CareerSection> {
         title: Text(_tr('আপনার প্রোফাইলের অবস্থা', 'Your profile status')),
         subtitle: Text(({'pending':_tr('অনুমোদনের অপেক্ষায়','Pending approval'),'approved':_tr('প্রকাশিত','Published'),'hidden':_tr('লুকানো','Hidden')})[_status] ?? _status),
       )),
-      if (_editingProfile) ...[
-        const SizedBox(height: 8),
-        Center(child: Column(children: [
-          if (_selectedPhoto != null)
-            CircleAvatar(radius: 40, backgroundImage: MemoryImage(_selectedPhoto!))
-          else
-            _PrivateProfileAvatar(photoKey: _removePhoto ? '' : _photoPath, radius: 40),
-          if (_selectedPhoto != null || (!_removePhoto && _photoPath.isNotEmpty))
-            TextButton.icon(onPressed: _busy ? null : () => setState(() {
-              _selectedPhoto = null;
-              _removePhoto = true;
-            }), icon: const Icon(Icons.delete_outline), label: Text(_tr('ছবি সরান', 'Remove photo'))),
-          TextButton.icon(onPressed:_busy?null:_pickProfilePhoto,icon:const Icon(Icons.add_a_photo_outlined),label:Text(_tr('ছবি নির্বাচন করুন','Choose photo'))),
-          Text(_tr('ছবি স্বয়ংক্রিয়ভাবে ছোট হবে','Photo will be resized automatically'),style:theme.textTheme.bodySmall), 
-        ])),
-        Text(_tr('প্রোফাইল তথ্য','Profile information'), style: Theme.of(context).textTheme.titleMedium),
-        Text(_tr('অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা দেখবেন। ফোন বা ইমেইল দেবেন না। এটি সনদ যাচাই নয়।','Visible to registered users after approval. Do not include phone or email. This is not certificate verification.')),
-        const SizedBox(height: 12),
-        _field(_name,_tr('প্রদর্শিত নাম','Display name'),100),
-        _field(_role,_tr('পদ / পেশা','Position / profession'),120),
-        _field(_organization,_tr('প্রতিষ্ঠান (ঐচ্ছিক)','Organization (optional)'),120),
-        _field(_city,_tr('শহর (ঐচ্ছিক)','City (optional)'),100),
-        TextField(
-          controller: _bio,
-          enabled: !_busy,
-          minLines: 4,
-          maxLines: 7,
-          maxLength: 2000,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            labelText: AppText.of(context, 'বিস্তারিত পরিচিতি (ঐচ্ছিক)', 'Professional summary (optional)'),
-            hintText: AppText.of(context,
-              'অভিজ্ঞতা, দক্ষতা, কাজের ক্ষেত্র ও অর্জন সম্পর্কে লিখুন',
-              'Describe your experience, skills, work areas and achievements'),
-            helperText: AppText.of(context, 'সর্বোচ্চ ২,০০০ অক্ষর। ফোন, ইমেইল বা ব্যক্তিগত লিংক লিখবেন না।', 'Up to 2,000 characters. Do not include phone numbers, email or personal links.'),
-            alignLabelWithHint: true,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        CheckboxListTile(contentPadding: EdgeInsets.zero,value:_consent,onChanged:_busy?null:(v)=>setState(()=>_consent=v==true),
-          title:Text(_tr('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।','I consent to showing my information to registered users.'))),
-        SizedBox(width: double.infinity, child: FilledButton.icon(
-          onPressed:_busy||!_consent?null:()=>_write('save_profile',{'consent':true,'display_name':_name.text,'role_name':_role.text,'organization':_organization.text,'city':_city.text,'bio':_bio.text,if(_selectedPhoto!=null)'photo_base64':base64Encode(_selectedPhoto!),if(_removePhoto)'remove_photo':true}),
-          icon: const Icon(Icons.send_outlined), label:Text(_tr('জমা দিন','Submit')))),
-        if(_status.isNotEmpty&&_status!='hidden') OutlinedButton(
-          onPressed:_busy?null:()=>_write('hide_profile',{}),child:Text(_tr('আমার পরিচিতি লুকান','Hide my profile'))),
-      ],
       const SizedBox(height: 16),
       Row(children: [
         Expanded(child: Text(_tr('পেশাজীবী','Professionals'), 
@@ -732,6 +693,210 @@ class _CareerSectionState extends State<CareerSection> {
   }
 }
 
+
+class _ProfessionalProfileEditorPage extends StatefulWidget {
+  const _ProfessionalProfileEditorPage({required this.profile, required this.write});
+  final Map<String, dynamic> profile;
+  final Future<Map<String, dynamic>> Function(String, Map<String, dynamic>) write;
+  @override
+  State<_ProfessionalProfileEditorPage> createState() => _ProfessionalProfileEditorPageState();
+}
+
+class _ProfessionalProfileEditorPageState extends State<_ProfessionalProfileEditorPage> {
+  late final _name = TextEditingController(text: CareerService.text(widget.profile, 'display_name'));
+  late final _role = TextEditingController(text: CareerService.text(widget.profile, 'role_name'));
+  late final _organization = TextEditingController(text: CareerService.text(widget.profile, 'organization'));
+  late final _city = TextEditingController(text: CareerService.text(widget.profile, 'city'));
+  late final _bio = TextEditingController(text: CareerService.text(widget.profile, 'bio'));
+  String get _status => CareerService.text(widget.profile, 'status');
+  String get _photoPath => CareerService.text(widget.profile, 'photo_path');
+  Uint8List? _photo;
+  bool _removePhoto = false, _consent = false, _busy = false, _picking = false;
+  String? _error;
+  bool get _blocked => _busy || _picking;
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
+
+  @override
+  void dispose() {
+    for (final controller in [_name, _role, _organization, _city, _bio]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _showInfo() {
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(_tr('প্রোফাইল সম্পর্কে', 'About profiles')),
+      content: SingleChildScrollView(child: Text(_tr(
+        'অ্যাডমিন অনুমোদনের পর নিবন্ধিত ব্যবহারকারীরা প্রোফাইল দেখতে পারবেন। ফোন নম্বর, ইমেইল বা ব্যক্তিগত লিংক দেবেন না। এটি পেশাগত সনদ যাচাই নয়। ছবি স্বয়ংক্রিয়ভাবে ছোট করা হবে; নির্বাচনের পর ছবির আকার ২ MB-এর মধ্যে থাকতে হবে।',
+        'Registered users can view profiles after admin approval. Do not include phone numbers, email or personal links. Approval is not verification of professional certificates. Photos are resized automatically; selected image bytes must be within 2 MB.',
+      ))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx),
+        child: Text(_tr('বন্ধ করুন','Close')))],
+    ));
+  }
+
+  Future<void> _pickPhoto() async {
+    if (_blocked) return;
+    setState(() => _picking = true);
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery,
+        imageQuality: 82, maxWidth: 720, maxHeight: 720);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
+      if (bytes.length > 2097152) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
+          Text(_tr('ছবির আকার ২ MB-এর মধ্যে রাখুন','Keep the image within 2 MB.'))));
+        return;
+      }
+      setState(() { _photo = bytes; _removePhoto = false; });
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
+        Text(_tr('ছবি নির্বাচন করা যায়নি','Could not select photo.'))));
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_blocked || !_consent || _name.text.trim().isEmpty || _role.text.trim().isEmpty) return;
+    await _send('save_profile', {
+      'consent': true, 'display_name': _name.text, 'role_name': _role.text,
+      'organization': _organization.text, 'city': _city.text, 'bio': _bio.text,
+      if (_photo != null) 'photo_base64': base64Encode(_photo!),
+      if (_removePhoto) 'remove_photo': true,
+    });
+  }
+
+  Future<void> _send(String action, Map<String, dynamic> body) async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    setState(() { _busy = true; _error = null; });
+    try {
+      await widget.write(action, body);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) setState(() { _busy = false; _error = e.toString(); });
+    }
+  }
+
+  Future<void> _hide() async {
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(_tr('পরিচিতি লুকাবেন?', 'Hide profile?')),
+      content: Text(_tr('আপনার পরিচিতি অন্য ব্যবহারকারীরা আর দেখতে পাবেন না।',
+        'Other users will no longer see your profile.')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(_tr('বাতিল','Cancel'))),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(_tr('লুকান','Hide'))),
+      ],
+    ));
+    if (mounted && confirmed == true) await _send('hide_profile', {});
+  }
+
+  Widget _field(TextEditingController controller, IconData icon, String label, int max) {
+    final scheme = Theme.of(context).colorScheme;
+    return TextField(controller: controller, enabled: !_blocked, maxLength: max,
+      textInputAction: TextInputAction.next, onChanged: (_) => setState(() {}),
+      decoration: InputDecoration(labelText: label, counterText: '',
+        prefixIcon: Icon(icon, size: 20, color: scheme.primary),
+        filled: true, fillColor: scheme.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final canSubmit = !_blocked && _consent && _name.text.trim().isNotEmpty && _role.text.trim().isNotEmpty;
+    return PopScope(canPop: !_busy, child: Scaffold(
+      appBar: AppBar(toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48,
+        centerTitle: false, backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
+        title: Row(children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .13), borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: .24))),
+            child: Icon(_status.isEmpty ? Icons.person_add_alt_1 : Icons.edit_outlined,
+              size: 26, color: Colors.white)),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_status.isEmpty ? _tr('প্রোফাইল তৈরি করুন','Create profile')
+            : _tr('প্রোফাইল সম্পাদনা','Edit profile'), maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w500, color: Colors.white))),
+        ]),
+        actions: [IconButton(onPressed: _busy ? null : _showInfo,
+          tooltip: _tr('প্রোফাইল সম্পর্কে','About profiles'), icon: const Icon(Icons.info_outline, size: 22))],
+      ),
+      body: ListView(padding: const EdgeInsets.fromLTRB(14, 12, 14, 24), children: [
+        if (_busy || _picking) const LinearProgressIndicator(),
+        Center(child: _photo != null
+          ? CircleAvatar(radius: 38, backgroundImage: MemoryImage(_photo!))
+          : _PrivateProfileAvatar(photoKey: _removePhoto ? '' : _photoPath, radius: 38)),
+        Wrap(alignment: WrapAlignment.center, spacing: 6, children: [
+          TextButton.icon(onPressed: _blocked ? null : _pickPhoto,
+            icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+            label: Text(_tr('ছবি নির্বাচন করুন','Choose photo'))),
+          if (_photo != null || (!_removePhoto && _photoPath.isNotEmpty))
+            TextButton.icon(onPressed: _blocked ? null : () => setState(() {
+              _photo = null; _removePhoto = true;
+            }), icon: const Icon(Icons.delete_outline, size: 18),
+              label: Text(_tr('ছবি সরান','Remove photo'))),
+        ]),
+        Card(margin: EdgeInsets.zero, child: Padding(padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(_tr('পেশাগত তথ্য','Professional information'), style: theme.textTheme.titleMedium),
+            const SizedBox(height: 10),
+            _field(_name, Icons.person_outline, _tr('প্রদর্শিত নাম *','Display name *'), 100),
+            const SizedBox(height: 8),
+            _field(_role, Icons.work_outline, _tr('পদ / পেশা *','Position / profession *'), 120),
+            const SizedBox(height: 8),
+            _field(_organization, Icons.business_outlined, _tr('প্রতিষ্ঠান (ঐচ্ছিক)','Organization (optional)'), 120),
+            const SizedBox(height: 8),
+            _field(_city, Icons.location_on_outlined, _tr('শহর (ঐচ্ছিক)','City (optional)'), 100),
+            const SizedBox(height: 8),
+            TextField(controller: _bio, enabled: !_blocked, minLines: 3, maxLines: 7,
+              maxLength: 2000, textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: _tr('বিস্তারিত পরিচিতি (ঐচ্ছিক)','Professional summary (optional)'),
+                alignLabelWithHint: true, filled: true, fillColor: scheme.surface,
+                prefixIcon: Icon(Icons.description_outlined, size: 20, color: scheme.primary),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              )),
+            Text(_tr('ফোন নম্বর, ইমেইল বা ব্যক্তিগত লিংক লিখবেন না।',
+              'Do not include phone numbers, email or personal links.'),
+              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          ]),
+        )),
+        const SizedBox(height: 8),
+        CheckboxListTile(contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading,
+          value: _consent, onChanged: _blocked ? null : (value) => setState(() => _consent = value == true),
+          title: Text(_tr('আমার তথ্য নিবন্ধিত ব্যবহারকারীদের দেখাতে সম্মত।',
+            'I consent to showing my information to registered users.'), style: theme.textTheme.bodyMedium)),
+        if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 8),
+          child: Text(_error!, style: TextStyle(color: scheme.error))),
+        FilledButton.icon(onPressed: canSubmit ? _submit : null,
+          icon: const Icon(Icons.send_outlined, size: 18),
+          label: Text(_tr('জমা দিন','Submit'))),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.info_outline, size: 17, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Flexible(child: Text(_tr('অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে','Published after admin approval'),
+            textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+        ]),
+        if (_status.isNotEmpty && _status != 'hidden') ...[
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: _blocked ? null : _hide,
+            child: Text(_tr('আমার পরিচিতি লুকান','Hide my profile'))),
+        ],
+      ]),
+    ));
+  }
+}
 
 class _ProfessionalProfileDetailsPage extends StatelessWidget {
   const _ProfessionalProfileDetailsPage({required this.profile});
