@@ -12,11 +12,12 @@ import '../widgets/post_card.dart';
 
 const _maroon = Color(0xFF650D18);
 const _deepMaroon = Color(0xFF36060D);
-// Lighter maroon for dark mode (same as the rest of the app).
-const _maroonLight = Color(0xFFC0485F);
 
 class CommunityPage extends StatefulWidget {
-  const CommunityPage({super.key});
+  const CommunityPage({super.key, this.loadFeed});
+
+  // Optional fixture loader for UI tests; production uses the existing service.
+  final Future<List<CommunityPost>> Function(String sort)? loadFeed;
 
   @override
   State<CommunityPage> createState() => _CommunityPageState();
@@ -40,10 +41,13 @@ class _CommunityPageState extends State<CommunityPage> {
 
   String _tr(String bn, String en) => AppText.of(context, bn, en);
 
+  Future<List<CommunityPost>> _loadFeed(String sort) =>
+      widget.loadFeed?.call(sort) ?? CommunityService.instance.feed(sort: sort);
+
   void _reload() {
     final sortAtStart = _sort;
     final epoch = ++_feedEpoch;
-    _feed = CommunityService.instance.feed(sort: sortAtStart).then((posts) {
+    _feed = _loadFeed(sortAtStart).then((posts) {
       if (mounted && epoch == _feedEpoch && sortAtStart == _sort) {
         _lastPosts = posts;
       }
@@ -65,7 +69,7 @@ class _CommunityPageState extends State<CommunityPage> {
     final sortAtStart = _sort;
     final epoch = ++_feedEpoch;
     try {
-      final posts = await CommunityService.instance.feed(sort: sortAtStart);
+      final posts = await _loadFeed(sortAtStart);
       // Ignore the result if the user changed the sort meanwhile.
       if (!mounted || epoch != _feedEpoch || sortAtStart != _sort) return;
       setState(() {
@@ -94,172 +98,114 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final accent = dark ? _maroonLight : _maroon;
+    final accent = scheme.primary;
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 76,
+        toolbarHeight: 68,
+        titleSpacing: 8,
         backgroundColor: _deepMaroon,
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_tr('কমিউনিটি', 'Community'),
-                style: const TextStyle(
-                    fontSize: 21, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 3),
-            Text(
-                _tr('ফায়ার সেফটি নিয়ে শিখুন, জানুন ও শেয়ার করুন',
-                    'Learn, discover and share about fire safety'),
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFFF0CCD2))),
-          ],
-        ),
+        centerTitle: false,
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.forum_outlined, size: 29, color: Colors.white),
+          ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42,
+            color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr('কমিউনিটি', 'Community'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
         actions: [
-          IconButton(
-            tooltip: _tr('পোস্ট খুঁজুন', 'Search posts'),
-            icon: Icon(
-                _searchVisible ? Icons.close_rounded : Icons.search_rounded),
+          _headerAction(
+            tooltip: _searchVisible
+                ? _tr('সার্চ বন্ধ করুন', 'Close search')
+                : _tr('পোস্ট খুঁজুন', 'Search posts'),
+            icon: _searchVisible ? Icons.close_rounded : Icons.search_rounded,
             onPressed: () => setState(() {
               _searchVisible = !_searchVisible;
               if (!_searchVisible) _search.clear();
             }),
           ),
-          IconButton(
+          const SizedBox(width: 5),
+          _headerAction(
             tooltip: _tr('নতুন পোস্ট', 'New post'),
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 27),
+            icon: Icons.add_circle_outline_rounded,
             onPressed: _openComposer,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         color: accent,
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(15, 16, 15, 26),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
           children: [
-            Material(
-              color: scheme.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: scheme.outlineVariant),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: _openComposer,
-                child: Padding(
-                  padding: const EdgeInsets.all(15),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Color(0xFFFFE4DD),
-                            child: Icon(Icons.person_rounded, color: _maroon),
-                          ),
-                          const SizedBox(width: 11),
-                          Expanded(
-                            child: Text(
-                              _tr('আপনার অভিজ্ঞতা বা প্রশ্ন শেয়ার করুন...',
-                                  'Share your experience or question...'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          Icon(Icons.edit_square, size: 21, color: accent),
-                        ],
-                      ),
-                      const SizedBox(height: 13),
-                      Divider(height: 1, color: scheme.outlineVariant),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.add_photo_alternate_outlined,
-                              size: 20, color: accent),
-                          const SizedBox(width: 7),
-                          Text(_tr('ছবি যোগ করুন', 'Add photo'),
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: accent)),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 13, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: accent.withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                            child: Text(_tr('পোস্ট লিখুন', 'Write post'),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: accent,
-                                )),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
             if (_searchVisible) ...[
               TextField(
                 controller: _search,
                 autofocus: true,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: _tr('পোস্ট বা লেখকের নাম খুঁজুন',
-                      'Search posts or author name'),
+                  hintText: _tr('পোস্ট বা লেখকের নাম খুঁজুন', 'Search posts or author name'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: scheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Material(
+              color: scheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: scheme.outlineVariant),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Row(children: [
+                Expanded(child: InkWell(
+                  onTap: _openComposer,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                    child: Row(children: [
+                      CircleAvatar(
+                        radius: 17,
+                        backgroundColor: scheme.primaryContainer,
+                        child: Icon(Icons.person_rounded, size: 20,
+                          color: scheme.onPrimaryContainer),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(child: Text(_tr('পোস্ট লিখুন', 'Write a post'),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant))),
+                    ]),
+                  ),
+                )),
+                Padding(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: IconButton(
+                    tooltip: _tr('ছবি যোগ করুন', 'Add photo'),
+                    icon: Icon(Icons.add_photo_alternate_outlined, color: accent, size: 23),
+                    onPressed: _openComposer,
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-            ],
-            Row(
-              children: [
-                Expanded(
-                  child: Text(_tr('আলোচনা ও অভিজ্ঞতা', 'Discussions'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      )),
-                ),
-                _sortButton(_tr('সর্বশেষ', 'Latest'), 'latest'),
-                const SizedBox(width: 7),
-                _sortButton(_tr('জনপ্রিয়', 'Popular'), 'popular'),
-              ],
+              ]),
             ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                icon: Icon(_sort == 'mine' ? Icons.forum_outlined : Icons.person_outline),
-                label: Text(_sort == 'mine'
-                    ? _tr('সকল পোস্ট', 'All posts')
-                    : _tr('আমার পোস্ট', 'My posts')),
-                onPressed: () async {
-                  if (_sort != 'mine' &&
-                      (!await AuthGuard.ensureAuthenticated(context) || !mounted)) return;
-                  setState(() {
-                    _sort = _sort == 'mine' ? 'latest' : 'mine';
-                    _lastPosts = null;
-                    _reload();
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            _feedFilters(),
+            const SizedBox(height: 8),
             FutureBuilder<List<CommunityPost>>(
               future: _feed,
               builder: (context, snapshot) {
@@ -278,7 +224,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   }
                   // First load only.
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 70),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: const FsLoadingCards(count: 3),
                   );
                 }
@@ -320,35 +266,94 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
+  Widget _headerAction({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 48, height: 48,
+          child: Center(child: Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          )),
+        ),
+      ),
+    ),
+  );
+
+  Future<void> _selectSort(String value) async {
+    if (value == _sort) return;
+    if (value == 'mine' &&
+        (!await AuthGuard.ensureAuthenticated(context) || !mounted)) return;
+    if (!mounted) return;
+    setState(() {
+      _sort = value;
+      _lastPosts = null;
+      _reload();
+    });
+  }
+
+  Widget _feedFilters() {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(builder: (context, constraints) {
+      final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
+      final heading = Text(_tr('পোস্ট', 'Posts'),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: scheme.onSurface, fontWeight: FontWeight.w800));
+      final filters = Wrap(spacing: 5, runSpacing: 4, children: [
+        _sortButton(_tr('সর্বশেষ', 'Latest'), 'latest'),
+        _sortButton(_tr('জনপ্রিয়', 'Popular'), 'popular'),
+        _sortButton(_tr('আমার পোস্ট', 'My posts'), 'mine'),
+      ]);
+      if (constraints.maxWidth < 340 || largeText) {
+        return Column(crossAxisAlignment: CrossAxisAlignment.start,
+          children: [heading, const SizedBox(height: 4), filters]);
+      }
+      return Row(children: [
+        heading, const SizedBox(width: 8),
+        Expanded(child: Align(alignment: Alignment.centerRight, child: filters)),
+      ]);
+    });
+  }
+
   Widget _sortButton(String label, String value) {
     final selected = _sort == value;
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        if (selected) return;
-        setState(() {
-          _sort = value;
-          _lastPosts = null;
-          _reload();
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? _maroon : scheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? _maroon : scheme.outlineVariant,
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _selectSort(value),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+            decoration: BoxDecoration(
+              color: selected ? scheme.primary : scheme.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant),
+            ),
+            child: Align(
+              widthFactor: 1, heightFactor: 1,
+              child: Text(label, style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+              )),
+            ),
           ),
         ),
-        child: Text(label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : scheme.onSurfaceVariant,
-            )),
       ),
     );
   }
@@ -356,10 +361,9 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget _message(IconData icon, String title, String subtitle,
       {Future<void> Function()? retry}) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final accent = dark ? _maroonLight : _maroon;
+    final accent = scheme.primary;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 58, horizontal: 18),
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 14),
       child: Column(
         children: [
           Icon(icon, size: 42, color: accent),

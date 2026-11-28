@@ -159,44 +159,36 @@ class PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFFFB5C0)
-        : _maroon;
+    final accent = scheme.primary;
     final image = post.imageUrl;
     final photo = post.authorPhoto;
     return Container(
-      margin: const EdgeInsets.only(bottom: 13),
+      margin: const EdgeInsets.only(bottom: 9),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 13,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+            padding: const EdgeInsets.fromLTRB(11, 8, 8, 3),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 21,
-                  backgroundColor: const Color(0xFFFFE4DD),
-                  backgroundImage: photo != null && photo.startsWith('https://')
+                  radius: 18,
+                  backgroundColor: scheme.primaryContainer,
+                  foregroundImage: photo != null && photo.startsWith('https://')
                       ? NetworkImage(photo)
                       : null,
-                  child: photo == null || !photo.startsWith('https://')
-                      ? const Icon(Icons.person_rounded, color: _maroon)
+                  onForegroundImageError: photo != null && photo.startsWith('https://')
+                      ? (error, stack) => debugPrint('Community avatar failed to load')
                       : null,
+                  child: Icon(Icons.person_rounded, color: scheme.onPrimaryContainer, size: 22),
                 ),
-                const SizedBox(width: 11),
+                const SizedBox(width: 9),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +201,7 @@ class PostCard extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                             color: scheme.onSurface,
                           )),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Row(
                         children: [
                           Icon(Icons.schedule_rounded,
@@ -250,11 +242,11 @@ class PostCard extends StatelessWidget {
           ),
           if (post.text.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(15, 9, 15, 13),
+              padding: const EdgeInsets.fromLTRB(12, 5, 12, 9),
               child: Text(post.text,
                   style: TextStyle(
                     fontSize: 14,
-                    height: 1.65,
+                    height: 1.5,
                     color: scheme.onSurface,
                   )),
             ),
@@ -298,7 +290,7 @@ class PostCard extends StatelessWidget {
             ),
           if (showActions && post.status == 'approved') ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 3),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
               child: Row(
                 children: [
                   Icon(Icons.favorite_rounded,
@@ -318,10 +310,10 @@ class PostCard extends StatelessWidget {
                 ],
               ),
             ),
-            Divider(height: 15, indent: 14, endIndent: 14,
+            Divider(height: 9, indent: 12, endIndent: 12,
                 color: scheme.outlineVariant),
             Padding(
-              padding: const EdgeInsets.fromLTRB(7, 0, 7, 5),
+              padding: const EdgeInsets.fromLTRB(6, 0, 6, 2),
               child: Row(
                 children: [
                   Expanded(
