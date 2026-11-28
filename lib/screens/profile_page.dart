@@ -705,6 +705,22 @@ class _ProfilePageState extends State<ProfilePage> {
                             Tooltip(
                               key: const ValueKey('profile-learning-info'),
                               triggerMode: TooltipTriggerMode.tap,
+                              constraints: const BoxConstraints(maxWidth: 240),
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.symmetric(horizontal: 12),
+                              preferBelow: false,
+                              verticalOffset: 18,
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: scheme.outlineVariant),
+                              ),
+                              textStyle: TextStyle(
+                                color: scheme.onSurface,
+                                fontSize: 11,
+                                height: 1.35,
+                                fontWeight: FontWeight.w400,
+                              ),
                               message: _tr(context,
                                 'প্রকাশিত পরীক্ষার ফলাফল ও সংরক্ষিত অনুশীলন সেশনের ভিত্তিতে।',
                                 'Based on released test results and saved practice sessions.'),
