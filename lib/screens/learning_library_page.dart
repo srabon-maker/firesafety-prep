@@ -188,7 +188,9 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
         child: FutureBuilder<Map<String, dynamic>>(
           future: _data,
           builder: (context, snapshot) {
-            final rows = HomepageService.rows(snapshot.data?['data']);
+            final raw = snapshot.data?['data'];
+            final valid = raw is List && raw.every((item) => item is Map);
+            final rows = valid ? HomepageService.rows(raw) : <Map<String, dynamic>>[];
             final query = _search.text.trim().toLowerCase();
             final filtered = rows.where((row) => categoryMatches(row, 'category', query)).toList();
             return ListView(
@@ -215,7 +217,7 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
                 const SizedBox(height: 14),
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const FsLoadingCards(count: 3)
-                else if (snapshot.hasError || !snapshot.hasData)
+                else if (snapshot.hasError || !snapshot.hasData || !valid)
                   FsStatusCard(icon: Icons.error_outline,
                     message: _tr('প্রশ্নের বিভাগ লোড হয়নি।', 'Could not load categories.'),
                     onRetry: _refresh)
@@ -245,8 +247,9 @@ class _QuestionBankPageState extends State<QuestionBankPage> {
 }
 
 class InterviewPage extends StatefulWidget {
-  const InterviewPage({super.key, this.initialSearch = ''});
+  const InterviewPage({super.key, this.initialSearch = '', this.loadInterviews});
   final String initialSearch;
+  final Future<Map<String, dynamic>> Function(Map<String, String>)? loadInterviews;
   @override
   State<InterviewPage> createState() => _InterviewPageState();
 }
@@ -257,70 +260,273 @@ class _InterviewPageState extends State<InterviewPage> {
   int _page = 1;
   bool _english = false;
   List<String> _roles = [], _industries = [];
-  late final _premiumService=PremiumService();
+  late final _premiumService = PremiumService();
   late Future<Map<String, dynamic>> _data = _fetch();
-  Future<Map<String, dynamic>> _fetch() => _premiumService.interviews({
-    'search': _search.text.trim(), 'role': _role, 'industry': _industry, 'page': '$_page'
+
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
+
+  Future<Map<String, dynamic>> _fetch() {
+    final filters = <String, String>{
+      'search': _search.text.trim(), 'role': _role,
+      'industry': _industry, 'page': '$_page',
+    };
+    return widget.loadInterviews?.call(filters) ?? _premiumService.interviews(filters);
+  }
+
+  void _load({int page = 1}) => setState(() {
+    _page = page;
+    _data = _fetch();
   });
-  void _load({int page = 1}) => setState(() { _page = page; _data = _fetch(); });
-  @override
-  void dispose() { _search.dispose(); super.dispose(); }
+
+  Future<void> _refresh() async {
+    _load();
+    try {
+      await _data;
+    } catch (_) {
+      // FutureBuilder presents the retry state.
+    }
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('ইন্টারভিউ প্রস্তুতি'), actions: [
-      IconButton(tooltip: 'রিফ্রেশ', onPressed: () => _load(), icon: const Icon(Icons.refresh))
-    ]),
-    body: FutureBuilder<Map<String, dynamic>>(
-      future: _data,
-      builder: (context, snapshot) {
-        final waiting = snapshot.connectionState == ConnectionState.waiting;
-        final data = waiting ? null : snapshot.data;
-        if (data != null) {
-          _roles = HomepageService.strings(data['roles']);
-          _industries = HomepageService.strings(data['industries']);
-        }
-        final rows = data == null ? <Map<String,dynamic>>[] : HomepageService.rows(data['data']);
-        return ListView(padding: const EdgeInsets.all(16), children: [
-          TextField(controller: _search, textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _load(), maxLength: 120,
-            decoration: InputDecoration(hintText: 'প্রশ্ন, পদ বা ইন্ডাস্ট্রি খুঁজুন', suffixIcon: IconButton(onPressed: () => _load(), icon: const Icon(Icons.search)))),
-          DropdownButtonFormField<String>(initialValue: _roles.contains(_role) ? _role : '',
-            isExpanded: true, decoration: const InputDecoration(labelText: 'পদ'),
-            items: [const DropdownMenuItem(value: '', child: Text('সব পদ')), for(final v in _roles) DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))],
-            onChanged: waiting ? null : (v) { _role=v??''; _load(); }),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(initialValue: _industries.contains(_industry) ? _industry : '',
-            isExpanded: true, decoration: const InputDecoration(labelText: 'ইন্ডাস্ট্রি'),
-            items: [const DropdownMenuItem(value: '', child: Text('সব ইন্ডাস্ট্রি')), for(final v in _industries) DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))],
-            onChanged: waiting ? null : (v) { _industry=v??''; _load(); }),
-          SwitchListTile(title: const Text('English answer (যদি থাকে)'), value: _english, onChanged: (v)=>setState(()=>_english=v)),
-          if (waiting) const FsLoadingCards(count: 2)
-          else if (snapshot.hasError || data == null) const Text('ইন্টারভিউ প্রশ্ন লোড হয়নি। রিফ্রেশ করুন।')
-          else if (rows.isEmpty) const Text('এই বিভাগে প্রকাশিত প্রশ্ন পাওয়া যায়নি।')
-          else ...[
-            for (final row in rows)
-              if(row['locked']==true)
-                Card(child:ListTile(leading:const Icon(Icons.lock_outline),title:Text(_english&&HomepageService.text(row,'title_en').isNotEmpty?HomepageService.text(row,'title_en'):HomepageService.text(row,'title')),
-                  subtitle:const Text('Premium উত্তর • সদস্যপদ দেখুন'),trailing:const Icon(Icons.workspace_premium_outlined),onTap:() async {
-                    await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const PremiumPage()));
-                    if(mounted)_load(page:_page);
-                  }))
-              else Card(child: ExpansionTile(
-                key: ValueKey('${row['id']}-$_english'),
-                title: Text(_english && HomepageService.text(row,'title_en').isNotEmpty ? HomepageService.text(row,'title_en') : HomepageService.text(row,'title')),
-                subtitle: Text([row['role_name'],row['industry'],row['difficulty']].where((v)=>v!=null&&v.toString().isNotEmpty).join(' • ')),
-                childrenPadding: const EdgeInsets.all(16),
-                children: [Align(alignment: Alignment.centerLeft,child: SelectableText(_english && HomepageService.text(row,'body_en').isNotEmpty ? HomepageService.text(row,'body_en') : HomepageService.text(row,'body')))],
-              )),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,children:[
-              TextButton(onPressed: _page>1 ? ()=>_load(page:_page-1):null,child:const Text('আগের পেজ')),
-              Text('$_page'),
-              TextButton(onPressed: data['has_more']==true ? ()=>_load(page:_page+1):null,child:const Text('পরের পেজ')),
-            ]),
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Widget _filter({
+    required String label,
+    required IconData icon,
+    required String selected,
+    required List<String> values,
+    required bool waiting,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final options = <String>{if (selected.isNotEmpty) selected, ...values}
+      .where((value) => value.isNotEmpty).toList();
+    return DropdownButtonFormField<String>(
+      key: ValueKey((label, selected)),
+      initialValue: selected,
+      isExpanded: true,
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: scheme.primary, size: 19),
+        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 44),
+        filled: true,
+        fillColor: scheme.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      items: [
+        DropdownMenuItem(value: '', child: Text(label, overflow: TextOverflow.ellipsis)),
+        for (final value in options)
+          DropdownMenuItem(value: value, child: Text(value, overflow: TextOverflow.ellipsis)),
+      ],
+      onChanged: waiting ? null : onChanged,
+    );
+  }
+
+  Widget _filters(bool waiting) => LayoutBuilder(builder: (context, constraints) {
+    final role = _filter(label: _tr('সব পদ', 'All roles'), icon: Icons.work_outline,
+      selected: _role, values: _roles, waiting: waiting,
+      onChanged: (value) { _role = value ?? ''; _load(); });
+    final industry = _filter(label: _tr('সব ইন্ডাস্ট্রি', 'All industries'), icon: Icons.factory_outlined,
+      selected: _industry, values: _industries, waiting: waiting,
+      onChanged: (value) { _industry = value ?? ''; _load(); });
+    if (constraints.maxWidth < 300 || MediaQuery.textScalerOf(context).scale(14) > 19) {
+      return Column(children: [role, const SizedBox(height: 8), industry]);
+    }
+    return Row(children: [Expanded(child: role), const SizedBox(width: 8), Expanded(child: industry)]);
+  });
+
+  Widget _languagePicker() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Wrap(
+      spacing: 8, runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      alignment: WrapAlignment.spaceBetween,
+      children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.translate_rounded, size: 19, color: scheme.primary),
+          const SizedBox(width: 6),
+          Text(_tr('উত্তরের ভাষা', 'Answer language'), style: theme.textTheme.bodySmall),
+        ]),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: false, label: Text('বাংলা')),
+            ButtonSegment(value: true, label: Text('English')),
           ],
-        ]);
-      },
-    ),
-  );
+          selected: {_english},
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            textStyle: WidgetStatePropertyAll(theme.textTheme.labelMedium),
+            visualDensity: VisualDensity.compact,
+          ),
+          onSelectionChanged: (values) => setState(() => _english = values.first),
+        ),
+      ],
+    );
+  }
+
+  String _localizedField(Map<String, dynamic> row, String field) {
+    final english = HomepageService.text(row, '${field}_en');
+    return _english && english.isNotEmpty ? english : HomepageService.text(row, field);
+  }
+
+  Widget _questionCard(Map<String, dynamic> row) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final title = _localizedField(row, 'title');
+    final metadata = [row['role_name'], row['industry'], row['difficulty']]
+        .where((v) => v != null && v.toString().isNotEmpty).join(' • ');
+    final locked = row['locked'] == true;
+    final leading = Container(
+      width: 36, height: 36,
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(10)),
+      child: Icon(locked ? Icons.lock_outline : Icons.question_answer_outlined,
+        size: 21, color: scheme.primary),
+    );
+    final titleWidget = Text(title,
+      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface));
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      child: locked
+        ? ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
+            leading: leading, title: titleWidget,
+            subtitle: Text(_tr('Premium উত্তর', 'Premium answer'),
+              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            trailing: Icon(Icons.workspace_premium_outlined, color: scheme.primary),
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const PremiumPage()));
+              if (mounted) _load(page: _page);
+            })
+        : ExpansionTile(
+            key: ValueKey('${row['id']}-$_english'),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
+            leading: leading, title: titleWidget,
+            subtitle: metadata.isEmpty ? null : Text(metadata,
+              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            childrenPadding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+            children: [
+              Align(alignment: Alignment.centerLeft,
+                child: SelectableText(_localizedField(row, 'body'),
+                  style: theme.textTheme.bodyMedium)),
+            ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
+        backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
+        title: Row(children: [
+          Container(width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24))),
+            child: const Icon(Icons.record_voice_over_outlined, color: Colors.white, size: 29)),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr('ইন্টারভিউ প্রস্তুতি', 'Interview prep'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
+        actions: [
+          Tooltip(message: _tr('রিফ্রেশ', 'Refresh'), child: Material(
+            color: Colors.transparent,
+            child: InkWell(onTap: _refresh, borderRadius: BorderRadius.circular(10),
+              child: SizedBox(width: 48, height: 48, child: Center(
+                child: Container(width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white)),
+              )),
+            ),
+          )),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: RefreshIndicator(onRefresh: _refresh,
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _data,
+          builder: (context, snapshot) {
+            final waiting = snapshot.connectionState == ConnectionState.waiting;
+            final data = waiting ? null : snapshot.data;
+            final valid = data != null && data['data'] is List &&
+                (data['data'] as List).every((item) => item is Map) &&
+                data['roles'] is List && data['industries'] is List;
+            if (data != null && valid && !snapshot.hasError) {
+              _roles = HomepageService.strings(data['roles']);
+              _industries = HomepageService.strings(data['industries']);
+            }
+            final rows = data != null && valid ? HomepageService.rows(data['data']) : <Map<String, dynamic>>[];
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+              children: [
+                TextField(controller: _search, textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _load(), maxLength: 120,
+                  decoration: InputDecoration(
+                    hintText: _tr('প্রশ্ন খুঁজুন', 'Search questions'),
+                    counterText: '',
+                    filled: true, fillColor: scheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    prefixIcon: Icon(Icons.search_rounded, color: scheme.primary),
+                    suffixIcon: IconButton(tooltip: _tr('খুঁজুন', 'Search'),
+                      onPressed: () => _load(), icon: const Icon(Icons.arrow_forward_rounded)))),
+                const SizedBox(height: 8),
+                _filters(waiting),
+                const SizedBox(height: 8),
+                _languagePicker(),
+                const SizedBox(height: 12),
+                if (waiting) const FsLoadingCards(count: 2)
+                else if (snapshot.hasError || data == null || !valid)
+                  FsStatusCard(icon: Icons.error_outline,
+                    message: _tr('ইন্টারভিউ প্রশ্ন লোড হয়নি।', 'Could not load interview questions.'),
+                    onRetry: _refresh)
+                else ...[
+                  Row(children: [
+                    Expanded(child: Text(_tr('ইন্টারভিউ প্রশ্ন', 'Interview questions'),
+                      style: theme.textTheme.titleMedium)),
+                    Flexible(child: Text(_tr('${rows.length}টি প্রশ্ন (এই পেজে)', '${rows.length} on this page'),
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+                  ]),
+                  const SizedBox(height: 8),
+                  if (rows.isEmpty)
+                    FsStatusCard(icon: Icons.question_answer_outlined,
+                      message: _tr('এই বিভাগে কোনো প্রশ্ন পাওয়া যায়নি।', 'No questions found.'))
+                  else
+                    for (final row in rows) _questionCard(row),
+                  if (_page > 1 || data['has_more'] == true)
+                    Wrap(alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        TextButton(onPressed: _page > 1 ? () => _load(page: _page - 1) : null,
+                          child: Text(_tr('আগের পেজ', 'Previous'))),
+                        Text('$_page'),
+                        TextButton(onPressed: data['has_more'] == true ? () => _load(page: _page + 1) : null,
+                          child: Text(_tr('পরের পেজ', 'Next'))),
+                      ]),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }

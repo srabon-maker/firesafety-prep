@@ -47,8 +47,8 @@ void main() {
     expect(find.text('10টি প্রশ্ন'), findsOneWidget);
     expect(find.text('5টি প্রশ্ন · 5টি Premium'), findsOneWidget);
     expect(find.byTooltip('এই বিভাগের প্রশ্ন দেখুন'), findsNWidgets(2));
-    expect(tester.getTopLeft(find.text('প্রশ্ন খুঁজুন')).dy,
-      closeTo(tester.getTopLeft(find.text('বুকমার্ক')).dy, 1));
+    expect(tester.getTopLeft(find.ancestor(of: find.text('প্রশ্ন খুঁজুন'), matching: find.byType(InkWell)).first).dy,
+      closeTo(tester.getTopLeft(find.ancestor(of: find.text('বুকমার্ক'), matching: find.byType(InkWell)).first).dy, 1));
     expect(tester.takeException(), isNull);
   });
 
