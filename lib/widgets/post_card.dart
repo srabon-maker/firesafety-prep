@@ -379,6 +379,7 @@ class _CommentsPageState extends State<CommentsPage> {
   Set<int> _knownIds = {};
   int? _includeId;
   int? _targetId;
+  bool _revealPending = false;
   String? _pendingText;
   int _loadEpoch = 0;
   bool _sending = false;
@@ -409,21 +410,35 @@ class _CommentsPageState extends State<CommentsPage> {
         if (target != null) {
           _targetId = target.id;
           _pendingText = null;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || epoch != _loadEpoch) return;
-            final targetContext = _revealKey.currentContext;
-            if (targetContext != null) {
-              Scrollable.ensureVisible(targetContext,
-                alignment: 0.85, duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic);
-            }
-          });
+          // The FutureBuilder schedules scrolling only after it builds the
+          // completed result, not when the network future first resolves.
+          _revealPending = true;
         }
       }
       return comments;
     });
     // A disposed page may no longer have a FutureBuilder listener.
     _comments.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+  }
+
+  void _revealAfterLayout(List<Comment> comments) {
+    final targetId = _targetId;
+    if (!_revealPending || targetId == null ||
+        !comments.any((comment) => comment.id == targetId)) return;
+    final epoch = _loadEpoch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || epoch != _loadEpoch || !_revealPending ||
+          _targetId != targetId) return;
+      final targetContext = _revealKey.currentContext;
+      if (targetContext == null) return;
+      _revealPending = false;
+      // The card now has a laid-out render object, even below the viewport.
+      // Align its start so long comments also show their author and first line.
+      Scrollable.ensureVisible(targetContext,
+        alignment: 0.1,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic);
+    });
   }
 
   @override
@@ -454,6 +469,7 @@ class _CommentsPageState extends State<CommentsPage> {
         _includeId = id;
         _pendingText = draft;
         _targetId = null;
+        _revealPending = false;
         _reload();
       });
       widget.onChanged();
@@ -495,9 +511,14 @@ class _CommentsPageState extends State<CommentsPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            // The comments are already built as one bounded Column (API
+            // returns up to 101). Mount it eagerly so an offscreen target has
+            // a context and layout even before the user scrolls down.
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(14),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 PostCard(
                   post: widget.post,
                   onChanged: widget.onChanged,
@@ -522,6 +543,9 @@ class _CommentsPageState extends State<CommentsPage> {
                       );
                     }
                     final comments = snapshot.data ?? [];
+                    if (snapshot.connectionState == ConnectionState.done) {
+                      _revealAfterLayout(comments);
+                    }
                     if (comments.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(18),
@@ -572,7 +596,8 @@ class _CommentsPageState extends State<CommentsPage> {
                     );
                   },
                 ),
-              ],
+                ],
+              ),
             ),
           ),
           SafeArea(
