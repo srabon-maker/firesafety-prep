@@ -22,7 +22,7 @@ class CareerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     String tr(String bn, String en) => AppText.of(context, bn, en);
     final entries = [
-      ('alerts', Icons.notifications_active_outlined, tr('চাকরির এলার্ট','Job alerts'), tr('পদ ও কর্মস্থল অনুযায়ী চাকরি','Jobs matching your preferences')),
+      ('alerts', Icons.notifications_active_outlined, tr('চাকরির অ্যালার্ট','Job alerts'), tr('পদ ও কর্মস্থল অনুযায়ী চাকরি','Jobs matching your preferences')),
       ('mock', Icons.record_voice_over_outlined, tr('মক ইন্টারভিউ','Mock interview'), tr('লিখে ও অফলাইন ভয়েসে অনুশীলন','Practice with text and offline voice')),
       ('courses', Icons.school_outlined, tr('প্রশিক্ষণ ও কোর্স','Training & courses'), tr('প্রকাশিত প্রশিক্ষণের তথ্য','Explore published courses')),
       ('directory', Icons.groups_outlined, tr('পেশাজীবী ডিরেক্টরি','Professional directory'), tr('ঐচ্ছিক পেশাগত পরিচিতি','Optional professional profiles')),
@@ -51,8 +51,10 @@ class CareerPage extends StatelessWidget {
 }
 
 class CareerSection extends StatefulWidget {
-  const CareerSection({super.key, required this.section});
+  const CareerSection({super.key, required this.section, this.alertRequest});
   final String section;
+  // Optional alert-only fixture for widget tests. Normal navigation uses CareerService.
+  final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic>? body, Map<String, String> filters)? alertRequest;
   @override
   State<CareerSection> createState() => _CareerSectionState();
 }
@@ -82,18 +84,20 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _load({bool more = false}) async {
     setState(() { _busy = true; _error = null; if (!more) { _rows = []; _next = null; } });
     try {
-      final token = await AuthService.instance.getSessionToken();
-      final data = await CareerService.request(_section, filters: {
+      final fixture = _section == 'alerts' ? widget.alertRequest : null;
+      final token = fixture == null ? await AuthService.instance.getSessionToken() : null;
+      final filters = <String, String>{
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
         if (_section == 'directory' && _directoryQuery.isNotEmpty) 'q': _directoryQuery,
-      });
+      };
+      final data = await (fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
       Map<String, dynamic>? profile;
       if (_section == 'directory' && !more) {
         final mine = await CareerService.request('my_profile');
         if (mine['profile'] is Map) profile = Map<String, dynamic>.from(mine['profile'] as Map);
       }
-      if (await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
+      if (fixture == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
       if (!mounted) return;
       setState(() {
         _rows = [..._rows, ...CareerService.rows(data)];
@@ -135,10 +139,11 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _write(String action, Map<String,dynamic> body) async {
     setState(() { _busy = true; _error = null; });
     try {
-      final data = await CareerService.request(action, body: body);
+      final fixture = _section == 'alerts' ? widget.alertRequest : null;
+      final data = await (fixture?.call(action, body, const {}) ?? CareerService.request(action, body: body));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'check_alerts'
-          ? 'নতুন নোটিফিকেশন: ${data['new_alerts']}' : 'সংরক্ষণ হয়েছে')));
+          ? _tr('নতুন নোটিফিকেশন: ${data['new_alerts']}', 'New notifications: ${data['new_alerts']}') : action == 'save_alerts' ? _tr('সংরক্ষণ হয়েছে', 'Preferences saved') : 'সংরক্ষণ হয়েছে')));
       if (action == 'save_profile' || action == 'hide_profile') setState(() => _editingProfile = false);
       await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
@@ -171,17 +176,183 @@ class _CareerSectionState extends State<CareerSection> {
     );
   }
 
-  List<Widget> _content() {
-    if (_section == 'alerts') return [
-      const Text('গত ৩০ দিনের প্রকাশিত ও মেয়াদ না পেরোনো বিজ্ঞপ্তি থেকে শব্দের মিল। যোগ্যতা নিশ্চিত করে না। নতুন মিল থাকা চাকরি চেক করলে অ্যাপের ইনবক্সে নোটিফিকেশন যোগ হবে; মোবাইল পুশ নয়।'),
-      SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Job Alert চালু'), value: _enabled, onChanged: _busy ? null : (v) => setState(() => _enabled = v)),
-      _field(_keyword,'পদ / যোগ্যতার শব্দ',120), _field(_location,'কর্মস্থল',120),
-      FilledButton(onPressed: _busy ? null : () => _write('save_alerts',{'enabled':_enabled,'keyword':_keyword.text.trim(),'location':_location.text.trim()}), child: const Text('পছন্দ সংরক্ষণ')),
-      OutlinedButton(onPressed: _busy ? null : () => _write('check_alerts',{}), child: const Text('নতুন চাকরি চেক করুন')),
-      const SizedBox(height: 12), const Text('মিল থাকা চাকরি', style: TextStyle(fontWeight: FontWeight.bold)),
-      for(final row in _rows) _card(CareerService.text(row,'title'),
-        ['organization','location','requirements','application_deadline'].map((k)=>CareerService.text(row,k)).where((v)=>v.isNotEmpty).join('\n'),link:CareerService.text(row,'apply_url')),
+  String _tr(String bn, String en) => AppText.of(context, bn, en);
+
+  void _showAlertInfo() {
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(_tr('চাকরির অ্যালার্ট সম্পর্কে', 'About job alerts')),
+      content: SingleChildScrollView(child: Text(_tr(
+        'গত ৩০ দিনের প্রকাশিত ও মেয়াদ না পেরোনো বিজ্ঞপ্তি থেকে শব্দের মিল। যোগ্যতা নিশ্চিত করে না। নতুন মিল থাকা চাকরি চেক করলে অ্যাপের ইনবক্সে নোটিফিকেশন যোগ হবে; মোবাইল পুশ নয়।',
+        'Matches keywords in unexpired jobs published in the last 30 days. A match does not confirm eligibility. Checking new matching jobs adds in-app inbox notifications, not mobile push notifications.',
+      ))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx),
+        child: Text(_tr('বন্ধ করুন', 'Close')))],
+    ));
+  }
+
+  Widget _alertHeaderAction(IconData icon, String label, VoidCallback? onTap) =>
+      Tooltip(message: label, child: Material(color: Colors.transparent,
+        child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(10),
+          child: SizedBox(width: 48, height: 48, child: Center(child: Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 20, color: onTap == null ? Colors.white54 : Colors.white),
+          ))),
+        ),
+      ));
+
+  PreferredSizeWidget _alertAppBar() => AppBar(
+    toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
+    backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
+    title: LayoutBuilder(builder: (context, constraints) => Row(children: [
+      if (constraints.maxWidth >= 125) ...[
+        Container(width: 40, height: 40,
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: .24))),
+          child: const Icon(Icons.notifications_active_outlined, size: 29, color: Colors.white)),
+        const SizedBox(width: 9),
+        Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+        const SizedBox(width: 9),
+      ],
+      Expanded(child: Text(_tr('চাকরির অ্যালার্ট', 'Job Alerts'),
+        maxLines: 2, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Colors.white, fontSize: 15.5,
+          fontWeight: FontWeight.w500, height: 1.2))),
+    ])),
+    actions: [
+      _alertHeaderAction(Icons.info_outline_rounded, _tr('অ্যালার্ট সম্পর্কে', 'About alerts'), _showAlertInfo),
+      _alertHeaderAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'), _busy ? null : () => _load()),
+      const SizedBox(width: 8),
+    ],
+  );
+
+  Widget _alertField(TextEditingController controller, String label, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    return TextField(controller: controller, enabled: !_busy, maxLength: 120,
+      decoration: InputDecoration(
+        labelText: label, counterText: '', filled: true, fillColor: scheme.surface,
+        prefixIcon: Icon(icon, color: scheme.primary, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+  }
+
+  Widget _alertPreferences() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(margin: EdgeInsets.zero, child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(Icons.notifications_active_outlined, color: scheme.primary),
+          title: Text(_tr('চাকরির অ্যালার্ট', 'Job Alert'), style: theme.textTheme.titleSmall),
+          subtitle: Text(_enabled ? _tr('বর্তমানে চালু', 'Currently on') : _tr('বর্তমানে বন্ধ', 'Currently off'),
+            style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          value: _enabled,
+          onChanged: _busy ? null : (value) => setState(() => _enabled = value),
+        ),
+        Divider(height: 14, color: scheme.outlineVariant),
+        _alertField(_keyword, _tr('পদ / যোগ্যতা', 'Role / qualification'), Icons.work_outline),
+        const SizedBox(height: 8),
+        _alertField(_location, _tr('কর্মস্থল', 'Location'), Icons.location_on_outlined),
+        const SizedBox(height: 10),
+        LayoutBuilder(builder: (context, constraints) {
+          final save = FilledButton.icon(
+            onPressed: _busy ? null : () => _write('save_alerts', {
+              'enabled': _enabled, 'keyword': _keyword.text.trim(),
+              'location': _location.text.trim(),
+            }),
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: Text(_tr('সংরক্ষণ', 'Save')),
+          );
+          final check = OutlinedButton.icon(
+            onPressed: _busy ? null : () => _write('check_alerts', {}),
+            icon: const Icon(Icons.search_rounded, size: 18),
+            label: Text(_tr('চাকরি খুঁজুন', 'Check jobs')),
+          );
+          if (constraints.maxWidth < 270 || MediaQuery.textScalerOf(context).scale(14) > 19) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [save, const SizedBox(height: 6), check]);
+          }
+          return Row(children: [Expanded(child: save), const SizedBox(width: 8), Expanded(child: check)]);
+        }),
+      ]),
+    ));
+  }
+
+  Widget _alertJobCard(Map<String, dynamic> row) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final uri = CareerService.safeLink(CareerService.text(row, 'apply_url'));
+    final fields = [
+      (Icons.business_outlined, CareerService.text(row, 'organization')),
+      (Icons.location_on_outlined, CareerService.text(row, 'location')),
+      (Icons.description_outlined, CareerService.text(row, 'requirements')),
+      (Icons.event_outlined, CareerService.text(row, 'application_deadline')),
     ];
+    return Card(margin: const EdgeInsets.only(bottom: 8), child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 40, height: 40,
+            decoration: BoxDecoration(color: scheme.primary.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.work_outline, color: scheme.primary, size: 22)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(CareerService.text(row, 'title'),
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+        ]),
+        for (final field in fields)
+          if (field.$2.isNotEmpty) Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(field.$1, color: scheme.primary, size: 17),
+              const SizedBox(width: 6),
+              Expanded(child: Text(field.$2, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+            ]),
+          ),
+        if (uri != null) Align(alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(_tr('বিস্তারিত লিংক', 'View details')),
+            onPressed: () async {
+              try {
+                if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+              } catch (_) {
+                // The error is shown below.
+              }
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(_tr('লিংক খোলা যায়নি', 'Could not open link'))));
+            },
+          )),
+      ]),
+    ));
+  }
+
+  List<Widget> _alertContent() => [
+    _alertPreferences(),
+    const SizedBox(height: 14),
+    Row(children: [
+      Expanded(child: Text(_tr('মিল থাকা চাকরি', 'Matching jobs'),
+        style: Theme.of(context).textTheme.titleMedium)),
+      const SizedBox(width: 8),
+      Text(_tr('${_rows.length}টি', '${_rows.length} loaded'),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+    ]),
+    const SizedBox(height: 8),
+    if (!_busy && _error == null && _rows.isEmpty)
+      FsStatusCard(icon: Icons.work_outline,
+        message: _tr('এখনো মিল থাকা চাকরি নেই।', 'No matching jobs yet.')),
+    for (final row in _rows) _alertJobCard(row),
+  ];
+
+  List<Widget> _content() {
+    if (_section == 'alerts') return _alertContent();
     if (_section == 'mock') return [
       const Text('লিখে অথবা ভয়েসে উত্তর দিন। প্রশ্ন ফোনের অফলাইন ভয়েসে শোনা যাবে; উত্তরও ডিভাইসেই লেখা হবে।'),
       const SizedBox(height: 10),
@@ -347,13 +518,13 @@ class _CareerSectionState extends State<CareerSection> {
   Widget build(BuildContext context) {
     String tr(String bn, String en) => AppText.of(context, bn, en);
     final titles = {
-      'alerts': tr('চাকরির বিজ্ঞপ্তি', 'Job Alerts'),
+      'alerts': tr('চাকরির অ্যালার্ট', 'Job Alerts'),
       'mock': tr('মক ইন্টারভিউ', 'Mock Interview'),
       'courses': tr('প্রশিক্ষণ ও কোর্স', 'Training & Courses'),
       'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
     };
     return Scaffold(
-    appBar: AppBar(
+    appBar: _section == 'alerts' ? _alertAppBar() : AppBar(
       title: Row(
         children: [
           if (_section == 'directory') ...[
@@ -386,12 +557,12 @@ class _CareerSectionState extends State<CareerSection> {
         ),
       ],
     ),
-    body: ListView(padding:const EdgeInsets.all(16),children:[
+    body: ListView(padding: _section == 'alerts' ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
-      if(_section!='directory'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
-      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:const Text('আরও দেখুন')),
+      if(_section!='directory'&&_section!='alerts'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
+      if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text(_section == 'alerts' ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
     ]));
   }
 }
