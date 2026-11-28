@@ -14,6 +14,7 @@ import 'notes_page.dart';
 import 'marketplace_page.dart';
 import 'community_page.dart';
 import 'notification_inbox_page.dart';
+import 'support_page.dart';
 import 'learning_library_page.dart';
 import '../widgets/home_hero_banner.dart';
 
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
   }
   Future<void> _open(String target, {String search=''}) async {
     if (target == 'career') { await CareerPage.open(context); return; }
-    if (!['jobs','shop','questions','notes','tests','interview','progress','community','notifications'].contains(target)) return;
+    if (!['jobs','shop','questions','notes','tests','interview','progress','community','notifications','support'].contains(target)) return;
     if (target!='jobs' && target!='shop') {
       if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
     }
@@ -88,6 +89,7 @@ class _HomePageState extends State<HomePage> {
       'progress'=>const PracticeDashboardPage(),
       'shop'=>const MarketplacePage(),
       'community'=>const CommunityPage(),
+      'support'=>const SupportPage(generalSupport: true),
       _=>const NotificationInboxPage(),
     };
     await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>page));
@@ -293,9 +295,17 @@ class _HomePageState extends State<HomePage> {
             Container(width:42,height:42,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
             const SizedBox(width:10),
             const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('Fire Safety BD',style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w700)),
-              Text('Learn • Prepare • Connect',style:TextStyle(color:Colors.white70,fontSize:11)),
+              Text('Fire Safety BD',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w700)),
+              Text('Learn • Prepare • Connect',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:Colors.white70,fontSize:11)),
             ])),
+            IconButton(
+              key: const ValueKey('home-admin-support'),
+              tooltip: _tr('অ্যাডমিন সাপোর্ট', 'Admin support'),
+              onPressed: () => _open('support'),
+              icon: Container(width:34,height:34,
+                decoration:BoxDecoration(color:Colors.white.withValues(alpha:.12),borderRadius:BorderRadius.circular(10)),
+                child:const Icon(Icons.support_agent_rounded,color:Colors.white,size:21)),
+            ),
             IconButton(
               tooltip: _tr('নোটিফিকেশন', 'Notifications'),
               onPressed: () => _open('notifications'),
