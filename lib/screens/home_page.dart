@@ -361,7 +361,7 @@ class _HomePageState extends State<HomePage> {
           if(pending&&activation!=null)Card(child:ListTile(leading:Icon(Icons.campaign_outlined,color:Theme.of(context).colorScheme.primary),title:Text(_tr('Premium সুবিধা চালুর আগাম নোটিশ','Upcoming Premium access')),subtitle:Text(_tr('এখন সব Free। লক কার্যকর হবে: ${activation.toString().substring(0,16)} (বাংলাদেশ সময়)।','Currently free. Access restrictions begin: ${activation.toString().substring(0,16)} (Bangladesh time).')))),
           if(top)_section('banners',data),
           const SizedBox(height: 8),
-          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145:80+(MediaQuery.textScalerOf(context).scale(13)-13).clamp(0.0,4.0)*3,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
+          LayoutBuilder(builder:(context,box)=>GridView.count(padding:EdgeInsets.zero,crossAxisCount:box.maxWidth<320||MediaQuery.textScalerOf(context).scale(13)>17?2:box.maxWidth>=700?4:3,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:8,mainAxisSpacing:8,mainAxisExtent:MediaQuery.textScalerOf(context).scale(13)>17?145.0:80.0+(MediaQuery.textScalerOf(context).scale(13)-13).clamp(0.0,4.0).toDouble()*3,children:[for(final item in _quick)_tile(AppText.of(context,item.$2,item.$3),item.$4,item.$5,()=>_open(item.$1))])),
           const SizedBox(height: 10),
           Row(children: [
             Icon(Icons.work_outline,color:Theme.of(context).colorScheme.primary,size:20),
@@ -381,7 +381,7 @@ class _HomePageState extends State<HomePage> {
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 6,
                     mainAxisSpacing: 6,
-                    mainAxisExtent: largeText ? 128 : (box.maxWidth < 320 ? 84.0 : 78.0) + (MediaQuery.textScalerOf(context).scale(13) - 13).clamp(0.0, 4.0) * 3,
+                    mainAxisExtent: largeText ? 128.0 : (box.maxWidth < 320 ? 84.0 : 78.0) + (MediaQuery.textScalerOf(context).scale(13) - 13).clamp(0.0, 4.0).toDouble() * 3,
                     children: [
                       for (final item in const [
                         ('alerts', 'চাকরির\nঅ্যালার্ট', 'Job\nalerts', Icons.notifications_active_outlined, Color(0xFFB83228)),

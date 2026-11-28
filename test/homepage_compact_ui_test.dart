@@ -75,7 +75,7 @@ void main() {
     expect(tester.getSize(tagline).width, lessThanOrEqualTo(tester.getSize(brand).width + .1));
     expect(tester.getTopLeft(tagline).dy - tester.getBottomLeft(brand).dy, closeTo(2, .1));
     expect(tester.widget<Text>(find.text('চাকরির খবর')).style?.fontWeight, FontWeight.w500);
-    expect(tester.widget<Text>(find.text('মক\\nইন্টারভিউ')).style?.fontWeight, FontWeight.w500);
+    expect(tester.widget<Text>(find.text('মক\nইন্টারভিউ')).style?.fontWeight, FontWeight.w500);
     expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontWeight, FontWeight.w600);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
     expect(find.byTooltip('অ্যাডমিন সাপোর্ট'), findsOneWidget);
