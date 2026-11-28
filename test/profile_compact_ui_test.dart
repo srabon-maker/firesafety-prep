@@ -23,7 +23,12 @@ Future<void> mountProfile(WidgetTester tester, ThemeMode mode, String language,
     ),
     home: ProfilePage(
       onLogout: () {},
-      loadProfile: (_) async => {'full_name': 'Sample User', 'email': 'sample@example.com'},
+      loadProfile: (_) async => {
+        'full_name': 'Sample User', 'email': 'sample@example.com',
+        'mobile_number': '01000000000', 'current_status': 'Employed',
+        'company_name': 'Example Company', 'designation': 'Safety Officer',
+        'job_location': 'Dhaka', 'current_address': 'Sample address',
+      },
       loadStats: () async => [<dynamic>[], {'overall': {'questions': 10, 'correct': 9}}],
     ),
   ));
@@ -44,6 +49,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('প্রিমিয়াম সদস্যপদ'), findsOneWidget);
     expect(find.text('নোটিফিকেশন ইনবক্স'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Personal information uses compact spacing without losing any fields', (tester) async {
+    await mountProfile(tester, ThemeMode.dark, 'en');
+    final heading = find.text('Personal information');
+    await tester.ensureVisible(heading);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(heading).style?.fontSize, 16);
+    await tester.tap(heading);
+    await tester.pumpAndSettle();
+    final card = find.byKey(const ValueKey('profile-personal-card'));
+    final labels = <String, String>{
+      'Full name': 'Sample User', 'Email': 'sample@example.com',
+      'Mobile': '01000000000', 'Current status': 'Employed',
+      'Company': 'Example Company', 'Designation': 'Safety Officer',
+      'Job location': 'Dhaka', 'Current address': 'Sample address',
+    };
+    for (final entry in labels.entries) {
+      final row = find.byKey(ValueKey('profile-info-${entry.key}'));
+      expect(row, findsOneWidget);
+      final label = find.descendant(of: row, matching: find.text(entry.key));
+      final value = find.descendant(of: row, matching: find.text(entry.value));
+      expect(label, findsOneWidget);
+      expect(value, findsOneWidget);
+      expect(tester.widget<Padding>(row).padding, const EdgeInsets.symmetric(vertical: 4));
+      expect(tester.widget<Text>(label).style?.fontSize, 11);
+      expect(tester.widget<Text>(value).style?.fontSize, 14);
+      expect(tester.getTopLeft(value).dy - tester.getBottomLeft(label).dy, closeTo(2, .1));
+    }
+    final edit = find.descendant(of: card, matching: find.byType(OutlinedButton));
+    await tester.ensureVisible(edit);
+    await tester.pumpAndSettle();
+    expect(edit.hitTestable(), findsOneWidget);
+    expect(tester.getSize(edit).height, greaterThanOrEqualTo(44));
     expect(tester.takeException(), isNull);
   });
 
