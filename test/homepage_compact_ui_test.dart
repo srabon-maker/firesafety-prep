@@ -54,6 +54,12 @@ void main() {
     final shape = mockCard.shape! as RoundedRectangleBorder;
     expect(shape.side.color.a, closeTo(.62, .01));
     expect(find.text('মার্কেটপ্লেস'), findsOneWidget);
+    final marketplace = find.byKey(const ValueKey('home-marketplace-tile'));
+    final marketIcon = find.byKey(const ValueKey('home-marketplace-icon'));
+    expect(tester.getSize(marketplace).height, closeTo(68, .1));
+    expect(tester.getSize(marketIcon), const Size(42, 42));
+    expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 15);
+    expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -91,6 +97,18 @@ void main() {
     final job = tester.widget<ListTile>(find.widgetWithText(ListTile, 'Sample job'));
     expect(job.subtitle, isNull);
     expect(find.text('Dhaka'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Marketplace expands naturally for large text on narrow phones', (tester) async {
+    await mountHome(tester, 'en', scale: 1.6, width: 320, sections: ['marketplace']);
+    final list = find.byType(ListView).first;
+    await tester.drag(list, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    final tile = find.byKey(const ValueKey('home-marketplace-tile'));
+    expect(tile, findsOneWidget);
+    expect(tester.getSize(tile).height, greaterThanOrEqualTo(68));
+    expect(find.text('Fire safety products & services'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
