@@ -127,7 +127,10 @@ void main() {
     expect(find.text('Edit profile'), findsNothing);
     expect(find.text('Deleting your account cannot be undone.'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('account-delete-tile')));
-    await tester.pumpAndSettle();
+    // The account page intentionally shows an indeterminate progress bar
+    // while the confirmation dialog is open; do not wait for global settling.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Permanently delete account?'), findsOneWidget);
     final confirm = find.widgetWithText(FilledButton, 'Delete permanently');
     expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
