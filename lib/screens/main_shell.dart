@@ -9,7 +9,11 @@ import 'profile_page.dart';
 import 'marketplace_page.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  const MainShell({super.key, this.authorize, this.tabBuilder});
+
+  // Optional test fixtures. Production retains the existing pages and guard.
+  final Future<bool> Function(BuildContext)? authorize;
+  final Widget Function(int index, bool active, VoidCallback onLogout)? tabBuilder;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -20,10 +24,13 @@ class _MainShellState extends State<MainShell> {
   bool _shopVisited = false;
 
   late final List<Widget> pages = [
-    const HomePage(),
+    _tab(0, () => const HomePage()),
     // Community is mounted only after successful authentication.
     const SizedBox.shrink(),
   ];
+
+  Widget _tab(int i, Widget Function() production) =>
+      widget.tabBuilder?.call(i, index == i, _goToHome) ?? production();
 
   void _goToHome() {
     if (!mounted) return;
@@ -45,7 +52,8 @@ class _MainShellState extends State<MainShell> {
 
     // অন্য পেজে প্রবেশের আগে Login যাচাই
     final authenticated =
-        await AuthGuard.ensureAuthenticated(context);
+        await (widget.authorize?.call(context) ??
+            AuthGuard.ensureAuthenticated(context));
 
     if (!mounted || !authenticated) return;
 
@@ -53,19 +61,33 @@ class _MainShellState extends State<MainShell> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return PopScope<Object?>(
+      // Let Android handle normal root exit on Home. Other tabs return Home.
+      // Normally the IME consumes Back first; guard the remaining events too.
+      canPop: index == 0 && !keyboardVisible,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (keyboardVisible) {
+          FocusManager.instance.primaryFocus?.unfocus();
+          return;
+        }
+        if (index != 0) _goToHome();
+      },
+      child: Scaffold(
         body: IndexedStack(
           index: index,
           children: [
             TickerMode(enabled: index == 0, child: pages[0]),
-            if (index == 1) const CommunityPage()
+            if (index == 1) _tab(1, () => const CommunityPage())
             else pages[1],
             // Mount on first visit, then keep filters and scroll state alive.
-            if (_shopVisited) MarketplacePage(active: index == 2)
+            if (_shopVisited) _tab(2, () => MarketplacePage(active: index == 2))
             else const SizedBox.shrink(),
             // Mount only after AuthGuard succeeds. Discard account-specific
             // state on leaving Profile so a new login cannot see stale data.
-            if (index == 3) ProfilePage(onLogout: _goToHome)
+            if (index == 3) _tab(3, () => ProfilePage(onLogout: _goToHome))
             else const SizedBox.shrink(),
           ],
         ),
@@ -102,5 +124,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
 }
