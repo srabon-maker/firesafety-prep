@@ -51,8 +51,10 @@ class CareerPage extends StatelessWidget {
 }
 
 class CareerSection extends StatefulWidget {
-  const CareerSection({super.key, required this.section});
+  const CareerSection({super.key, required this.section, this.alertRequest});
   final String section;
+  // Optional alert-only fixture for widget tests. Normal navigation uses CareerService.
+  final Future<Map<String, dynamic>> Function(String action, Map<String, dynamic>? body, Map<String, String> filters)? alertRequest;
   @override
   State<CareerSection> createState() => _CareerSectionState();
 }
@@ -82,18 +84,20 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _load({bool more = false}) async {
     setState(() { _busy = true; _error = null; if (!more) { _rows = []; _next = null; } });
     try {
-      final token = await AuthService.instance.getSessionToken();
-      final data = await CareerService.request(_section, filters: {
+      final fixture = _section == 'alerts' ? widget.alertRequest : null;
+      final token = fixture == null ? await AuthService.instance.getSessionToken() : null;
+      final filters = <String, String>{
         if (more && _next != null) 'before_id': _next!,
         if (_section == 'mock') 'role': _role.text.trim(),
         if (_section == 'directory' && _directoryQuery.isNotEmpty) 'q': _directoryQuery,
-      });
+      };
+      final data = await (fixture?.call(_section, null, filters) ?? CareerService.request(_section, filters: filters));
       Map<String, dynamic>? profile;
       if (_section == 'directory' && !more) {
         final mine = await CareerService.request('my_profile');
         if (mine['profile'] is Map) profile = Map<String, dynamic>.from(mine['profile'] as Map);
       }
-      if (await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
+      if (fixture == null && await AuthService.instance.getSessionToken() != token) throw const FormatException('Session changed');
       if (!mounted) return;
       setState(() {
         _rows = [..._rows, ...CareerService.rows(data)];
@@ -135,7 +139,8 @@ class _CareerSectionState extends State<CareerSection> {
   Future<void> _write(String action, Map<String,dynamic> body) async {
     setState(() { _busy = true; _error = null; });
     try {
-      final data = await CareerService.request(action, body: body);
+      final fixture = _section == 'alerts' ? widget.alertRequest : null;
+      final data = await (fixture?.call(action, body, const {}) ?? CareerService.request(action, body: body));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'check_alerts'
           ? _tr('নতুন নোটিফিকেশন: ${data['new_alerts']}', 'New notifications: ${data['new_alerts']}') : action == 'save_alerts' ? _tr('সংরক্ষণ হয়েছে', 'Preferences saved') : 'সংরক্ষণ হয়েছে')));
