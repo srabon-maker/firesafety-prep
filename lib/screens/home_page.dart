@@ -120,23 +120,31 @@ class _HomePageState extends State<HomePage> {
     }[color] ?? Theme.of(context).colorScheme.primary;
   }
 
+  RoundedRectangleBorder _shortcutShape() => RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(14),
+    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .62)),
+  );
+
   Widget _tile(String title,IconData icon,Color color,VoidCallback action)=>Card(
-    margin:EdgeInsets.zero,
+    margin:EdgeInsets.zero, shape:_shortcutShape(),
     child:InkWell(borderRadius:BorderRadius.circular(14),onTap:action,child:Padding(padding:const EdgeInsets.all(5),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
       Container(width:36,height:36,decoration:BoxDecoration(color:color.withValues(alpha:.13),borderRadius:BorderRadius.circular(10)),child:Icon(icon,color:_shortcutIconColor(color),size:22)),
       const SizedBox(height:5),
       Text(title,textAlign:TextAlign.center,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w600,fontSize:12,height:1.2)),
     ]))),
   );
-  Widget _careerTile(String title, IconData icon, Color color, VoidCallback action) => Card(
+  Widget _careerTile(String target, String title, IconData icon, Color color, VoidCallback action) => Card(
+    key: ValueKey('home-career-$target'),
     margin: EdgeInsets.zero,
+    shape: _shortcutShape(),
     child: InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: action,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        padding: const EdgeInsets.fromLTRB(3, 9, 3, 5),
+        child: Column(children: [
           Container(
+            key: ValueKey('home-career-icon-$target'),
             width: 32, height: 32,
             decoration: BoxDecoration(
               color: color.withValues(alpha: .13),
@@ -146,9 +154,9 @@ class _HomePageState extends State<HomePage> {
               color: _shortcutIconColor(color)),
           ),
           const SizedBox(height: 4),
-          Text(title, textAlign: TextAlign.center, maxLines: 3,
+          Expanded(child: Center(child: Text(title, textAlign: TextAlign.center, maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w600)),
+            style: const TextStyle(fontSize: 11, height: 1.15, fontWeight: FontWeight.w600)))),
         ]),
       ),
     ),
@@ -231,7 +239,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 10),
                   Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
                   ])),
                   const SizedBox(width: 6),
@@ -259,7 +267,10 @@ class _HomePageState extends State<HomePage> {
         trailing:Icon(Icons.chevron_right,color:scheme.primary,size:20),onTap:onTap));
   }
   @override
-  Widget build(BuildContext context)=>ColoredBox(color:deepMaroon,child:SafeArea(bottom:false,left:false,right:false,child:ColoredBox(color:Theme.of(context).scaffoldBackgroundColor,child:RefreshIndicator(onRefresh:_refresh,child:ListView(
+  Widget build(BuildContext context)=>DecoratedBox(
+    key: const ValueKey('home-status-gradient'),
+    decoration: const BoxDecoration(gradient: LinearGradient(colors: [deepMaroon, maroon, Color(0xFF8D1723)])),
+    child:SafeArea(bottom:false,left:false,right:false,child:ColoredBox(color:Theme.of(context).scaffoldBackgroundColor,child:RefreshIndicator(onRefresh:_refresh,child:ListView(
     padding:EdgeInsets.zero,physics:const AlwaysScrollableScrollPhysics(),children:[
       Container(padding:const EdgeInsets.fromLTRB(14,8,14,12),
         decoration:const BoxDecoration(gradient:LinearGradient(colors:[deepMaroon,maroon,Color(0xFF8D1723)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(20))),
@@ -335,7 +346,7 @@ class _HomePageState extends State<HomePage> {
             Icon(Icons.work_outline,color:Theme.of(context).colorScheme.primary,size:20),
             const SizedBox(width:6),
             Expanded(child:Text(_tr('ক্যারিয়ার ডেভেলপমেন্ট','Career development'),
-              style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.w700))),
+              style:Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight:FontWeight.w700))),
           ]),
           const SizedBox(height: 8),
                 LayoutBuilder(builder: (context, box) {
@@ -352,12 +363,12 @@ class _HomePageState extends State<HomePage> {
                     mainAxisExtent: largeText ? 128 : 84,
                     children: [
                       for (final item in const [
-                        ('alerts', 'চাকরির অ্যালার্ট', 'Job alerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
-                        ('mock', 'মক ইন্টারভিউ', 'Mock interview', Icons.record_voice_over_outlined, Color(0xFF7142B8)),
-                        ('courses', 'প্রশিক্ষণ ও কোর্স', 'Training & courses', Icons.school_outlined, Color(0xFF20834B)),
-                        ('directory', 'পেশাজীবী ডিরেক্টরি', 'Professional directory', Icons.groups_outlined, Color(0xFF14799A)),
+                        ('alerts', 'চাকরির\nঅ্যালার্ট', 'Job\nalerts', Icons.notifications_active_outlined, Color(0xFFB83228)),
+                        ('mock', 'মক\nইন্টারভিউ', 'Mock\ninterview', Icons.record_voice_over_outlined, Color(0xFF7142B8)),
+                        ('courses', 'প্রশিক্ষণ\nও কোর্স', 'Training\n& courses', Icons.school_outlined, Color(0xFF20834B)),
+                        ('directory', 'পেশাজীবী\nডিরেক্টরি', 'Professional\ndirectory', Icons.groups_outlined, Color(0xFF14799A)),
                       ])
-                        _careerTile(_tr(item.$2, item.$3), item.$4, item.$5,
+                        _careerTile(item.$1, _tr(item.$2, item.$3), item.$4, item.$5,
                           () => CareerPage.open(context, section: item.$1)),
                     ],
                   );
