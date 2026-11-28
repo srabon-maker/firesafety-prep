@@ -294,7 +294,14 @@ class _HomePageState extends State<HomePage> {
           Row(children:[
             Container(width:42,height:42,padding:const EdgeInsets.all(1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12)),child:ClipRRect(borderRadius:BorderRadius.circular(11),child:Image.asset('assets/fire_safety_job_prep_logo.png',fit:BoxFit.contain))),
             const SizedBox(width:10),
-            const Expanded(child: _HomeBrandText()),
+            const Expanded(child: Text(
+              'Fire Safety BD',
+              key: ValueKey('home-brand-title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white, fontSize: 20,
+                fontWeight: FontWeight.w700, height: 1.05, letterSpacing: 0),
+            )),
             IconButton(
               key: const ValueKey('home-admin-support'),
               tooltip: _tr('অ্যাডমিন সাপোর্ট', 'Admin support'),
@@ -400,52 +407,4 @@ class _HomePageState extends State<HomePage> {
       })),
     ],
   )))));
-}
-
-// The tagline shares the title's left edge and never exceeds its measured width.
-class _HomeBrandText extends StatelessWidget {
-  const _HomeBrandText();
-
-  @override
-  Widget build(BuildContext context) {
-    const name = 'Fire Safety BD';
-    const titleStyle = TextStyle(
-      color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700,
-      height: 1.05, letterSpacing: 0,
-    );
-    const taglineStyle = TextStyle(
-      color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w400,
-      height: 1.1, letterSpacing: 0,
-    );
-    return LayoutBuilder(builder: (context, constraints) {
-      final painter = TextPainter(
-        text: TextSpan(text: name,
-          style: DefaultTextStyle.of(context).style.merge(titleStyle)),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-        locale: Localizations.localeOf(context),
-        maxLines: 1,
-      )..layout(maxWidth: constraints.maxWidth);
-      final width = painter.width;
-      painter.dispose();
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: width,
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, key: ValueKey('home-brand-title'), maxLines: 1,
-                overflow: TextOverflow.ellipsis, style: titleStyle),
-              SizedBox(height: 2),
-              Text('Learn • Prepare • Connect',
-                key: ValueKey('home-brand-tagline'), maxLines: 1,
-                overflow: TextOverflow.ellipsis, style: taglineStyle),
-            ],
-          ),
-        ),
-      );
-    });
-  }
 }
