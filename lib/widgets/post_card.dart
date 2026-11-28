@@ -354,10 +354,17 @@ class CommentsPage extends StatefulWidget {
     super.key,
     required this.post,
     required this.onChanged,
+    this.loadComments,
+    this.submitComment,
+    this.authorize,
   });
 
   final CommunityPost post;
   final VoidCallback onChanged;
+  // Optional fixture hooks; normal navigation uses the existing services.
+  final Future<List<Comment>> Function(int? includeId)? loadComments;
+  final Future<int?> Function(String text)? submitComment;
+  final Future<bool> Function(BuildContext context)? authorize;
 
   @override
   State<CommentsPage> createState() => _CommentsPageState();
@@ -365,7 +372,15 @@ class CommentsPage extends StatefulWidget {
 
 class _CommentsPageState extends State<CommentsPage> {
   final _text = TextEditingController();
+  final _focus = FocusNode();
+  final _revealKey = GlobalKey();
   late Future<List<Comment>> _comments;
+  List<Comment> _lastComments = [];
+  Set<int> _knownIds = {};
+  int? _includeId;
+  int? _targetId;
+  String? _pendingText;
+  int _loadEpoch = 0;
   bool _sending = false;
 
   @override
@@ -375,25 +390,75 @@ class _CommentsPageState extends State<CommentsPage> {
   }
 
   void _reload() {
-    _comments = CommunityService.instance.comments(widget.post.id);
+    final epoch = ++_loadEpoch;
+    final request = widget.loadComments?.call(_includeId) ??
+        CommunityService.instance.comments(widget.post.id, includeCommentId: _includeId);
+    _comments = request.then((comments) {
+      if (!mounted || epoch != _loadEpoch) return comments;
+      _lastComments = comments;
+      if (_pendingText != null) {
+        Comment? target;
+        for (final comment in comments) {
+          if (_includeId != null
+              ? comment.id == _includeId
+              : comment.isOwner && !_knownIds.contains(comment.id) &&
+                  comment.text.trim() == _pendingText) {
+            target = comment;
+          }
+        }
+        if (target != null) {
+          _targetId = target.id;
+          _pendingText = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || epoch != _loadEpoch) return;
+            final targetContext = _revealKey.currentContext;
+            if (targetContext != null) {
+              Scrollable.ensureVisible(targetContext,
+                alignment: 0.85, duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic);
+            }
+          });
+        }
+      }
+      return comments;
+    });
+    // A disposed page may no longer have a FutureBuilder listener.
+    _comments.then<void>((_) {}, onError: (Object _, StackTrace __) {});
   }
 
   @override
   void dispose() {
+    _focus.dispose();
     _text.dispose();
     super.dispose();
   }
 
   Future<void> _send() async {
-    if (_sending || _text.text.trim().isEmpty) return;
-    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    final draft = _text.text.trim();
+    if (_sending || draft.isEmpty) return;
+    // Lock before the first await so keyboard and button cannot submit twice.
     setState(() => _sending = true);
+    _focus.unfocus();
     try {
-      await CommunityService.instance.comment(widget.post.id, _text.text.trim());
+      final allowed = await (widget.authorize?.call(context) ??
+          AuthGuard.ensureAuthenticated(context));
+      if (!allowed || !mounted) return;
+      final known = _lastComments.map((c) => c.id).toSet();
+      final id = await (widget.submitComment?.call(draft) ??
+          CommunityService.instance.comment(widget.post.id, draft));
       if (!mounted) return;
       _text.clear();
-      setState(_reload);
+      _focus.unfocus();
+      setState(() {
+        _knownIds = known;
+        _includeId = id;
+        _pendingText = draft;
+        _targetId = null;
+        _reload();
+      });
       widget.onChanged();
+      // Posting succeeded. A list refresh failure must not invite resubmission.
+      try { await _comments; } catch (_) {}
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -446,7 +511,7 @@ class _CommentsPageState extends State<CommentsPage> {
                 FutureBuilder<List<Comment>>(
                   future: _comments,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
+                    if (snapshot.connectionState != ConnectionState.done && !snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
@@ -467,6 +532,7 @@ class _CommentsPageState extends State<CommentsPage> {
                       children: [
                         for (final comment in comments)
                           Container(
+                            key: comment.id == _targetId ? _revealKey : ValueKey('comment-${comment.id}'),
                             width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 9),
                             padding: const EdgeInsets.all(13),
@@ -517,6 +583,8 @@ class _CommentsPageState extends State<CommentsPage> {
                   Expanded(
                     child: TextField(
                       controller: _text,
+                      focusNode: _focus,
+                      readOnly: _sending,
                       maxLength: 1000,
                       maxLines: 1,
                       onSubmitted: (_) => _send(),
