@@ -43,10 +43,11 @@ void main() {
     ));
 
     expect(find.text('Fire & Safety Jobs'), findsOneWidget);
-    expect(find.text('সর্বশেষ প্রকাশিত চাকরির বিজ্ঞপ্তি'), findsOneWidget);
+    expect(find.text('সর্বশেষ প্রকাশিত চাকরির বিজ্ঞপ্তি'), findsNothing);
     final appBar = tester.widget<AppBar>(find.byType(AppBar).first);
     expect(appBar.foregroundColor, Colors.white);
     final title = tester.widget<Text>(find.text('Fire & Safety Jobs'));
-    expect(title.style?.fontWeight, FontWeight.w800);
+    expect(title.style?.color, Colors.white);
+    expect(_contrastRatio(title.style!.color!, appBar.backgroundColor!), greaterThanOrEqualTo(4.5));
   });
 }
