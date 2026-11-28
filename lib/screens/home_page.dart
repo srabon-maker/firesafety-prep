@@ -301,7 +301,7 @@ class _HomePageState extends State<HomePage> {
               ),
               alignment: Alignment.center,
               child: const SizedBox(
-                width: 32, height: 32,
+                width: 28, height: 28,
                 child: CustomPaint(
                   key: ValueKey('home-brand-flame'),
                   painter: _HomeBrandFlamePainter(),
