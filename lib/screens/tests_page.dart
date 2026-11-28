@@ -1786,6 +1786,9 @@ class _MyTestResultsPageState extends State<MyTestResultsPage> {
             _metric(_tr('মোট পরীক্ষা', 'Total tests'), '${rows.length}'),
             _metric(_tr('পাস', 'Passed'), '${rows.where((r) => _passed(r['passed']) == true).length}'),
             _metric(_tr('গড় স্কোর', 'Average score'), scores.isEmpty ? '—' : fmt(average)),
+          ]),
+          const SizedBox(height: 10),
+          _metrics([
             _metric(_tr('সেরা স্কোর', 'Best score'), scores.isEmpty ? '—' : fmt(best)),
             _metric(_tr('সঠিক উত্তরের হার', 'Accuracy'), questions > 0 ? fmt(accuracy) : '—'),
           ]),
