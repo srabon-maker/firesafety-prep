@@ -1018,6 +1018,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
           }
         },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             _productBanners(),
