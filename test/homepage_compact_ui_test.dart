@@ -36,7 +36,7 @@ void main() {
   testWidgets('Bengali home preserves all ten shortcuts and compact grids', (tester) async {
     await mountHome(tester, 'bn');
     for (final label in ['চাকরির খবর','প্রশ্ন ব্যাংক','স্টাডি নোট','মডেল টেস্ট',
-      'ইন্টারভিউ','আমার প্রস্তুতি','চাকরির অ্যালার্ট','মক ইন্টারভিউ','প্রশিক্ষণ ও কোর্স','পেশাজীবী ডিরেক্টরি']) {
+      'ইন্টারভিউ','আমার প্রস্তুতি','চাকরির\nঅ্যালার্ট','মক\nইন্টারভিউ','প্রশিক্ষণ\nও কোর্স','পেশাজীবী\nডিরেক্টরি']) {
       expect(find.text(label), findsOneWidget);
     }
     final grids = tester.widgetList<GridView>(find.byType(GridView)).toList();
@@ -46,6 +46,12 @@ void main() {
     expect(first.mainAxisExtent, 88);
     expect(second.crossAxisCount, 4);
     expect(second.mainAxisExtent, 84);
+    final iconTops = [for (final target in ['alerts','mock','courses','directory'])
+      tester.getTopLeft(find.byKey(ValueKey('home-career-icon-$target'))).dy];
+    expect(iconTops.toSet().length, 1);
+    final mockCard = tester.widget<Card>(find.byKey(const ValueKey('home-career-mock')));
+    final shape = mockCard.shape! as RoundedRectangleBorder;
+    expect(shape.side.color.a, closeTo(.62, .01));
     expect(find.text('মার্কেটপ্লেস'), findsOneWidget);
     expect(find.text('Fire Safety BD'), findsOneWidget);
     expect(find.byTooltip('নোটিফিকেশন'), findsOneWidget);
@@ -56,6 +62,8 @@ void main() {
     await mountHome(tester, 'en', mode: ThemeMode.light);
     final list = find.byType(ListView).first;
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
+    final status = tester.widget<DecoratedBox>(find.byKey(const ValueKey('home-status-gradient')));
+    expect((status.decoration as BoxDecoration).gradient, isA<LinearGradient>());
     expect(find.text('Marketplace'), findsOneWidget);
     await tester.drag(list, const Offset(0, -500));
     await tester.pumpAndSettle();
@@ -74,7 +82,7 @@ void main() {
     expect(find.text('My preparation'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(find.text('Professional directory'), findsOneWidget);
+    expect(find.text('Professional\ndirectory'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
