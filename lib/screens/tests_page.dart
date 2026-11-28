@@ -1595,224 +1595,297 @@ class _ResultPending extends StatelessWidget{
   );
 }
 
-Widget _resultMetric(String label, String value) => Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Text(value, style: const TextStyle(
-      color: _maroon, fontSize: 20, fontWeight: FontWeight.bold,
-    )),
-    Text(label, style: const TextStyle(fontSize: 11)),
-  ],
-);
+class MyTestResultsPage extends StatefulWidget {
+  const MyTestResultsPage({super.key, this.loadResults, this.loadDetail});
+  final Future<List<Map<String, dynamic>>> Function()? loadResults;
+  final Future<Map<String, dynamic>> Function(int)? loadDetail;
 
-class MyTestResultsPage extends StatefulWidget{
-  const MyTestResultsPage();
   @override
-  State<MyTestResultsPage> createState()=>_MyTestResultsPageState();
+  State<MyTestResultsPage> createState() => _MyTestResultsPageState();
 }
-class _MyTestResultsPageState extends State<MyTestResultsPage>{
-  late Future<List<Map<String,dynamic>>> _future;
+
+class _MyTestResultsPageState extends State<MyTestResultsPage> {
+  late Future<List<Map<String, dynamic>>> _future;
+  bool _opening = false;
+
+  String _tr(String bn, String en) =>
+      Localizations.localeOf(context).languageCode == 'en' ? en : bn;
+
+  Future<List<Map<String, dynamic>>> _load() async =>
+      widget.loadResults?.call() ?? ModelTestService.instance.myResults();
+
   @override
-  void initState(){super.initState();_future=ModelTestService.instance.myResults();}
-  Future<void> _refresh()async{final f=ModelTestService.instance.myResults();setState(()=>_future=f);await f;}
-  @override
-  Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('আমার পরীক্ষার ফলাফল'),actions:[IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))]),
-    body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
-      future:_future,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-        if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('ফলাফল লোড করা যায়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
-        final rows=snapshot.data??[];
-        if(rows.isEmpty)return ListView(children:[const SizedBox(height:110),const Center(child:Icon(Icons.assignment_outlined,size:56,color:_maroon)),const Center(child:Text('এখনো কোনো প্রকাশিত ফলাফল নেই।'))]);
-        final totalAttempts = rows.length;
-        final passedAttempts = rows.where((r) => r['passed'] == true || r['passed'] == 1).length;
-        final validScores = rows.where((r) => ((r['total_marks'] as num?)?.toDouble() ?? 0) > 0).toList();
-        final percentages = validScores
-            .map((r) => ((r['score'] as num?)?.toDouble() ?? 0) /
-                (r['total_marks'] as num).toDouble() * 100)
-            .toList();
-        final average = percentages.isEmpty ? 0.0 :
-            percentages.reduce((a, b) => a + b) / percentages.length;
-        final bestScore = percentages.isEmpty ? 0.0 :
-            percentages.reduce((a, b) => a > b ? a : b);
-        final totalQuestions = rows.fold<int>(0, (sum, r) =>
-            sum + ((r['question_count'] as num?)?.toInt() ?? 0));
-        final totalCorrect = rows.fold<int>(0, (sum, r) =>
-            sum + ((r['correct_count'] as num?)?.toInt() ?? 0));
-        final accuracy = totalQuestions == 0 ? 0.0 :
-            totalCorrect / totalQuestions * 100;
-        final recentScores = percentages.reversed.take(8).toList().reversed.toList();
-        final grouped = <String, List<double>>{};
-        for (final row in validScores) {
-          final title = row['title']?.toString() ?? 'মডেল টেস্ট';
-          final percent = ((row['score'] as num?)?.toDouble() ?? 0) /
-              (row['total_marks'] as num).toDouble() * 100;
-          grouped.putIfAbsent(title, () => []).add(percent);
-        }
-        final testAverages = grouped.entries.map((entry) {
-          final values = entry.value;
-          return MapEntry(entry.key, values.reduce((a, b) => a + b) / values.length);
-        }).toList();
-        return ListView(padding:const EdgeInsets.all(16),children:[
-          Card(
-            color: const Color(0xFFFFF5F3),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('আপনার প্রস্তুতির সারাংশ',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _resultMetric('মোট পরীক্ষা', '$totalAttempts')),
-                      Expanded(child: _resultMetric('পাস', '$passedAttempts')),
-                      Expanded(child: _resultMetric('গড় স্কোর', '${average.toStringAsFixed(1)}%')),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('প্রকাশিত ফলাফলের ভিত্তিতে হিসাব করা হয়েছে।',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-                ],
-              ),
-            ),
-          ),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('আরও কিছু পারফরম্যান্স তথ্য',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _resultMetric('সেরা স্কোর', '${bestScore.toStringAsFixed(1)}%')),
-                    Expanded(child: _resultMetric('সঠিক উত্তরের হার', '${accuracy.toStringAsFixed(1)}%')),
-                  ]),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: (accuracy / 100).clamp(0.0, 1.0),
-                      minHeight: 9,
-                      backgroundColor: Colors.grey.shade200,
-                      color: _maroon,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('প্রকাশিত ফলাফলের মোট প্রশ্ন ও সঠিক উত্তরের ভিত্তিতে হিসাব।',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-                ],
-              ),
-            ),
-          ),
-          if (recentScores.length > 1)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('সাম্প্রতিক পরীক্ষার স্কোর ট্রেন্ড',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 116,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          for (var i = 0; i < recentScores.length; i++)
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 3),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Text('${recentScores[i].toStringAsFixed(0)}%',
-                                      style: const TextStyle(fontSize: 9)),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      height: (recentScores[i].clamp(0, 100) / 100 * 78).clamp(3, 78),
-                                      decoration: BoxDecoration(
-                                        color: _maroon.withValues(alpha: 0.78),
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text('${i + 1}', style: const TextStyle(fontSize: 9)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const Text('ক্রম অনুযায়ী শেষ ৮টি প্রকাশিত ফলাফল; ১ = সবচেয়ে পুরোনো।',
-                      style: TextStyle(fontSize: 10, color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ),
-          if (testAverages.isNotEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('পরীক্ষাভিত্তিক গড় স্কোর',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    const SizedBox(height: 10),
-                    for (final item in testAverages)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.key, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 4),
-                            Row(children: [
-                              Expanded(child: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: LinearProgressIndicator(
-                                  value: (item.value / 100).clamp(0.0, 1.0),
-                                  minHeight: 8,
-                                  color: _maroon,
-                                  backgroundColor: Colors.grey.shade200,
-                                ),
-                              )),
-                              const SizedBox(width: 10),
-                              Text('${item.value.toStringAsFixed(1)}%',
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ]),
-                          ],
-                        ),
-                      ),
-                    const Text('শুধু প্রকাশিত ফলাফলের ভিত্তিতে; Admin-এর আলাদা Subject তথ্য এখানে নেই।',
-                      style: TextStyle(fontSize: 10, color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ),
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<void> _refresh() async {
+    final next = _load();
+    setState(() { _future = next; });
+    // FutureBuilder owns the error state; do not leak an unhandled retry error.
+    await next.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+  }
+
+  double? _number(dynamic value) {
+    final parsed = value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed.isFinite ? parsed : null;
+  }
+
+  bool? _passed(dynamic value) {
+    if (value == true || value == 1 || value == '1') return true;
+    if (value == false || value == 0 || value == '0') return false;
+    return null;
+  }
+
+  String _title(Map<String, dynamic> row) =>
+      row['title']?.toString() ?? _tr('মডেল টেস্ট', 'Model test');
+
+  Widget _metric(String label, String value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(value, style: TextStyle(color: Theme.of(context).colorScheme.primary,
+        fontSize: 18, fontWeight: FontWeight.w800, height: 1.2)),
+      const SizedBox(height: 2),
+      Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, height: 1.2)),
+    ],
+  );
+
+  Widget _heading(String title) => Text(title, style: Theme.of(context).textTheme.titleSmall
+    ?.copyWith(fontWeight: FontWeight.w800, fontSize: 14, height: 1.25));
+
+  Widget _caption(String title) => Text(title, style: Theme.of(context).textTheme.bodySmall
+    ?.copyWith(fontSize: 11, height: 1.3, color: Theme.of(context).colorScheme.onSurfaceVariant));
+
+  Widget _card(List<Widget> children) => Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    child: Padding(padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children)),
+  );
+
+  Widget _metrics(List<Widget> items) => LayoutBuilder(builder: (context, constraints) {
+    if (constraints.maxWidth < 240 || MediaQuery.textScalerOf(context).scale(14) > 20) {
+      return Wrap(spacing: 16, runSpacing: 10, children: [
+        for (final item in items) SizedBox(width: (constraints.maxWidth - 16) / 2, child: item),
+      ]);
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start,
+      children: [for (final item in items) Expanded(child: item)]);
+  });
+
+  Widget _bar(double percentage) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRRect(borderRadius: BorderRadius.circular(5),
+      child: LinearProgressIndicator(value: (percentage / 100).clamp(0.0, 1.0),
+        minHeight: 6, color: scheme.primary, backgroundColor: scheme.surfaceContainerHighest));
+  }
+
+  PreferredSizeWidget _header() => AppBar(
+    toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
+    backgroundColor: _deepMaroon, foregroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent, scrolledUnderElevation: 0,
+    title: LayoutBuilder(builder: (context, constraints) => Row(children: [
+      if (constraints.maxWidth >= 145) ...[
+        Container(width: 40, height: 40, decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .13),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: .24))),
+          child: const Icon(Icons.assignment_turned_in_outlined, size: 27, color: Colors.white)),
+        const SizedBox(width: 9),
+        Container(width: 1, height: 42, color: Colors.white54),
+        const SizedBox(width: 9),
+      ],
+      Expanded(child: Text(_tr('আমার পরীক্ষার ফলাফল', 'My Exam Results'),
+        maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(
+          color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w500, height: 1.2))),
+    ])),
+    actions: [
+      IconButton(tooltip: _tr('রিফ্রেশ', 'Refresh'), onPressed: _refresh,
+        icon: Container(width: 34, height: 34, decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.refresh_rounded, size: 20, color: Colors.white))),
+      const SizedBox(width: 4),
+    ],
+  );
+
+  Future<void> _openDetail(Map<String, dynamic> row) async {
+    if (_opening) return;
+    final id = int.tryParse(row['attempt_id']?.toString() ?? '');
+    if (id == null || id < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+        _tr('সঠিক ফলাফল নির্বাচন করা যায়নি।', 'Invalid result selection.'))));
+      return;
+    }
+    setState(() { _opening = true; });
+    try {
+      final detail = await (widget.loadDetail?.call(id) ?? ModelTestService.instance.getResult(id));
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => _ExamResult(result: detail)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+        _tr('বিস্তারিত ফলাফল লোড হয়নি। আবার চেষ্টা করুন।', 'Could not load result details. Try again.'))));
+    } finally {
+      if (mounted) setState(() { _opening = false; });
+    }
+  }
+
+  Widget _resultCard(Map<String, dynamic> row) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final passed = _passed(row['passed']);
+    final status = passed == null ? _tr('পাস নম্বর নির্ধারিত নয়', 'Pass mark not set')
+        : passed ? _tr('পাস', 'Pass') : _tr('ফেল', 'Fail');
+    final color = passed == null ? scheme.onSurfaceVariant : passed
+        ? (theme.brightness == Brightness.dark ? const Color(0xFF8BD5AF) : const Color(0xFF207A50))
+        : scheme.error;
+    return _card([
+      _heading(_title(row)),
+      const SizedBox(height: 6),
+      Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        Text(_tr('স্কোর: ${row['score'] ?? '—'} / ${row['total_marks'] ?? '—'}',
+          'Score: ${row['score'] ?? '—'} / ${row['total_marks'] ?? '—'}'),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: scheme.primary)),
+        Text(status, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700)),
+      ]),
+      const SizedBox(height: 4),
+      _caption(_tr('সঠিক: ${row['correct_count'] ?? 0} • ভুল: ${row['incorrect_count'] ?? 0} • উত্তর নেই: ${row['unanswered_count'] ?? 0}',
+        'Correct: ${row['correct_count'] ?? 0} • Wrong: ${row['incorrect_count'] ?? 0} • Unanswered: ${row['unanswered_count'] ?? 0}')),
+      const SizedBox(height: 2),
+      _caption(_tr('জমা: ${row['submitted_at'] ?? '—'}', 'Submitted: ${row['submitted_at'] ?? '—'}')),
+      Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(
+        onPressed: _opening ? null : () => _openDetail(row),
+        icon: const Icon(Icons.chevron_right, size: 18),
+        label: Text(_tr('বিস্তারিত ফলাফল দেখুন', 'View result details'),
+          style: const TextStyle(fontSize: 12)),
+      )),
+    ]);
+  }
+
+  Widget _content(List<Map<String, dynamic>> rows) {
+    final valid = rows.where((r) => (_number(r['total_marks']) ?? 0) > 0 && _number(r['score']) != null).toList();
+    double percent(Map<String, dynamic> row) =>
+        _number(row['score'])! / _number(row['total_marks'])! * 100;
+    final scores = valid.map(percent).toList();
+    final average = scores.isEmpty ? 0.0 : scores.reduce((a, b) => a + b) / scores.length;
+    final best = scores.isEmpty ? 0.0 : scores.reduce((a, b) => a > b ? a : b);
+    final questions = rows.fold<double>(0, (sum, r) => sum + (_number(r['question_count']) ?? 0));
+    final correct = rows.fold<double>(0, (sum, r) => sum + (_number(r['correct_count']) ?? 0));
+    final accuracy = questions > 0 ? correct / questions * 100 : 0.0;
+    final recent = scores.take(8).toList().reversed.toList();
+    final grouped = <String, List<double>>{};
+    for (final row in valid) {
+      grouped.putIfAbsent(_title(row), () => []).add(percent(row));
+    }
+    String fmt(double n) => '${n.toStringAsFixed(1)}%';
+    return ListView(physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 16), children: [
+        _card([
+          _heading(_tr('আপনার প্রস্তুতির সারাংশ', 'Preparation summary')),
           const SizedBox(height: 8),
-          for(final r in rows)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text(r['title']?.toString()??'মডেল টেস্ট',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
-            const SizedBox(height:8),
-            Text('স্কোর: ${r['score']??'—'} / ${r['total_marks']??'—'}'),
-            Text('সঠিক: ${r['correct_count']??0}  •  ভুল: ${r['incorrect_count']??0}  •  উত্তর নেই: ${r['unanswered_count']??0}'),
-            Text('জমা: ${r['submitted_at']??'—'}'),
-            Text(r['passed']==null?'পাস নম্বর নির্ধারিত নয়':((r['passed']==true||r['passed']==1)?'Pass':'Fail'),style:TextStyle(fontWeight:FontWeight.bold,color:(r['passed']==true||r['passed']==1)?Colors.green:Colors.red)),
-            Align(alignment:Alignment.centerRight,child:TextButton(onPressed:() async {
-              try{
-                final detail=await ModelTestService.instance.getResult((r['attempt_id'] as num).toInt());
-                if(!mounted)return;
-                Navigator.push(context,MaterialPageRoute(builder:(_)=>_ExamResult(result:detail)));
-              }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
-            },child:const Text('বিস্তারিত ফলাফল দেখুন')))
-          ])))
-        ]);
-      }))
+          _metrics([
+            _metric(_tr('মোট পরীক্ষা', 'Total tests'), '${rows.length}'),
+            _metric(_tr('পাস', 'Passed'), '${rows.where((r) => _passed(r['passed']) == true).length}'),
+            _metric(_tr('গড় স্কোর', 'Average score'), scores.isEmpty ? '—' : fmt(average)),
+          ]),
+          const SizedBox(height: 10),
+          _metrics([
+            _metric(_tr('সেরা স্কোর', 'Best score'), scores.isEmpty ? '—' : fmt(best)),
+            _metric(_tr('সঠিক উত্তরের হার', 'Accuracy'), questions > 0 ? fmt(accuracy) : '—'),
+          ]),
+          if (questions > 0) ...[const SizedBox(height: 8), _bar(accuracy)],
+          const SizedBox(height: 6),
+          _caption(_tr('প্রকাশিত ফলাফলের ভিত্তিতে হিসাব।', 'Based on published results.')),
+        ]),
+        if (recent.length > 1) _card([
+          _heading(_tr('সাম্প্রতিক স্কোর ট্রেন্ড', 'Recent score trend')),
+          const SizedBox(height: 8),
+          for (var i = 0; i < recent.length; i++)
+            Padding(padding: const EdgeInsets.only(bottom: 5), child: Row(children: [
+              SizedBox(width: 22, child: _caption('${i + 1}')),
+              Expanded(child: _bar(recent[i])),
+              const SizedBox(width: 8),
+              Text(fmt(recent[i]), style: const TextStyle(fontSize: 12)),
+            ])),
+          _caption(_tr('শেষ ৮টি প্রকাশিত ফলাফল; ১ = সবচেয়ে পুরোনো।',
+            'Latest 8 published results; 1 = oldest shown.')),
+        ]),
+        if (grouped.isNotEmpty) _card([
+          _heading(_tr('পরীক্ষাভিত্তিক গড় স্কোর', 'Average by test')),
+          const SizedBox(height: 8),
+          for (final entry in grouped.entries) ...[
+            Text(entry.key, style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 4),
+            Row(children: [
+              Expanded(child: _bar(entry.value.reduce((a, b) => a + b) / entry.value.length)),
+              const SizedBox(width: 8),
+              Text(fmt(entry.value.reduce((a, b) => a + b) / entry.value.length),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: 6),
+          ],
+          _caption(_tr('শুধু প্রকাশিত ফলাফল; আলাদা Subject তথ্য নেই।',
+            'Published results only; separate subject data is unavailable.')),
+        ]),
+        _heading(_tr('পরীক্ষার ইতিহাস', 'Test history')),
+        const SizedBox(height: 6),
+        for (final row in rows) _resultCard(row),
+      ]);
+  }
+
+  String _loadError(Object? error) {
+    final generic = _tr('ফলাফল লোড করা যায়নি। লগইন ও সংযোগ পরীক্ষা করুন।',
+      'Could not load results. Check your login and connection.');
+    if (error is! ModelTestRequestException) return generic;
+    switch (error.code) {
+      case 'AUTH_REQUIRED':
+      case 'SESSION_CHANGED':
+        return _tr('সেশন পাওয়া যায়নি বা শেষ হয়েছে। আবার লগইন করুন।',
+          'Session missing or expired. Sign in again.');
+      case 'NETWORK':
+      case 'TIMEOUT':
+        return _tr('সার্ভারের সঙ্গে সংযোগ হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।',
+          'Connection failed. Check your internet and try again.');
+      case 'MODEL_TEST_MIGRATION_REQUIRED':
+        return _tr('ফলাফল দেখাতে সার্ভারের ডেটাবেজ আপডেট প্রয়োজন। অ্যাডমিনকে জানান।',
+          'Results require a server database update. Contact the administrator.');
+      case 'ENDPOINT_NOT_FOUND':
+      case 'INVALID_RESPONSE':
+        return _tr('ফলাফলের API থেকে সঠিক তথ্য আসেনি। অ্যাডমিনকে জানান।',
+          'The results API returned an invalid response. Contact the administrator.');
+      case 'SERVER_ERROR':
+        return _tr('সার্ভারে সমস্যা হয়েছে। পরে চেষ্টা করুন বা অ্যাডমিনকে জানান।',
+          'Server error. Try again later or contact the administrator.');
+      default:
+        return generic;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: _header(),
+    body: RefreshIndicator(onRefresh: _refresh,
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const FsLoadingCards(count: 3);
+          }
+          if (snapshot.hasError) return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(14), children: [
+              FsStatusCard(icon: Icons.cloud_off_outlined,
+                message: _loadError(snapshot.error),
+                onRetry: _refresh),
+            ]);
+          final rows = snapshot.data ?? [];
+          if (rows.isEmpty) return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(14), children: [
+              FsStatusCard(icon: Icons.assignment_outlined,
+                message: _tr('এখনো কোনো প্রকাশিত ফলাফল নেই।', 'No published results yet.')),
+            ]);
+          return _content(rows);
+        },
+      )),
   );
 }
