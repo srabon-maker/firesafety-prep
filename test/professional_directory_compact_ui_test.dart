@@ -32,7 +32,7 @@ void main() {
     expect(find.byTooltip('খুঁজুন'), findsOneWidget);
     await tester.tap(find.text('প্রোফাইল যোগ করুন'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('জমা দিন'), 150);
+    await tester.scrollUntilVisible(find.text('জমা দিন'), 150, scrollable: find.byType(Scrollable).first);
     final submit = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'জমা দিন'));
     expect(submit.onPressed, isNull);
     expect(tester.takeException(), isNull);
@@ -58,7 +58,7 @@ void main() {
     expect(find.text('Approved profile'), findsOneWidget);
     expect(find.text('Example Company'), findsOneWidget);
     expect(find.text('Dhaka'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Sample professional summary.'), 120);
+    await tester.scrollUntilVisible(find.text('Sample professional summary.'), 120, scrollable: find.byType(Scrollable).first);
     expect(find.text('Professional summary'), findsOneWidget);
     expect(find.text('Sample professional summary.'), findsOneWidget);
     expect(tester.takeException(), isNull);
