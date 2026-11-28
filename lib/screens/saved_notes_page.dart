@@ -39,7 +39,7 @@ class _SavedNotesPageState extends State<SavedNotesPage> {
 
   Future<void> _refresh() async {
     final next = _load();
-    setState(() => _future = next);
+    setState(() { _future = next; });
     await next;
   }
 
