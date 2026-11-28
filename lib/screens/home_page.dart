@@ -239,10 +239,10 @@ class _HomePageState extends State<HomePage> {
                     child: const Icon(Icons.storefront, color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                  Expanded(child: Column(key: const ValueKey('home-marketplace-labels'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(_tr('মার্কেটপ্লেস','Marketplace'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, height: 1.2)),
                     const SizedBox(height: 1),
-                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(AppText.of(context, 'ফায়ার সেফটি পণ্য ও সার্ভিস', 'Fire safety products & services'), style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.2)),
                   ])),
                   const SizedBox(width: 6),
                   const Icon(Icons.chevron_right, color: Colors.white, size: 20),
