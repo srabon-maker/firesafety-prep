@@ -12,7 +12,9 @@ const Color _maroon = Color(0xFF650D18);
 const Color _deepMaroon = Color(0xFF36060D);
 
 class TestsPage extends StatefulWidget {
-  const TestsPage({super.key});
+  const TestsPage({super.key, this.loadTests, this.loadActiveAttempts});
+  final Future<List<Map<String, dynamic>>> Function()? loadTests;
+  final Future<List<Map<String, dynamic>>> Function()? loadActiveAttempts;
   @override
   State<TestsPage> createState() => _TestsPageState();
 }
@@ -20,6 +22,9 @@ class TestsPage extends StatefulWidget {
 class _TestsPageState extends State<TestsPage> {
   late Future<List<Map<String,dynamic>>> _tests;
   String? _categoryFilter;
+  String _tr(String bn, String en) => Localizations.localeOf(context).languageCode == 'en' ? en : bn;
+  Future<List<Map<String, dynamic>>> _fetchTests() =>
+      widget.loadTests?.call() ?? ModelTestService.instance.listTests();
   String _categoryKey(Map<String,dynamic> test) => test['category_id']?.toString() ?? 'mixed';
   String _categoryLabel(Map<String,dynamic> test) {
     final language = Localizations.localeOf(context).languageCode;
@@ -32,14 +37,14 @@ class _TestsPageState extends State<TestsPage> {
   @override
   void initState(){
     super.initState();
-    _tests=ModelTestService.instance.listTests();
+    _tests=_fetchTests();
     _loadActiveAttempts();
   }
   Future<void> _loadActiveAttempts() async {
     if (_loadingActiveAttempts) return;
     _loadingActiveAttempts = true;
     try {
-      final rows = await ModelTestService.instance.activeAttempts();
+      final rows = await (widget.loadActiveAttempts?.call() ?? ModelTestService.instance.activeAttempts());
       if (!mounted) return;
       setState(() {
         _activeAttempts = {
@@ -54,9 +59,13 @@ class _TestsPageState extends State<TestsPage> {
     }
   }
   Future<void> _refresh() async {
-    final next=ModelTestService.instance.listTests();
-    setState(()=>_tests=next);
-    await Future.wait([next, _loadActiveAttempts()]);
+    final next = _fetchTests();
+    setState(() => _tests = next);
+    try {
+      await Future.wait([next, _loadActiveAttempts()]);
+    } catch (_) {
+      // FutureBuilder displays the load error and retry action.
+    }
   }
   Future<void> _start(Map<String,dynamic> test) async {
     final testId = (test['id'] as num).toInt();
@@ -92,128 +101,233 @@ class _TestsPageState extends State<TestsPage> {
       if (mounted) setState(() => _startingTestIds.remove(testId));
     }
   }
-  @override
-  Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('মডেল টেস্ট'),actions:[
-      IconButton(tooltip:'আমার ফলাফল',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyTestResultsPage()));},icon:const Icon(Icons.history)),
-      IconButton(tooltip:'প্র্যাকটিস ড্যাশবোর্ড',onPressed:() async {if(!await AuthGuard.ensureAuthenticated(context)||!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>const PracticeDashboardPage()));},icon:const Icon(Icons.insights)),
-      IconButton(onPressed:_refresh,icon:const Icon(Icons.refresh))
-    ]),
-    body:RefreshIndicator(onRefresh:_refresh,child:FutureBuilder<List<Map<String,dynamic>>>(
-      future:_tests,builder:(context,snapshot){
-        if(snapshot.connectionState==ConnectionState.waiting)return const FsLoadingCards(count: 3);
-        if(snapshot.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('পরীক্ষার তালিকা লোড হয়নি।')),Center(child:TextButton(onPressed:_refresh,child:const Text('আবার চেষ্টা করুন')))]);
-        final tests=snapshot.data??[];
-        final categories = <String,String>{
-          for (final test in tests) _categoryKey(test): _categoryLabel(test),
-        };
-        final selected = categories.containsKey(_categoryFilter) ? _categoryFilter : null;
-        final visibleTests = selected == null ? tests : tests.where((test) => _categoryKey(test) == selected).toList();
-        if(tests.isEmpty)return ListView(children:[const SizedBox(height:100),Center(child:Icon(Icons.assignment_outlined,size:54,color:_maroon)),const Center(child:Text('এখন কোনো প্রকাশিত পরীক্ষা নেই।'))]);
-        return ListView(padding:const EdgeInsets.all(16),children:[
-          Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_deepMaroon,_maroon]),borderRadius:BorderRadius.circular(20)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.track_changes,color:Colors.orangeAccent,size:34),SizedBox(height:10),Text('নিজেকে যাচাই করুন',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.bold)),SizedBox(height:5),Text('প্রকাশিত পরীক্ষা নির্বাচন করে প্রস্তুতি যাচাই করুন।',style:TextStyle(color:Colors.white70))])),
-          if (_activeAttempts.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Card(
-              color: const Color(0xFFFFF5E8),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(children: [
-                      Icon(Icons.pending_actions, color: Colors.deepOrange),
-                      SizedBox(width: 8),
-                      Expanded(child: Text('আপনার অসমাপ্ত পরীক্ষা',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                    ]),
-                    const SizedBox(height: 8),
-                    for (final entry in _activeAttempts.entries)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(entry.value['title']?.toString() ?? 'মডেল টেস্ট'),
-                        subtitle: Text('বাকি সময়: ${((entry.value['remaining_seconds'] as num?)?.toInt() ?? 0) ~/ 60} মিনিট'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          final test = tests.firstWhere(
-                            (t) => (t['id'] as num).toInt() == entry.key,
-                            orElse: () => <String, dynamic>{},
-                          );
-                          if (test.isNotEmpty) _start(test);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height:16),
-          Text('ক্যাটাগরি', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height:6),
-          Wrap(spacing:8, runSpacing:6, children:[
-            ChoiceChip(label: Text('সব (${tests.length})'), selected: selected == null,
-              onSelected: (_) => setState(() => _categoryFilter = null)),
-            for(final entry in categories.entries)
-              ChoiceChip(label: Text(entry.value), selected: selected == entry.key,
-                onSelected: (value) => setState(() => _categoryFilter = value ? entry.key : null)),
+  Widget _headerAction(IconData icon, String label, VoidCallback onTap) =>
+      Tooltip(message: label, child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap, borderRadius: BorderRadius.circular(10),
+          child: SizedBox(width: 48, height: 48,
+            child: Center(child: Container(width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20, color: Colors.white),
+            )),
+          ),
+        ),
+      ));
+
+  Future<void> _openProtected(Widget page) async {
+    if (!await AuthGuard.ensureAuthenticated(context) || !mounted) return;
+    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  Widget _meta(IconData icon, String label) {
+    final theme = Theme.of(context);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 17, color: theme.colorScheme.primary),
+      const SizedBox(width: 5),
+      Flexible(child: Text(label, style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant))),
+    ]);
+  }
+
+  Widget _testCard(Map<String, dynamic> t) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final testId = (t['id'] as num).toInt();
+    final starting = _startingTestIds.contains(testId);
+    final active = _activeAttempts.containsKey(testId);
+    final locked = t['locked'] == true;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(width: 42, height: 42,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10)),
+              child: Icon(locked && !active ? Icons.lock_outline : Icons.assignment_outlined,
+                color: scheme.primary, size: 24)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(t['title']?.toString() ?? _tr('মডেল টেস্ট', 'Model test'),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text(_categoryLabel(t), style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant)),
+            ])),
           ]),
-          const SizedBox(height:12),
-          for(final t in visibleTests) Card(color:const Color(0xFF241D20),surfaceTintColor:Colors.transparent,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20),side:BorderSide(color:Colors.white.withValues(alpha:0.16))),margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text(_categoryLabel(t), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height:4),
-            Text(t['title']?.toString()??'মডেল টেস্ট',style:Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight:FontWeight.bold)),
-            if((t['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:6),child:Text(t['description'].toString())),
-            const SizedBox(height:10),Wrap(spacing:14,runSpacing:8,children:[
-              if(t['locked']==true)_meta(Icons.lock_outline,'Premium'),
-              _meta(Icons.help_outline,'${t['question_count']} প্রশ্ন'),
-              _meta(Icons.timer_outlined,'${t['duration_minutes']} মিনিট'),
-              _meta(Icons.grade_outlined,'${t['total_marks']} নম্বর'),
-              if(t['pass_marks']!=null)_meta(Icons.flag_outlined,'পাস ${t['pass_marks']}'),
-              if(((t['negative_marks_per_question'] as num?)?.toDouble() ?? 0) > 0)
-                _meta(Icons.remove_circle_outline,'ভুলে -${t['negative_marks_per_question']}'),
-              if(t['randomize_questions']==true)_meta(Icons.shuffle,'প্রশ্নের ক্রম এলোমেলো'),
-              if((t['max_attempts'] as num?)?.toInt()!=null && (t['max_attempts'] as num).toInt()>0)_meta(Icons.replay,'সর্বোচ্চ ${t['max_attempts']} বার'),
-            ]),
-            if((t['exam_instructions']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Text('নির্দেশনা: ${t['exam_instructions']}',maxLines:3,overflow:TextOverflow.ellipsis)),
-            const SizedBox(height:12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Builder(builder: (context) {
-                final testId = (t['id'] as num).toInt();
-                final starting = _startingTestIds.contains(testId);
-                final active = _activeAttempts.containsKey(testId);
-                return FilledButton.icon(
-                  onPressed: starting ? null : () => _start(t),
-                  icon: starting
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white,
-                          ),
-                        )
-                      : Icon(active ? Icons.play_circle_outline : Icons.play_arrow),
-                  label: Text(starting
-                      ? 'প্রস্তুত হচ্ছে…'
-                      : active ? 'পরীক্ষা চালিয়ে যান' : t['locked']==true?'Premium দেখুন':'পরীক্ষা শুরু করুন'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF9D1B30),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: const Color(0xFF6B2530),
-                    disabledForegroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                    textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+          if ((t['description'] ?? '').toString().isNotEmpty)
+            Padding(padding: const EdgeInsets.only(top: 6), child: Text(t['description'].toString())),
+          const SizedBox(height: 10),
+          Wrap(spacing: 12, runSpacing: 6, children: [
+            if (locked) _meta(Icons.lock_outline, 'Premium'),
+            _meta(Icons.help_outline, _tr('${t['question_count']} প্রশ্ন', '${t['question_count']} questions')),
+            _meta(Icons.timer_outlined, _tr('${t['duration_minutes']} মিনিট', '${t['duration_minutes']} min')),
+            _meta(Icons.grade_outlined, _tr('${t['total_marks']} নম্বর', '${t['total_marks']} marks')),
+            if (t['pass_marks'] != null) _meta(Icons.flag_outlined, _tr('পাস ${t['pass_marks']}', 'Pass ${t['pass_marks']}')),
+            if (((t['negative_marks_per_question'] as num?)?.toDouble() ?? 0) > 0)
+              _meta(Icons.remove_circle_outline, _tr('ভুলে -${t['negative_marks_per_question']}', 'Wrong -${t['negative_marks_per_question']}')),
+            if (t['randomize_questions'] == true) _meta(Icons.shuffle, _tr('প্রশ্নের ক্রম এলোমেলো', 'Randomized questions')),
+            if (((t['max_attempts'] as num?)?.toInt() ?? 0) > 0)
+              _meta(Icons.replay, _tr('সর্বোচ্চ ${t['max_attempts']} বার', 'Max ${t['max_attempts']} attempts')),
+          ]),
+          if ((t['exam_instructions'] ?? '').toString().isNotEmpty)
+            Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+              _tr('নির্দেশনা: ${t['exam_instructions']}', 'Instructions: ${t['exam_instructions']}'),
+              maxLines: 3, overflow: TextOverflow.ellipsis)),
+          Divider(height: 18, color: scheme.outlineVariant),
+          SizedBox(width: double.infinity, child: FilledButton.icon(
+            onPressed: starting ? null : () => _start(t),
+            icon: starting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(active ? Icons.play_circle_outline : locked ? Icons.lock_outline : Icons.play_arrow, size: 20),
+            label: Text(starting ? _tr('প্রস্তুত হচ্ছে…', 'Preparing…')
+              : active ? _tr('পরীক্ষা চালিয়ে যান', 'Resume test')
+              : locked ? _tr('Premium দেখুন', 'View Premium')
+              : _tr('পরীক্ষা শুরু করুন', 'Start test')),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(48, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
+
+  Widget _unfinished(List<Map<String, dynamic>> tests) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.pending_actions, color: scheme.primary, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(_tr('অসমাপ্ত পরীক্ষা', 'Unfinished tests'),
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+          ]),
+          const SizedBox(height: 4),
+          for (final entry in _activeAttempts.entries)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(entry.value['title']?.toString() ?? _tr('মডেল টেস্ট', 'Model test')),
+              subtitle: Text(_tr(
+                'বাকি সময়: ${((entry.value['remaining_seconds'] as num?)?.toInt() ?? 0) ~/ 60} মিনিট',
+                'Time left: ${((entry.value['remaining_seconds'] as num?)?.toInt() ?? 0) ~/ 60} min'),
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              trailing: Icon(Icons.play_circle_outline, color: scheme.primary),
+              onTap: () {
+                final test = tests.firstWhere(
+                  (t) => (t['id'] as num).toInt() == entry.key,
+                  orElse: () => <String, dynamic>{},
                 );
-              }),
-            )
-          ])))
-        ]);
-      })),
-  );
-  Widget _meta(IconData icon,String text)=>Row(mainAxisSize:MainAxisSize.min,children:[Icon(icon,size:16,color:_maroon),const SizedBox(width:4),Text(text,style:const TextStyle(fontSize:12))]);
+                if (test.isNotEmpty) _start(test);
+              },
+            ),
+        ]),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        leadingWidth: 48,
+        centerTitle: false,
+        backgroundColor: _deepMaroon,
+        foregroundColor: Colors.white,
+        title: LayoutBuilder(builder: (context, constraints) {
+          final compact = constraints.maxWidth < 140;
+          return Row(children: [
+            if (!compact) ...[
+              Container(width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: .24))),
+                child: const Icon(Icons.assignment_outlined, size: 29, color: Colors.white)),
+              const SizedBox(width: 9),
+              Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+              const SizedBox(width: 9),
+            ],
+            Expanded(child: Text(_tr('মডেল টেস্ট', 'Model Tests'),
+              maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 15.5,
+                fontWeight: FontWeight.w500, height: 1.2))),
+          ]);
+        }),
+        actions: [
+          _headerAction(Icons.history_rounded, _tr('আমার ফলাফল', 'My results'),
+            () => _openProtected(const MyTestResultsPage())),
+          _headerAction(Icons.insights_rounded, _tr('প্র্যাকটিস ড্যাশবোর্ড', 'Practice dashboard'),
+            () => _openProtected(const PracticeDashboardPage())),
+          _headerAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'), _refresh),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: RefreshIndicator(onRefresh: _refresh,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _tests,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) return const FsLoadingCards(count: 3);
+            if (snapshot.hasError) return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(14),
+              children: [FsStatusCard(icon: Icons.error_outline,
+                message: _tr('পরীক্ষার তালিকা লোড হয়নি।', 'Could not load tests.'),
+                onRetry: _refresh)],
+            );
+            final tests = snapshot.data ?? [];
+            final categories = <String, String>{
+              for (final test in tests) _categoryKey(test): _categoryLabel(test),
+            };
+            final selected = categories.containsKey(_categoryFilter) ? _categoryFilter : null;
+            final visibleTests = selected == null ? tests : tests.where((test) => _categoryKey(test) == selected).toList();
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
+              children: [
+                if (_activeAttempts.isNotEmpty && tests.isNotEmpty) _unfinished(tests),
+                Row(children: [
+                  Icon(Icons.grid_view_rounded, color: scheme.primary, size: 20),
+                  const SizedBox(width: 7),
+                  Expanded(child: Text(_tr('ক্যাটাগরি', 'Categories'), style: theme.textTheme.titleMedium)),
+                  Flexible(child: Text(_tr('${visibleTests.length}টি পরীক্ষা', '${visibleTests.length} tests'),
+                    textAlign: TextAlign.end, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+                ]),
+                const SizedBox(height: 6),
+                if (tests.isEmpty)
+                  FsStatusCard(icon: Icons.assignment_outlined,
+                    message: _tr('এখন কোনো প্রকাশিত পরীক্ষা নেই।', 'No tests published yet.'))
+                else ...[
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    ChoiceChip(label: Text(_tr('সব (${tests.length})', 'All (${tests.length})')),
+                      selected: selected == null,
+                      onSelected: (_) => setState(() => _categoryFilter = null)),
+                    for (final entry in categories.entries)
+                      ChoiceChip(label: Text(entry.value), selected: selected == entry.key,
+                        onSelected: (value) => setState(() => _categoryFilter = value ? entry.key : null)),
+                  ]),
+                  const SizedBox(height: 10),
+                  for (final t in visibleTests) _testCard(t),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _ExamRunner extends StatefulWidget {
