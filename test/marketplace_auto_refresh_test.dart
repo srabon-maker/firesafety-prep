@@ -170,6 +170,17 @@ void main() {
     expect(tester.getCenter(label).dx, greaterThan(tester.getCenter(iconFinder).dx));
     expect(tester.getCenter(label).dy, lessThan(tester.getCenter(iconFinder).dy));
     expect(find.byTooltip('Cart'), findsOneWidget);
+    final header = find.byType(AppBar);
+    expect(find.descendant(of: header, matching: find.text('Orders')), findsNothing);
+    expect(find.descendant(of: header, matching: find.text('Cart')), findsNothing);
+    final orders = find.byTooltip('Orders & booking history');
+    final cart = find.byTooltip('Cart');
+    expect(orders, findsOneWidget);
+    expect(tester.getSize(orders), const Size(48, 54));
+    expect(tester.getSize(cart), const Size(48, 54));
+    expect(tester.getCenter(find.byIcon(Icons.receipt_long_outlined)).dy,
+      closeTo(tester.getCenter(iconFinder).dy, .01));
+    expect(tester.getCenter(iconFinder).dy, closeTo(tester.getCenter(cart).dy, .01));
     count = 12;
     await show(false);
     await show(true);

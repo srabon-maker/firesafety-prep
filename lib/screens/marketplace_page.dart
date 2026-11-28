@@ -860,8 +860,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
   Widget _headerAction({
     required String tooltip,
-    required String label,
-    required String englishLabel,
     required VoidCallback onPressed,
     required IconData icon,
     int? count,
@@ -875,25 +873,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         child: SizedBox(
           width: 48,
           height: 54,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _headerIcon(icon, count: count),
-              const SizedBox(height: 2),
-              Text(
-                AppText.of(context, label, englishLabel),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9.5,
-                  height: 1.1,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
+          child: Center(child: _headerIcon(icon, count: count)),
         ),
       ),
     ),
@@ -1012,16 +992,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
           _headerAction(
             tooltip: _tr(context, 'অর্ডার ও বুকিং ইতিহাস',
                 'Orders & booking history'),
-            label: 'অর্ডার',
-            englishLabel: 'Orders',
             onPressed: _showHistory,
             icon: Icons.receipt_long_outlined,
           ),
           const SizedBox(width: 5),
           _headerAction(
             tooltip: _tr(context, 'কার্ট', 'Cart'),
-            label: 'কার্ট',
-            englishLabel: 'Cart',
             onPressed: _showCart,
             icon: Icons.shopping_cart_rounded,
             count: _cartCount,
