@@ -326,16 +326,8 @@ class _JobsPageState extends State<JobsPage> {
               child: Icon(Icons.add_circle_outline_rounded,
                 size: 21, color: scheme.primary)),
             const SizedBox(width: 9),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_tr('সার্কুলার জমা দিন', 'Submit a circular'),
-                  style: Theme.of(context).textTheme.titleSmall),
-                Text(_tr('অনুমোদন সাপেক্ষে', 'Subject to approval'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant)),
-              ],
-            )),
+            Expanded(child: Text(_tr('সার্কুলার জমা দিন', 'Submit a circular'),
+              style: Theme.of(context).textTheme.titleSmall)),
             const SizedBox(width: 4),
             Icon(Icons.chevron_right_rounded, color: scheme.primary),
           ]),
