@@ -27,6 +27,12 @@ class SupportService {
   Future<Map<String,dynamic>> thread(String id,{String? before})=>_request(query:{'ticket_id':id,if(before!=null)'before_id':before});
   Future<String> create(String subject,String plan,String message) async =>
     (await _request(body:{'action':'create','subject':subject,'plan_code':plan,'message':message}))['ticket_id'].toString();
+  Future<void> hideMessage(String id,String messageId) async {
+    await _request(body:{'action':'hide_message','ticket_id':id,'message_id':messageId});
+  }
+  Future<void> hideThread(String id) async {
+    await _request(body:{'action':'hide_thread','ticket_id':id});
+  }
   Future<void> reply(String id,String message) async{
     await _request(body:{'action':'reply','ticket_id':id,'message':message});
   }
