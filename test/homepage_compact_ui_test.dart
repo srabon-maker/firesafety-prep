@@ -56,7 +56,11 @@ void main() {
     expect(find.text('মার্কেটপ্লেস'), findsOneWidget);
     final marketplace = find.byKey(const ValueKey('home-marketplace-tile'));
     final marketIcon = find.byKey(const ValueKey('home-marketplace-icon'));
-    expect(tester.getSize(marketplace).height, closeTo(68, .1));
+    final labels = find.byKey(const ValueKey('home-marketplace-labels'));
+    final labelHeight = tester.getSize(labels).height;
+    final expectedHeight = (labelHeight > 42 ? labelHeight : 42.0) + 26;
+    expect(tester.getSize(marketplace).height, closeTo(expectedHeight, .1));
+    expect(tester.getSize(marketplace).height, greaterThanOrEqualTo(68));
     expect(tester.getSize(marketIcon), const Size(42, 42));
     expect(tester.widget<Text>(find.text('মার্কেটপ্লেস')).style?.fontSize, 15);
     expect(tester.widget<Text>(find.text('ফায়ার সেফটি পণ্য ও সার্ভিস')).style?.fontSize, 12);
@@ -97,6 +101,15 @@ void main() {
     final job = tester.widget<ListTile>(find.widgetWithText(ListTile, 'Sample job'));
     expect(job.subtitle, isNull);
     expect(find.text('Dhaka'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Marketplace is exactly 68dp when both labels fit', (tester) async {
+    await mountHome(tester, 'en', width: 600, sections: ['marketplace']);
+    final tile = find.byKey(const ValueKey('home-marketplace-tile'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(tile).height, closeTo(68, .1));
     expect(tester.takeException(), isNull);
   });
 
