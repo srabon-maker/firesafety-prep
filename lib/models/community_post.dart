@@ -60,15 +60,17 @@ class CommunityPost {
 }
 
 class Comment {
-  Comment({required this.author, required this.text, this.id = 0, this.isOwner = false});
+  Comment({required this.author, required this.text, this.id = 0, this.isOwner = false, this.authorPhoto});
   final int id;
   final bool isOwner;
   final String author;
   final String text;
+  final String? authorPhoto;
   factory Comment.fromJson(Map<String, dynamic> json) => Comment(
     id: int.tryParse(json['id'].toString()) ?? 0,
     isOwner: json['is_owner'] == true || json['is_owner'] == 1 || json['is_owner'] == '1',
     author: json['author']?.toString() ?? 'সদস্য',
     text: json['text']?.toString() ?? '',
+    authorPhoto: json['author_photo']?.toString(),
   );
 }

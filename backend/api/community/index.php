@@ -174,7 +174,7 @@ try {
         $check->execute([$postId]);
         if (!$check->fetchColumn()) community_reply(404, ['success'=>false,'message'=>'পোস্ট পাওয়া যায়নি।']);
         $q = $pdo->prepare(
-            "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author,
+            "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author, u.profile_photo AS author_photo,
                     (c.user_id=?) AS is_owner
              FROM community_comments c JOIN users u ON u.id=c.user_id
              WHERE c.post_id=? AND c.status='visible' ORDER BY c.id ASC LIMIT 100"
@@ -191,7 +191,7 @@ try {
             }
             if (!$found) {
                 $extra = $pdo->prepare(
-                    "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author,
+                    "SELECT c.id, c.body AS text, c.created_at, u.full_name AS author, u.profile_photo AS author_photo,
                             (c.user_id=?) AS is_owner
                      FROM community_comments c JOIN users u ON u.id=c.user_id
                      WHERE c.post_id=? AND c.status='visible' AND c.id=? AND c.user_id=?"
