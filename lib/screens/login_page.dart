@@ -99,7 +99,6 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     String t(String bn, String en) => AppText.of(context, bn, en);
 
     return Scaffold(
