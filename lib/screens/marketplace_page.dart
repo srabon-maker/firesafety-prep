@@ -287,7 +287,12 @@ class _MarketplacePageState extends State<MarketplacePage> {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => const MarketplaceCartPage(),
     ));
-    if (mounted) await _loadCartCount();
+    if (mounted) {
+      // A request started before cart edits/checkout must not supply the badge.
+      _cartEpoch++;
+      _cartLoad = null;
+      await _loadCartCount();
+    }
   }
 
   Future<void> _showHistory() async {
@@ -859,6 +864,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     required String englishLabel,
     required VoidCallback onPressed,
     required IconData icon,
+    int? count,
   }) => Tooltip(
     message: tooltip,
     child: Material(
@@ -873,15 +879,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 20, color: Colors.white),
-              ),
+              _headerIcon(icon, count: count),
               const SizedBox(height: 2),
               Text(
                 AppText.of(context, label, englishLabel),
@@ -900,6 +898,35 @@ class _MarketplacePageState extends State<MarketplacePage> {
       ),
     ),
   );
+
+  Widget _headerIcon(IconData icon, {int? count}) {
+    final tile = Container(
+      key: count == null ? null : const ValueKey('market-cart-icon'),
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, size: 20, color: Colors.white),
+    );
+    if (count == null) return tile;
+    // Anchor to the icon itself, not the entire action including its label.
+    return Badge(
+      key: const ValueKey('market-cart-count-badge'),
+      isLabelVisible: count > 0,
+      alignment: AlignmentDirectional.topEnd,
+      offset: const Offset(4, -3),
+      largeSize: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      backgroundColor: const Color(0xFFD92D20),
+      textColor: Colors.white,
+      textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+      label: Text(count > 99 ? '99+' : '$count',
+        semanticsLabel: _tr(context, 'কার্টে $count টি পণ্য', '$count items in cart')),
+      child: tile,
+    );
+  }
 
   IconData _categoryIcon(String name) {
     final value = name.toLowerCase();
@@ -991,16 +1018,13 @@ class _MarketplacePageState extends State<MarketplacePage> {
             icon: Icons.receipt_long_outlined,
           ),
           const SizedBox(width: 5),
-          Badge(
-            isLabelVisible: _cartCount > 0,
-            label: Text('$_cartCount'),
-            child: _headerAction(
-              tooltip: _tr(context, 'কার্ট', 'Cart'),
-              label: 'কার্ট',
-              englishLabel: 'Cart',
-              onPressed: _showCart,
-              icon: Icons.shopping_cart_rounded,
-            ),
+          _headerAction(
+            tooltip: _tr(context, 'কার্ট', 'Cart'),
+            label: 'কার্ট',
+            englishLabel: 'Cart',
+            onPressed: _showCart,
+            icon: Icons.shopping_cart_rounded,
+            count: _cartCount,
           ),
           const SizedBox(width: 8),
         ],

@@ -144,6 +144,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Cart count badge is red, anchored to icon and reflects quantity changes',
+      (tester) async {
+    final session = ValueNotifier(0);
+    var count = 0;
+    Future<void> show(bool active) async {
+      await tester.pumpWidget(host(active: active, session: session,
+        catalog: (_) async => [product], cart: () async => count));
+      await tester.pumpAndSettle();
+    }
+    final badgeFinder = find.byKey(const ValueKey('market-cart-count-badge'));
+    final iconFinder = find.byKey(const ValueKey('market-cart-icon'));
+    Badge badge() => tester.widget<Badge>(badgeFinder);
+    await show(true);
+    expect(badge().isLabelVisible, isFalse);
+    count = 9;
+    await show(false);
+    await show(true);
+    expect(badge().isLabelVisible, isTrue);
+    expect(badge().backgroundColor, const Color(0xFFD92D20));
+    expect(badge().textColor, Colors.white);
+    expect(badge().child!.key, const ValueKey('market-cart-icon'));
+    final label = find.descendant(of: badgeFinder, matching: find.text('9'));
+    expect(label, findsOneWidget);
+    expect(tester.getCenter(label).dx, greaterThan(tester.getCenter(iconFinder).dx));
+    expect(tester.getCenter(label).dy, lessThan(tester.getCenter(iconFinder).dy));
+    expect(find.byTooltip('Cart'), findsOneWidget);
+    count = 12;
+    await show(false);
+    await show(true);
+    expect((badge().label as Text).data, '12');
+    count = 124;
+    await show(false);
+    await show(true);
+    expect((badge().label as Text).data, '99+');
+    expect((badge().label as Text).semanticsLabel, '124 items in cart');
+    count = 0;
+    await show(false);
+    await show(true);
+    expect(badge().isLabelVisible, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+    session.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Session change clears badge and rejects late previous-account count',
       (tester) async {
     final session = ValueNotifier(0);
