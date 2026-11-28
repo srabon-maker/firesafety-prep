@@ -16,12 +16,14 @@ try {
     // LIMIT 0 verifies all columns without retrieving user data.
     $pdo->query('SELECT id,user_id,plan_code,subject,status,created_at,updated_at FROM support_tickets LIMIT 0');
     $pdo->query('SELECT id,ticket_id,sender,body,created_at FROM support_messages LIMIT 0');
+    $pdo->query('SELECT ticket_id FROM support_user_hidden_tickets LIMIT 0');
+    $pdo->query('SELECT message_id FROM support_user_hidden_messages LIMIT 0');
     $pdo->query('SELECT id,is_registered,full_name FROM users LIMIT 0');
     $pdo->query('SELECT user_id,token_hash,expires_at FROM auth_sessions LIMIT 0');
     $q = $pdo->query("SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES
-        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('support_tickets','support_messages')");
+        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('support_tickets','support_messages','support_user_hidden_tickets','support_user_hidden_messages')");
     $engines = $q->fetchAll(PDO::FETCH_KEY_PAIR);
-    foreach (['support_tickets','support_messages'] as $table) {
+    foreach (['support_tickets','support_messages','support_user_hidden_tickets','support_user_hidden_messages'] as $table) {
         if (strcasecmp((string)($engines[$table] ?? ''), 'InnoDB') !== 0) {
             throw new RuntimeException('Support requires InnoDB');
         }
@@ -33,13 +35,15 @@ try {
           ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME
           AND r.TABLE_NAME=k.TABLE_NAME
         WHERE k.TABLE_SCHEMA=DATABASE() AND k.REFERENCED_TABLE_SCHEMA=DATABASE()
-          AND k.TABLE_NAME IN ('support_tickets','support_messages')");
+          AND k.TABLE_NAME IN ('support_tickets','support_messages','support_user_hidden_tickets','support_user_hidden_messages')");
     $found = [];
     foreach ($q->fetchAll(PDO::FETCH_NUM) as $row) {
         $found[] = implode(':', $row);
     }
     foreach (['support_tickets:user_id:users:id:CASCADE',
-              'support_messages:ticket_id:support_tickets:id:CASCADE'] as $required) {
+              'support_messages:ticket_id:support_tickets:id:CASCADE',
+              'support_user_hidden_tickets:ticket_id:support_tickets:id:CASCADE',
+              'support_user_hidden_messages:message_id:support_messages:id:CASCADE'] as $required) {
         if (!in_array($required, $found, true)) {
             throw new RuntimeException('Required foreign key is missing');
         }

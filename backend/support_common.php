@@ -9,8 +9,9 @@ function support_text(mixed $v,int $limit):string {
     if(!is_string($v)||!preg_match('//u',$v)||trim($v)===''||mb_strlen(trim($v),'UTF-8')>$limit)throw new DomainException('সঠিক লেখা দিন।');
     return trim($v);
 }
-function support_thread(PDO $pdo,int $ticket,?int $before=null):array{
+function support_thread(PDO $pdo,int $ticket,?int $before=null,bool $userView=false):array{
     $where='ticket_id=?';$args=[$ticket];
+    if($userView)$where.=' AND NOT EXISTS (SELECT 1 FROM support_user_hidden_messages h WHERE h.message_id=support_messages.id)';
     if($before!==null){$where.=' AND id<?';$args[]=$before;}
     $q=$pdo->prepare("SELECT id,sender,body,created_at FROM support_messages WHERE $where ORDER BY id DESC LIMIT 51");$q->execute($args);
     $rows=$q->fetchAll(PDO::FETCH_ASSOC);$more=count($rows)>50;if($more)array_pop($rows);
