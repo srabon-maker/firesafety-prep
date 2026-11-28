@@ -67,6 +67,7 @@ class _CareerSectionState extends State<CareerSection> {
       _bio = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
   bool _busy = true, _enabled = false, _consent = false, _editingProfile = false;
+  bool _mockVoice = false;
   Uint8List? _selectedPhoto;
   String _photoPath = '';
   String _directoryQuery = '';
@@ -203,7 +204,7 @@ class _CareerSectionState extends State<CareerSection> {
         ),
       ));
 
-  PreferredSizeWidget _alertAppBar() => AppBar(
+  PreferredSizeWidget _compactCareerAppBar() => AppBar(
     toolbarHeight: 68, titleSpacing: 8, leadingWidth: 48, centerTitle: false,
     backgroundColor: const Color(0xFF36060D), foregroundColor: Colors.white,
     title: LayoutBuilder(builder: (context, constraints) => Row(children: [
@@ -212,18 +213,18 @@ class _CareerSectionState extends State<CareerSection> {
           decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white.withValues(alpha: .24))),
-          child: const Icon(Icons.notifications_active_outlined, size: 29, color: Colors.white)),
+          child: Icon(_section == 'mock' ? Icons.record_voice_over_outlined : Icons.notifications_active_outlined, size: 29, color: Colors.white)),
         const SizedBox(width: 9),
         Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
         const SizedBox(width: 9),
       ],
-      Expanded(child: Text(_tr('চাকরির অ্যালার্ট', 'Job Alerts'),
+      Expanded(child: Text(_section == 'mock' ? _tr('মক ইন্টারভিউ', 'Mock Interview') : _tr('চাকরির অ্যালার্ট', 'Job Alerts'),
         maxLines: 2, overflow: TextOverflow.ellipsis,
         style: const TextStyle(color: Colors.white, fontSize: 15.5,
           fontWeight: FontWeight.w500, height: 1.2))),
     ])),
     actions: [
-      _alertHeaderAction(Icons.info_outline_rounded, _tr('অ্যালার্ট সম্পর্কে', 'About alerts'), _showAlertInfo),
+      _alertHeaderAction(Icons.info_outline_rounded, _section == 'mock' ? _tr('ইন্টারভিউ সম্পর্কে', 'About interview') : _tr('অ্যালার্ট সম্পর্কে', 'About alerts'), _section == 'mock' ? _showMockInfo : _showAlertInfo),
       _alertHeaderAction(Icons.refresh_rounded, _tr('রিফ্রেশ', 'Refresh'), _busy ? null : () => _load()),
       const SizedBox(width: 8),
     ],
@@ -351,23 +352,90 @@ class _CareerSectionState extends State<CareerSection> {
     for (final row in _rows) _alertJobCard(row),
   ];
 
-  List<Widget> _content() {
-    if (_section == 'alerts') return _alertContent();
-    if (_section == 'mock') return [
-      const Text('লিখে অথবা ভয়েসে উত্তর দিন। প্রশ্ন ফোনের অফলাইন ভয়েসে শোনা যাবে; উত্তরও ডিভাইসেই লেখা হবে।'),
-      const SizedBox(height: 10),
-      _field(_role,'পদের নাম (ঐচ্ছিক, সঠিক নাম)',120),
-      FilledButton(
-        onPressed: _busy ? null : () => _load(),
-        child: const Text('নতুন অনুশীলন শুরু'),
+  void _showMockInfo() {
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(_tr('মক ইন্টারভিউ সম্পর্কে', 'About mock interview')),
+      content: SingleChildScrollView(child: Text(_tr(
+        'প্রথমে নিজের উত্তর দিন। নমুনা উত্তরের শব্দ ও দৈর্ঘ্যের মিল দেখে ফোনেই অনুশীলনের সূচক তৈরি হয়। এটি AI বা পরীক্ষকের মূল্যায়ন নয় এবং তথ্যের সত্যতা বা পেশাগত যোগ্যতা যাচাই করে না। ভয়েস ইনপুটের জন্য Android 12+ ও ইনস্টল করা অফলাইন ভাষা মডেল প্রয়োজন। প্রশ্ন শোনার জন্য অফলাইন TTS ভয়েস প্রয়োজন। ভয়েস বা উত্তর সার্ভারে পাঠানো হয় না।',
+        'Answer first. Your device compares words and length with the sample answer. This is not AI or examiner assessment and cannot verify facts or professional competence. Voice input needs Android 12+ and an installed offline language model. Reading questions aloud needs offline TTS. Voice and answers are not sent to a server.',
+      ))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx),
+        child: Text(_tr('বন্ধ করুন', 'Close')))],
+    ));
+  }
+
+  Widget _mockModeTile(bool voice, IconData icon, String title, String subtitle) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selected = _mockVoice == voice;
+    return Semantics(button: true, selected: selected, child: Material(
+      color: selected ? scheme.primaryContainer : scheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: selected ? scheme.primary : scheme.outlineVariant)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _busy ? null : () => setState(() => _mockVoice = voice),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, color: selected ? scheme.onPrimaryContainer : scheme.primary, size: 25),
+            const SizedBox(height: 5),
+            Text(title, textAlign: TextAlign.center,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
+                fontWeight: FontWeight.w700)),
+            Text(subtitle, textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant)),
+          ]),
+        ),
       ),
-      const SizedBox(height: 12),
+    ));
+  }
+
+  List<Widget> _mockContent() => [
+    Card(margin: EdgeInsets.zero, child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(_tr('ইন্টারভিউ মোড', 'Interview mode'),
+          style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        LayoutBuilder(builder: (context, constraints) {
+          final text = _mockModeTile(false, Icons.edit_note_rounded,
+            _tr('টেক্সট', 'Text'), _tr('লিখে উত্তর দিন', 'Type an answer'));
+          final voice = _mockModeTile(true, Icons.mic_none_rounded,
+            _tr('ভয়েস', 'Voice'), _tr('বলে উত্তর দিন', 'Speak an answer'));
+          if (constraints.maxWidth < 240 || MediaQuery.textScalerOf(context).scale(14) > 19) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [text, const SizedBox(height: 8), voice]);
+          }
+          return Row(children: [Expanded(child: text), const SizedBox(width: 8), Expanded(child: voice)]);
+        }),
+        const SizedBox(height: 10),
+        _alertField(_role, _tr('পদের নাম (ঐচ্ছিক)', 'Exact role (optional)'), Icons.work_outline),
+        const SizedBox(height: 8),
+        FilledButton.icon(onPressed: _busy ? null : () => _load(),
+          icon: const Icon(Icons.play_arrow_rounded, size: 20),
+          label: Text(_tr('ইন্টারভিউ শুরু করুন', 'Start interview'))),
+      ]),
+    )),
+    const SizedBox(height: 10),
+    if (_error == null || _rows.isNotEmpty)
       FreeMockInterviewPanel(
         questions: _rows,
         role: _role.text.trim(),
+        voiceMode: _mockVoice,
         onRestart: _busy ? null : () => _load(),
       ),
-    ];
+    const SizedBox(height: 8),
+    Text(_tr('সম্পূর্ণ বিনামূল্যে অনুশীলন', 'Free practice'),
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+  ];
+
+  List<Widget> _content() {
+    if (_section == 'alerts') return _alertContent();
+    if (_section == 'mock') return _mockContent();
     if (_section == 'courses') return [
       const Text('প্রতিষ্ঠান, তারিখ, ফি ও সনদের তথ্য অফিসিয়াল উৎসে যাচাই করুন। অ্যাপের মাধ্যমে কোর্সে ভর্তি বা পেমেন্ট হয় না।'),
       for(final row in _rows) _card(CareerService.text(row,'title'),
@@ -524,7 +592,7 @@ class _CareerSectionState extends State<CareerSection> {
       'directory': tr('পেশাজীবী ডিরেক্টরি', 'Professional Directory'),
     };
     return Scaffold(
-    appBar: _section == 'alerts' ? _alertAppBar() : AppBar(
+    appBar: (_section == 'alerts' || _section == 'mock') ? _compactCareerAppBar() : AppBar(
       title: Row(
         children: [
           if (_section == 'directory') ...[
@@ -557,11 +625,11 @@ class _CareerSectionState extends State<CareerSection> {
         ),
       ],
     ),
-    body: ListView(padding: _section == 'alerts' ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
+    body: ListView(padding: (_section == 'alerts' || _section == 'mock') ? const EdgeInsets.fromLTRB(14, 10, 14, 22) : const EdgeInsets.all(16),children:[
       if(_busy) const LinearProgressIndicator(),
       if(_error != null) Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_error!,style:TextStyle(color:Theme.of(context).colorScheme.error))),
       if(!_busy || _rows.isNotEmpty) ..._content(),
-      if(_section!='directory'&&_section!='alerts'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
+      if(_section!='directory'&&_section!='alerts'&&_section!='mock'&&!_busy&&_error==null&&_rows.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('এখন কোনো তথ্য পাওয়া যায়নি।')),
       if(_next!=null) OutlinedButton(onPressed:_busy?null:()=>_load(more:true),child:Text(_section == 'alerts' ? _tr('আরও দেখুন', 'Load more') : 'আরও দেখুন')),
     ]));
   }
