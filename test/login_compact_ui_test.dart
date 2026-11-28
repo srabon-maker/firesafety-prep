@@ -61,8 +61,21 @@ void main() {
     expect(find.text('স্বাগতম'), findsOneWidget);
     expect(find.text('Google দিয়ে লগইন করুন'), findsOneWidget);
     expect(find.text('নতুনদের লগইনের পর নিবন্ধন করতে হবে।'), findsOneWidget);
-    expect(tester.getSize(find.byKey(const ValueKey('login-brand-logo'))),
-        const Size(100, 100));
+    final logo = find.byKey(const ValueKey('login-brand-logo'));
+    final frame = find.byKey(const ValueKey('login-brand-frame'));
+    expect(tester.getSize(logo), const Size(120, 120));
+    expect(tester.getSize(frame), const Size(120, 120));
+    final image = tester.widget<Image>(logo);
+    expect((image.image as AssetImage).assetName,
+        'assets/fire_safety_job_prep_logo.png');
+    final darkFrame = tester.widget<DecoratedBox>(frame);
+    final darkDecoration = darkFrame.decoration as BoxDecoration;
+    expect(darkFrame.position, DecorationPosition.foreground);
+    expect(darkDecoration.borderRadius, BorderRadius.circular(22));
+    expect(darkDecoration.boxShadow, isNull);
+    expect((darkDecoration.border as Border).top.width, 1);
+    expect((darkDecoration.border as Border).top.color,
+        Colors.white.withValues(alpha: .32));
     expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 52);
     final hint = tester.renderObject<RenderParagraph>(
         find.descendant(of: find.byKey(hintKey), matching: find.byType(RichText)));
@@ -81,6 +94,10 @@ void main() {
         isNotNull);
     expect(Theme.of(tester.element(find.byType(LoginPage))).brightness,
         Brightness.light);
+    expect(tester.getSize(logo), const Size(120, 120));
+    final lightDecoration = tester.widget<DecoratedBox>(frame).decoration as BoxDecoration;
+    expect((lightDecoration.border as Border).top.color, const Color(0xFFB9A5A9));
+    expect((lightDecoration.border as Border).top.width, 1);
     expect(tester.takeException(), isNull);
   });
 

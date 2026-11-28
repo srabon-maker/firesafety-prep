@@ -126,24 +126,37 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: Image.asset(
-                      'assets/fire_safety_job_prep_logo.png',
-                      key: const ValueKey('login-brand-logo'),
-                      height: 100,
-                      width: 100,
-                      fit: BoxFit.contain,
-                      semanticLabel: 'Fire Safety BD',
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        height: 100,
-                        width: 100,
-                        alignment: Alignment.center,
-                        color: scheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 54,
-                          color: scheme.primary,
+                  DecoratedBox(
+                    key: const ValueKey('login-brand-frame'),
+                    position: DecorationPosition.foreground,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: .32)
+                            : const Color(0xFFB9A5A9),
+                        width: 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Image.asset(
+                        'assets/fire_safety_job_prep_logo.png',
+                        key: const ValueKey('login-brand-logo'),
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.contain,
+                        semanticLabel: 'Fire Safety BD',
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 120,
+                          width: 120,
+                          alignment: Alignment.center,
+                          color: scheme.surfaceContainerHighest,
+                          child: Icon(
+                            Icons.local_fire_department_rounded,
+                            size: 64,
+                            color: scheme.primary,
+                          ),
                         ),
                       ),
                     ),
