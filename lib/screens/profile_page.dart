@@ -11,28 +11,27 @@ import 'saved_notes_page.dart';
 import 'notification_preferences_page.dart';
 import 'notification_inbox_page.dart';
 import 'premium_page.dart';
-import 'career_page.dart';
 
 // Private colours: other files can not clash with these names.
 const Color _maroon = Color(0xFF650D18);
 const Color _deepMaroon = Color(0xFF36060D);
-// Lighter maroon, used only in dark mode so icons and text stay readable.
-const Color _maroonLight = Color(0xFFC0485F);
-
-// Same theme colours, but the main (primary) colour is maroon.
-ColorScheme _scheme(BuildContext context) {
-  final theme = Theme.of(context);
-  final dark = theme.brightness == Brightness.dark;
-  return theme.colorScheme.copyWith(primary: dark ? _maroonLight : _maroon);
-}
+// Use the app's complete light/dark color scheme, including matching
+// foreground colors, rather than overriding only the primary color.
+ColorScheme _scheme(BuildContext context) => Theme.of(context).colorScheme;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
     super.key,
     required this.onLogout,
+    this.loadProfile,
+    this.loadStats,
   });
 
   final VoidCallback onLogout;
+  // Optional loaders for deterministic widget tests. Production uses the
+  // authenticated service paths below.
+  final Future<Map<String, dynamic>?> Function(bool forceRefresh)? loadProfile;
+  final Future<List<dynamic>> Function()? loadStats;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -55,13 +54,15 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<List<dynamic>> _startStats() {
-    final future = _loadStats();
+    final future = widget.loadStats?.call() ?? _loadStats();
     // Profile may fail before the stats FutureBuilder is mounted.
     future.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return future;
   }
 
   Future<Map<String, dynamic>?> _loadProfile({bool forceRefresh = false}) async {
+    final loader = widget.loadProfile;
+    if (loader != null) return loader(forceRefresh);
     final session =
         await AuthService.instance.validateSession(forceRefresh: forceRefresh);
 
@@ -293,97 +294,61 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _sectionHeading(String title, IconData icon) {
     final scheme = _scheme(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
-      child: Row(
-        children: [
-          Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 19, color: scheme.onPrimaryContainer)),
-          const SizedBox(width: 9),
-          Expanded(child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
-            ),
-          )),
+      padding: const EdgeInsets.fromLTRB(3, 2, 3, 7),
+      child: Row(children: [
+        Icon(icon, size: 19, color: scheme.primary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w800, color: scheme.onSurface))),
+      ]),
+    );
+  }
+
+  Widget _menuGroup(List<Widget> items) {
+    final scheme = _scheme(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: [
+        for (int i = 0; i < items.length; i++) ...[
+          if (i > 0) Divider(height: 1, thickness: 1, indent: 53,
+            endIndent: 12, color: scheme.outlineVariant),
+          items[i],
         ],
-      ),
+      ]),
     );
   }
 
   Widget _menuTile({
     required IconData icon,
     required String title,
-    String? subtitle,
-    VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
     final scheme = _scheme(context);
-    final enabled = onTap != null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Material(
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(17),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Icon(icon, size: 21, color: scheme.primary),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 5),
-                if (enabled)
-                  Icon(Icons.chevron_right_rounded,
-                      color: scheme.onSurfaceVariant)
-                else
-                  Text(
-                    _tr(context, 'শীঘ্রই', 'Soon'),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          child: Row(children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 19, color: scheme.primary),
             ),
-          ),
+            const SizedBox(width: 11),
+            Expanded(child: Text(title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600, color: scheme.onSurface))),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right_rounded, size: 19,
+              color: scheme.onSurfaceVariant),
+          ]),
         ),
       ),
     );
@@ -556,12 +521,12 @@ class _ProfilePageState extends State<ProfilePage> {
           physics: const AlwaysScrollableScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 22),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(17),
+                  padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [_deepMaroon, _maroon, Color(0xFF891C32)],
@@ -591,15 +556,15 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             child: CircleAvatar(
-                              radius: 34,
+                              radius: 28,
                               backgroundColor: const Color(0xFFFFEDF0),
                               // If the photo fails to load, the icon is shown.
                               child: hasPhoto
                                   ? ClipOval(
                                       child: Image.network(
                                         photo,
-                                        width: 68,
-                                        height: 68,
+                                        width: 56,
+                                        height: 56,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             const Icon(
@@ -627,7 +592,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 19,
+                                    fontSize: 17,
                                     height: 1.25,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -668,7 +633,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 10),
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -685,10 +650,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         _tr(context, 'ব্যক্তিগত তথ্য', 'Personal information'),
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      subtitle: Text(_tr(context, 'আপনার প্রোফাইলের বিস্তারিত',
-                          'Your profile details')),
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
                       childrenPadding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          const EdgeInsets.fromLTRB(14, 0, 14, 12),
                       children: [
                         _profileInfoRow(
                             context,
@@ -741,7 +705,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 10),
                 FutureBuilder<List<dynamic>>(
                   future: _statsFuture,
                   builder: (context, stats) {
@@ -857,132 +821,85 @@ class _ProfilePageState extends State<ProfilePage> {
                     );
                   },
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 14),
                 _sectionHeading(
-                  _tr(context, 'আপনার কার্যক্রম', 'Your activity'),
-                  Icons.grid_view_rounded,
+                  _tr(context, 'শেখা ও অনুশীলন', 'Learning & practice'),
+                  Icons.school_outlined,
                 ),
-                _menuTile(
-                  icon: Icons.history_rounded,
-                  title:
-                      _tr(context, 'মডেল টেস্টের ফলাফল', 'Model test results'),
-                  subtitle: _tr(context, 'পরীক্ষার ফলাফল ও ইতিহাস',
-                      'Your scores and history'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const MyTestResultsPage(),
-                    ),
+                _menuGroup([
+                  _menuTile(
+                    icon: Icons.history_rounded,
+                    title: _tr(context, 'মডেল টেস্টের ফলাফল', 'Model test results'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const MyTestResultsPage())),
                   ),
-                ),
-                _menuTile(
-                  icon: Icons.insights_rounded,
-                  title: _tr(
-                      context, 'অনুশীলন ড্যাশবোর্ড', 'Practice dashboard'),
-                  subtitle: _tr(context, 'দৈনিক লক্ষ্য ও শেখার অগ্রগতি',
-                      'Daily target and learning progress'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const PracticeDashboardPage(),
-                    ),
+                  _menuTile(
+                    icon: Icons.insights_rounded,
+                    title: _tr(context, 'অনুশীলন ড্যাশবোর্ড', 'Practice dashboard'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const PracticeDashboardPage())),
                   ),
-                ),
-                _menuTile(
-                  icon: Icons.menu_book_outlined,
-                  title: _tr(context, 'নোট ও রিসোর্স', 'Notes & resources'),
-                  subtitle: _tr(context, 'প্রকাশিত স্টাডি নোট দেখুন',
-                      'Browse published study notes'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotesPage(),
-                    ),
+                  _menuTile(
+                    icon: Icons.menu_book_outlined,
+                    title: _tr(context, 'নোট ও রিসোর্স', 'Notes & resources'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const NotesPage())),
                   ),
-                ),
-                _menuTile(
-                  icon: Icons.bookmark_rounded,
-                  title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
-                  subtitle: _tr(context, 'আপনার বুকমার্ক করা নোট',
-                      'Your bookmarked notes'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SavedNotesPage(),
-                    ),
+                  _menuTile(
+                    icon: Icons.bookmark_rounded,
+                    title: _tr(context, 'সংরক্ষিত নোট', 'Saved notes'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const SavedNotesPage())),
                   ),
-                ),
-                const SizedBox(height: 11),
+                ]),
+                const SizedBox(height: 14),
                 _sectionHeading(
                   _tr(context, 'অ্যাপ ও অ্যাকাউন্ট', 'App & account'),
                   Icons.tune_rounded,
                 ),
-                _menuTile(
-                  icon: Icons.work_outline,
-                  title: _tr(context, 'ক্যারিয়ার ডেভেলপমেন্ট', 'Career development'),
-                  subtitle: _tr(context, 'চাকরি, ইন্টারভিউ ও প্রশিক্ষণ', 'Jobs, interviews and training'),
-                  onTap: () => CareerPage.open(context),
-                ),
-                _menuTile(
-                  icon: Icons.workspace_premium_outlined,
-                  title: _tr(context, 'প্রিমিয়াম সদস্যপদ', 'Premium membership'),
-                  subtitle: _tr(context, 'সদস্যপদের অবস্থা ও প্যাকেজ', 'Membership status and plans'),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PremiumPage())),
-                ),
-                _menuTile(
-                  icon: Icons.settings_outlined,
-                  title: _tr(context, 'অ্যাপ সেটিংস', 'App settings'),
-                  subtitle: _tr(context, 'ভাষা ও থিম পরিবর্তন',
-                      'Language and appearance'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SettingsPage(),
+                _menuGroup([
+                  _menuTile(
+                    icon: Icons.workspace_premium_outlined,
+                    title: _tr(context, 'প্রিমিয়াম সদস্যপদ', 'Premium membership'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const PremiumPage())),
+                  ),
+                  _menuTile(
+                    icon: Icons.settings_outlined,
+                    title: _tr(context, 'অ্যাপ সেটিংস', 'App settings'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+                  ),
+                  _menuTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: _tr(context, 'নোটিফিকেশন ইনবক্স', 'Notification inbox'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const NotificationInboxPage())),
+                  ),
+                  _menuTile(
+                    icon: Icons.notifications_none_rounded,
+                    title: _tr(context, 'নোটিফিকেশন পছন্দ', 'Notification preferences'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const NotificationPreferencesPage())),
+                  ),
+                  _menuTile(
+                    icon: Icons.info_outline_rounded,
+                    title: _tr(context, 'অ্যাপ সম্পর্কে', 'About app'),
+                    onTap: () => showAboutDialog(
+                      context: context,
+                      applicationName: 'Fire Safety BD',
+                      applicationVersion: '1.0.0',
+                      applicationLegalese: _tr(context,
+                        'ফায়ার সেফটি শেখা ও প্রস্তুতির ডিজিটাল প্ল্যাটফর্ম।',
+                        'A digital platform for fire safety learning and preparation.'),
                     ),
                   ),
-                ),
-                _menuTile(
-                  icon: Icons.notifications_active_outlined,
-                  title: _tr(context, 'নোটিফিকেশন ইনবক্স', 'Notification inbox'),
-                  subtitle: _tr(context, 'প্রাপ্ত নোটিফিকেশন দেখুন', 'View received notifications'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationInboxPage(),
-                    ),
+                  _menuTile(
+                    icon: Icons.manage_accounts_outlined,
+                    title: _tr(context, 'অ্যাকাউন্ট ও নিরাপত্তা', 'Account & security'),
+                    onTap: () => _openAccountManagement(user),
                   ),
-                ),
-                _menuTile(
-                  icon: Icons.notifications_none_rounded,
-                  title: _tr(context, 'নোটিফিকেশন পছন্দ', 'Notification preferences'),
-                  subtitle: _tr(
-                      context,
-                      'আপনার নোটিফিকেশন পছন্দ নিয়ন্ত্রণ করুন',
-                      'Manage your notification preferences'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationPreferencesPage(),
-                    ),
-                  ),
-                ),
-                _menuTile(
-                  icon: Icons.info_outline_rounded,
-                  title: _tr(context, 'অ্যাপ সম্পর্কে', 'About app'),
-                  subtitle: _tr(context, 'Fire Safety BD সম্পর্কে জানুন',
-                      'Learn about Fire Safety BD'),
-                  onTap: () => showAboutDialog(
-                    context: context,
-                    applicationName: 'Fire Safety BD',
-                    applicationVersion: '1.0.0',
-                    applicationLegalese: _tr(
-                      context,
-                      'ফায়ার সেফটি শেখা ও প্রস্তুতির ডিজিটাল প্ল্যাটফর্ম।',
-                      'A digital platform for fire safety learning and preparation.',
-                    ),
-                  ),
-                ),
-                _menuTile(
-                  icon: Icons.manage_accounts_outlined,
-                  title: _tr(context, 'অ্যাকাউন্ট ও নিরাপত্তা',
-                      'Account & security'),
-                  subtitle: _tr(context, 'প্রোফাইল এডিট ও অ্যাকাউন্ট ডিলিট',
-                      'Edit profile and delete account'),
-                  onTap: () => _openAccountManagement(user),
-                ),
+                ]),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => _logout(context),
@@ -1035,7 +952,30 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _scaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tr(context, 'প্রোফাইল', 'Profile')),
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        backgroundColor: _deepMaroon,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.person_rounded, size: 29, color: Colors.white),
+          ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42,
+            color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(_tr(context, 'প্রোফাইল', 'Profile'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
         actions: [
           IconButton(
             onPressed: _refreshProfile,
