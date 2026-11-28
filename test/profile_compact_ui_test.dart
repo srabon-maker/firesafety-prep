@@ -115,4 +115,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Account security is compact and retains delete confirmation', (tester) async {
+    await mountProfile(tester, ThemeMode.dark, 'en');
+    final entry = find.text('Account & security');
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 68);
+    expect(find.text('Your account'), findsOneWidget);
+    expect(find.text('Edit profile'), findsNothing);
+    expect(find.text('Deleting your account cannot be undone.'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('account-delete-tile')));
+    await tester.pumpAndSettle();
+    expect(find.text('Permanently delete account?'), findsOneWidget);
+    final confirm = find.widgetWithText(FilledButton, 'Delete permanently');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Permanently delete account?'), findsNothing);
+    expect(find.byKey(const ValueKey('account-delete-tile')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

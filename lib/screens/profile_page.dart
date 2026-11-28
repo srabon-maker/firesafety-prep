@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
 import '../services/model_test_service.dart';
@@ -173,21 +174,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _editProfile(Map<String, dynamic> user) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => EditProfilePage(user: user),
-      ),
-    );
-    if (!mounted || saved != true) return;
-    await _refreshProfile();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(_tr(context, 'প্রোফাইল আপডেট হয়েছে।', 'Profile updated.'))),
-    );
-  }
-
   Future<void> _openPersonalInformation(Map<String, dynamic> user) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -295,7 +281,6 @@ class _ProfilePageState extends State<ProfilePage> {
       MaterialPageRoute<bool>(
         builder: (_) => _AccountManagementPage(
           email: _value(user['email']),
-          onEdit: () => _editProfile(user),
           onDelete: () => _deleteAccount(rawEmail),
         ),
       ),
@@ -1122,12 +1107,10 @@ class _PersonalInformationPageState extends State<_PersonalInformationPage> {
 class _AccountManagementPage extends StatefulWidget {
   const _AccountManagementPage({
     required this.email,
-    required this.onEdit,
     required this.onDelete,
   });
 
   final String email;
-  final VoidCallback onEdit;
   // Returns true only when the account was really deleted.
   final Future<bool> Function() onDelete;
 
@@ -1164,7 +1147,41 @@ class _AccountManagementPageState extends State<_AccountManagementPage> {
     String tr(String bn, String en) => AppText.of(context, bn, en);
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr('অ্যাকাউন্ট ও নিরাপত্তা', 'Account & security')),
+        toolbarHeight: 68,
+        titleSpacing: 8,
+        leadingWidth: 48,
+        centerTitle: false,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? _deepMaroon : _maroon,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+        ),
+        leading: IconButton(
+          tooltip: tr('ফিরে যান', 'Back'),
+          onPressed: _busy ? null : () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+        ),
+        title: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: .24)),
+            ),
+            child: const Icon(Icons.verified_user_outlined,
+              size: 29, color: Colors.white),
+          ),
+          const SizedBox(width: 9),
+          Container(width: 1, height: 42, color: Colors.white.withValues(alpha: .55)),
+          const SizedBox(width: 9),
+          Expanded(child: Text(tr('অ্যাকাউন্ট ও নিরাপত্তা', 'Account & security'),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15.5,
+              fontWeight: FontWeight.w500, height: 1.2))),
+        ]),
         bottom: _busy
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(3),
@@ -1173,20 +1190,27 @@ class _AccountManagementPageState extends State<_AccountManagementPage> {
             : null,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           Container(
-            padding: const EdgeInsets.all(17),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(19),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: scheme.outlineVariant),
             ),
             child: Row(
               children: [
-                Icon(Icons.verified_user_outlined,
-                    size: 28, color: scheme.primary),
-                const SizedBox(width: 13),
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.verified_user_outlined,
+                    size: 22, color: scheme.onPrimaryContainer),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,7 +1218,7 @@ class _AccountManagementPageState extends State<_AccountManagementPage> {
                       Text(
                         tr('আপনার অ্যাকাউন্ট', 'Your account'),
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w800),
+                            fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1212,56 +1236,57 @@ class _AccountManagementPageState extends State<_AccountManagementPage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(17),
-              side: BorderSide(color: scheme.outlineVariant),
-            ),
-            child: ListTile(
-              leading: Icon(Icons.edit_outlined, color: scheme.primary),
-              title: Text(tr('প্রোফাইল এডিট করুন', 'Edit profile')),
-              subtitle: Text(tr('নাম, মোবাইল ও পেশাগত তথ্য পরিবর্তন',
-                  'Update name, mobile and professional details')),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: _busy ? null : widget.onEdit,
-            ),
-          ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.only(left: 5, bottom: 8),
-            child: Text(
-              tr('বিপজ্জনক কার্যক্রম', 'Danger zone'),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: scheme.error,
-              ),
-            ),
+            child: Row(children: [
+              Icon(Icons.warning_amber_rounded, size: 17, color: scheme.error),
+              const SizedBox(width: 7),
+              Expanded(child: Text(
+                tr('অ্যাকাউন্ট ব্যবস্থাপনা', 'Account management'),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                  color: scheme.error),
+              )),
+            ]),
           ),
           Card(
+            margin: EdgeInsets.zero,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(16),
               side: BorderSide(
                 color: scheme.error.withOpacity(0.35),
               ),
             ),
             child: ListTile(
-              leading: Icon(Icons.delete_forever_outlined, color: scheme.error),
+              key: const ValueKey('account-delete-tile'),
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              horizontalTitleGap: 10,
+              leading: Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.delete_forever_outlined,
+                  size: 21, color: scheme.onErrorContainer),
+              ),
               title: Text(
-                tr('অ্যাকাউন্ট ডিলিট করুন', 'Delete account'),
+                tr('অ্যাকাউন্ট মুছুন', 'Delete account'),
                 style: TextStyle(
                   color: scheme.error,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               subtitle: Text(
                 _busy
                     ? tr('অপেক্ষা করুন...', 'Please wait...')
-                    : tr('স্থায়ীভাবে মুছে ফেলার আগে নিশ্চিতকরণ প্রয়োজন',
-                        'Confirmation required before permanent deletion'),
+                    : tr('স্থায়ীভাবে অপসারণ · নিশ্চিতকরণ প্রয়োজন',
+                        'Permanent removal · Confirmation required'),
+                style: TextStyle(fontSize: 11, height: 1.35,
+                  color: scheme.onSurfaceVariant),
               ),
               trailing:
                   Icon(Icons.chevron_right_rounded, color: scheme.error),
