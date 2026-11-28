@@ -78,7 +78,8 @@ void main() {
     final brandIcon = find.byKey(const ValueKey('home-brand-icon'));
     final flame = find.byKey(const ValueKey('home-brand-flame'));
     expect(tester.getSize(brandIcon), const Size(42, 42));
-    expect(tester.getSize(flame), const Size(32, 32));
+    expect(tester.getSize(flame), const Size(28, 28));
+    expect(tester.getCenter(flame), tester.getCenter(brandIcon));
     expect(tester.widget<CustomPaint>(flame).painter, isNotNull);
     final brandDecoration = tester.widget<Container>(brandIcon).decoration as BoxDecoration;
     expect(brandDecoration.border, isNull);
@@ -99,7 +100,12 @@ void main() {
 
   testWidgets('Safe area protects scroll viewport and previews remain available', (tester) async {
     await mountHome(tester, 'en', mode: ThemeMode.light);
-    expect(find.byKey(const ValueKey('home-brand-flame')), findsOneWidget);
+    final flame = find.byKey(const ValueKey('home-brand-flame'));
+    final brandIcon = find.byKey(const ValueKey('home-brand-icon'));
+    expect(flame, findsOneWidget);
+    expect(tester.getSize(flame), const Size(28, 28));
+    expect(tester.getSize(brandIcon), const Size(42, 42));
+    expect(tester.getCenter(flame), tester.getCenter(brandIcon));
     expect(tester.widget<Text>(find.byKey(const ValueKey('home-brand-title'))).style?.fontWeight, FontWeight.w600);
     final list = find.byType(ListView).first;
     expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
