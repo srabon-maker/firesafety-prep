@@ -805,9 +805,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
+                  fontSize: 9.5,
                   height: 1.1,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
