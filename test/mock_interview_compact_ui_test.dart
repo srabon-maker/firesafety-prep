@@ -68,10 +68,16 @@ void main() {
       (filters) async => {'data': questions});
     expect(tester.widget<FreeMockInterviewPanel>(find.byType(FreeMockInterviewPanel)).voiceMode, isFalse);
     expect(find.text('Hear question'), findsNothing);
-    await tester.ensureVisible(find.byType(TextField).last);
-    await tester.enterText(find.byType(TextField).last, 'Sample answer');
-    await tester.ensureVisible(find.text('Voice'));
-    await tester.tap(find.text('Voice'));
+    final answer = find.byKey(const ValueKey('mock-answer'));
+    final voice = find.byKey(const ValueKey('mock-voice-mode'));
+    final text = find.byKey(const ValueKey('mock-text-mode'));
+    final pageScroll = find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(answer, 120, scrollable: pageScroll);
+    await tester.enterText(answer, 'Sample answer');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(voice, -150, scrollable: pageScroll);
+    await tester.tap(voice);
     await tester.pumpAndSettle();
     expect(tester.widget<FreeMockInterviewPanel>(find.byType(FreeMockInterviewPanel)).voiceMode, isTrue);
     expect(find.text('Hear question'), findsOneWidget);
@@ -79,17 +85,19 @@ void main() {
     await tester.tap(find.text('Speak answer'));
     await tester.pumpAndSettle();
     expect(find.text('Voice requires microphone permission.'), findsOneWidget);
-    await tester.ensureVisible(find.text('Text'));
-    await tester.tap(find.text('Text'));
+    // The setup tile may have been disposed by the lazy ListView.
+    // Scroll the outer page up until it is built, not ensureVisible on an absent element.
+    await tester.scrollUntilVisible(text, -150, scrollable: pageScroll);
+    await tester.tap(text);
     await tester.pumpAndSettle();
     expect(find.text('Hear question'), findsNothing);
-    await tester.ensureVisible(find.byType(TextField).last);
-    expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, 'Sample answer');
+    await tester.scrollUntilVisible(answer, 120, scrollable: pageScroll);
+    expect(tester.widget<TextField>(answer).controller!.text, 'Sample answer');
     await tester.ensureVisible(find.text('Check answer'));
     await tester.tap(find.text('Check answer'));
     await tester.pumpAndSettle();
     expect(find.textContaining('sample-match indicator'), findsOneWidget);
-    await tester.ensureVisible(find.text('View summary'));
+    await tester.scrollUntilVisible(find.text('View summary'), 150, scrollable: pageScroll);
     await tester.tap(find.text('View summary'));
     await tester.pumpAndSettle();
     expect(find.text('Practice complete'), findsOneWidget);

@@ -25,7 +25,11 @@ class FreeMockInterviewPanel extends StatefulWidget {
   State<FreeMockInterviewPanel> createState() => _FreeMockInterviewPanelState();
 }
 
-class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
+class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel>
+    with AutomaticKeepAliveClientMixin<FreeMockInterviewPanel> {
+  // Retain the answer and progress when mode controls are scrolled offscreen.
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _answer = TextEditingController();
   StreamSubscription<Map<String, dynamic>>? _voiceSubscription;
   int _index = 0;
@@ -393,6 +397,7 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final question = _question;
 
@@ -520,6 +525,7 @@ class _FreeMockInterviewPanelState extends State<FreeMockInterviewPanel> {
         const SizedBox(height: 10),
         _sectionTitle(context, _tr('আপনার উত্তর', 'Your answer')),
         TextField(
+          key: const ValueKey('mock-answer'),
           controller: _answer,
           onChanged: (_) => setState(() {
             _evaluation = null;
