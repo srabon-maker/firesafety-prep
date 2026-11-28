@@ -781,22 +781,22 @@ class _MarketplacePageState extends State<MarketplacePage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         child: SizedBox(
-          width: 58,
-          height: 62,
+          width: 48,
+          height: 54,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 21, color: Colors.white),
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
               const SizedBox(height: 2),
               Text(
